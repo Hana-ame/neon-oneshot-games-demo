@@ -1,0 +1,70 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Web HOI — 1936 欧洲战区大战略</title>
+  <link rel="stylesheet" href="./src/styles/main.css" />
+</head>
+<body>
+  <header class="topbar">
+    <div class="brand-group">
+      <strong style="color:#d4af37;letter-spacing:0.5px;">⚔️ WEB HOI</strong>
+      <select id="nationSelect" class="nation-select" aria-label="选择国家"></select>
+    </div>
+
+    <div class="stats-strip">
+      <div class="stat-pill">🏛 政治 <strong id="statPP">0</strong></div>
+      <div class="stat-pill">👥 人力 <strong id="statMP">0</strong></div>
+      <div class="stat-pill">🏭 工业 <strong id="statFac">0/0</strong></div>
+      <div class="stat-pill">🪖 师数 <strong id="statDivs">0</strong></div>
+      <div class="stat-pill">🌍 紧张 <strong id="statTension">0%</strong></div>
+    </div>
+
+    <div class="time-controls">
+      <div id="dateDisplay" class="date-display">1936-01-01 00:00</div>
+      <button id="btnPause" class="btn">▶ 开始</button>
+      <button class="btn sm" data-speed="1">1x</button>
+      <button class="btn sm" data-speed="3">3x</button>
+      <button class="btn sm" data-speed="5">5x</button>
+      <button id="btnSave" class="btn sm" title="保存战局">💾</button>
+      <button id="btnLoad" class="btn sm" title="读取战局">📂</button>
+      <button id="btnMute" class="btn sm" title="音效开关">🔊</button>
+    </div>
+  </header>
+
+  <main class="main-layout">
+    <aside class="sidebar">
+      <nav class="tab-bar">
+        <button class="tab-btn active" data-tab="military">军事</button>
+        <button class="tab-btn" data-tab="production">工业</button>
+        <button class="tab-btn" data-tab="research">科研</button>
+        <button class="tab-btn" data-tab="focus">国策</button>
+        <button class="tab-btn" data-tab="diplomacy">外交</button>
+      </nav>
+      <section id="panelBody" class="panel-body"></section>
+    </aside>
+
+    <section class="map-stage">
+      <canvas id="mapCanvas"></canvas>
+
+      <div class="map-overlay-top">
+        <button class="btn sm active" data-mapmode="political">政治</button>
+        <button class="btn sm" data-mapmode="terrain">地形</button>
+        <button class="btn sm" data-mapmode="supply">补给</button>
+        <button id="btnZoomIn" class="btn sm">+</button>
+        <button id="btnZoomOut" class="btn sm">-</button>
+        <button id="btnResetView" class="btn sm">重置</button>
+      </div>
+
+      <div class="map-overlay-bottom">
+        <div id="provinceInspector" class="province-inspector"></div>
+        <div id="eventLog" class="event-log"></div>
+      </div>
+    </section>
+  </main>
+
+  <div id="toast" class="toast"></div>
+  <script type="module" src="./src/ui/app.js"></script>
+</body>
+</html>

@@ -1,0 +1,3119 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>网页德州扑克 · Royal Hold'em</title>
+  <style>
+:root {
+  --bg-dark: #090e1a;
+  --bg-panel: #111827;
+  --bg-panel-soft: rgba(17, 24, 39, 0.88);
+  --felt-center: #166534;
+  --felt-mid: #114b27;
+  --felt-edge: #072c17;
+  --rail-outer: #3b2314;
+  --rail-inner: #5c3720;
+  --gold: #eab308;
+  --gold-soft: rgba(234, 179, 8, 0.2);
+  --text-main: #f8fafc;
+  --text-muted: #94a3b8;
+  --danger: #ef4444;
+  --success: #22c55e;
+  --primary: #3b82f6;
+  --border-subtle: rgba(255, 255, 255, 0.1);
+}
+
+* {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+}
+
+body {
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", "PingFang SC", "Hiragino Sans GB", "Microsoft YaHei", sans-serif;
+  background: radial-gradient(circle at 50% 20%, #16223a 0%, var(--bg-dark) 75%);
+  color: var(--text-main);
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
+  overflow-x: hidden;
+  user-select: none;
+}
+
+/* 顶部导航栏 */
+.topbar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  padding: 10px 16px;
+  background: rgba(9, 14, 26, 0.92);
+  border-bottom: 1px solid var(--border-subtle);
+  flex-wrap: wrap;
+  z-index: 20;
+}
+
+.brand {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.brand-logo {
+  width: 32px;
+  height: 32px;
+  border-radius: 8px;
+  background: linear-gradient(135deg, #facc15, #b45309);
+  color: #111827;
+  font-weight: 900;
+  font-size: 18px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  box-shadow: 0 2px 10px rgba(234, 179, 8, 0.35);
+}
+
+.brand-title {
+  font-size: 15px;
+  font-weight: 700;
+  letter-spacing: 0.4px;
+}
+
+.brand-meta {
+  font-size: 12px;
+  color: var(--text-muted);
+}
+
+.topbar-controls {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  flex-wrap: wrap;
+}
+
+.btn-ghost {
+  background: rgba(255, 255, 255, 0.06);
+  color: var(--text-main);
+  border: 1px solid var(--border-subtle);
+  border-radius: 8px;
+  padding: 6px 10px;
+  font-size: 12px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.16s ease;
+}
+
+.btn-ghost:hover {
+  background: rgba(255, 255, 255, 0.14);
+  border-color: rgba(255, 255, 255, 0.25);
+}
+
+.btn-ghost.active {
+  background: var(--gold-soft);
+  border-color: var(--gold);
+  color: #fde047;
+}
+
+/* 主舞台区域 */
+.stage {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 14px 12px 10px;
+  position: relative;
+  width: 100%;
+  max-width: 1180px;
+  margin: 0 auto;
+}
+
+/* 椭圆牌桌容器 */
+.table-wrapper {
+  position: relative;
+  width: 100%;
+  max-width: 980px;
+  min-height: 430px;
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+/* 对手区网格 */
+.opponents-row {
+  display: flex;
+  justify-content: center;
+  align-items: flex-start;
+  gap: 10px;
+  flex-wrap: wrap;
+  z-index: 5;
+}
+
+/* 牌桌桌面 */
+.poker-table {
+  position: relative;
+  margin: 0 auto;
+  width: 100%;
+  max-width: 820px;
+  min-height: 215px;
+  border-radius: 120px;
+  background: radial-gradient(ellipse at center, var(--felt-center) 0%, var(--felt-mid) 58%, var(--felt-edge) 100%);
+  border: 11px solid var(--rail-outer);
+  box-shadow:
+    inset 0 0 0 2px rgba(234, 179, 8, 0.35),
+    inset 0 0 45px rgba(0, 0, 0, 0.65),
+    0 18px 45px rgba(0, 0, 0, 0.6);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 18px 20px;
+  gap: 10px;
+}
+
+.table-header-row {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+
+.phase-badge {
+  background: rgba(0, 0, 0, 0.45);
+  border: 1px solid rgba(255, 255, 255, 0.16);
+  color: #e2e8f0;
+  font-size: 12px;
+  font-weight: 600;
+  padding: 4px 12px;
+  border-radius: 999px;
+}
+
+.pot-display {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  background: rgba(0, 0, 0, 0.52);
+  border: 1px solid rgba(234, 179, 8, 0.45);
+  color: #fde047;
+  font-size: 14px;
+  font-weight: 700;
+  padding: 4px 14px;
+  border-radius: 999px;
+}
+
+.side-pots-bar {
+  display: flex;
+  gap: 6px;
+  flex-wrap: wrap;
+  justify-content: center;
+}
+
+.side-pot-chip {
+  font-size: 11px;
+  background: rgba(15, 23, 42, 0.65);
+  border: 1px solid rgba(250, 204, 21, 0.3);
+  color: #fef08a;
+  padding: 2px 8px;
+  border-radius: 999px;
+}
+
+/* 公共牌区 */
+.community-cards {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  min-height: 82px;
+  flex-wrap: wrap;
+}
+
+.card-slot {
+  width: 56px;
+  height: 78px;
+  border-radius: 7px;
+  border: 1.5px dashed rgba(255, 255, 255, 0.18);
+  background: rgba(0, 0, 0, 0.16);
+}
+
+/* 扑克牌样式 */
+.card {
+  width: 56px;
+  height: 78px;
+  border-radius: 7px;
+  background: linear-gradient(180deg, #ffffff 0%, #f1f5f9 100%);
+  color: #0f172a;
+  border: 1px solid #cbd5e1;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.38);
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  padding: 4px 5px;
+  position: relative;
+  animation: cardDeal 0.24s ease-out;
+  transition: transform 0.18s ease, box-shadow 0.18s ease;
+}
+
+.card.red {
+  color: #dc2626;
+}
+
+.card.mini {
+  width: 38px;
+  height: 54px;
+  padding: 2px 4px;
+  border-radius: 5px;
+}
+
+.card.hero-card {
+  width: 64px;
+  height: 90px;
+  padding: 5px 6px;
+  border-radius: 8px;
+}
+
+.card.back {
+  background: repeating-linear-gradient(
+    45deg,
+    #1e3a8a,
+    #1e3a8a 6px,
+    #1d4ed8 6px,
+    #1d4ed8 12px
+  );
+  border: 2px solid #e2e8f0;
+  color: transparent;
+}
+
+.card.back::after {
+  content: "♠";
+  position: absolute;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: rgba(255, 255, 255, 0.28);
+  font-size: 20px;
+}
+
+.card.winner-card {
+  transform: translateY(-4px);
+  box-shadow: 0 0 0 2px #facc15, 0 8px 20px rgba(250, 204, 21, 0.55);
+}
+
+.card-corner {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  line-height: 1;
+  font-weight: 800;
+  font-size: 13px;
+}
+
+.card.mini .card-corner {
+  font-size: 10px;
+}
+
+.card.hero-card .card-corner {
+  font-size: 15px;
+}
+
+.card-center {
+  font-size: 22px;
+  line-height: 1;
+  text-align: center;
+  align-self: center;
+}
+
+.card.mini .card-center {
+  font-size: 15px;
+}
+
+.card.hero-card .card-center {
+  font-size: 26px;
+}
+
+@keyframes cardDeal {
+  from {
+    opacity: 0;
+    transform: translateY(-14px) scale(0.92);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}
+
+/* 摊牌横幅 */
+.showdown-banner {
+  background: rgba(15, 23, 42, 0.88);
+  border: 1px solid rgba(250, 204, 21, 0.55);
+  color: #fef08a;
+  font-size: 13px;
+  font-weight: 600;
+  padding: 6px 14px;
+  border-radius: 10px;
+  text-align: center;
+  max-width: 92%;
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.4);
+}
+
+/* 玩家座位卡片 */
+.seat-card {
+  background: var(--bg-panel-soft);
+  border: 1.5px solid var(--border-subtle);
+  border-radius: 12px;
+  padding: 8px 10px;
+  width: 170px;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  position: relative;
+  transition: all 0.2s ease;
+  backdrop-filter: blur(6px);
+}
+
+.seat-card.active-turn {
+  border-color: var(--gold);
+  box-shadow: 0 0 0 2px rgba(234, 179, 8, 0.28), 0 0 22px rgba(234, 179, 8, 0.22);
+}
+
+.seat-card.folded {
+  opacity: 0.52;
+}
+
+.seat-card.eliminated {
+  opacity: 0.35;
+  filter: grayscale(0.9);
+}
+
+.seat-card.winner-seat {
+  border-color: var(--success);
+  box-shadow: 0 0 0 2px rgba(34, 197, 94, 0.35), 0 0 24px rgba(34, 197, 94, 0.3);
+}
+
+.seat-top {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 6px;
+}
+
+.seat-name-wrap {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  min-width: 0;
+}
+
+.seat-avatar {
+  font-size: 18px;
+  line-height: 1;
+}
+
+.seat-name {
+  font-size: 13px;
+  font-weight: 700;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.seat-style {
+  font-size: 10px;
+  color: var(--text-muted);
+}
+
+.seat-badges {
+  display: flex;
+  gap: 3px;
+}
+
+.role-pill {
+  font-size: 10px;
+  font-weight: 800;
+  padding: 1px 5px;
+  border-radius: 999px;
+}
+
+.role-pill.dealer {
+  background: #facc15;
+  color: #111827;
+}
+
+.role-pill.sb {
+  background: #38bdf8;
+  color: #0f172a;
+}
+
+.role-pill.bb {
+  background: #f97316;
+  color: #0f172a;
+}
+
+.seat-middle {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 6px;
+}
+
+.seat-cards {
+  display: flex;
+  gap: 4px;
+}
+
+.seat-info-right {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 3px;
+}
+
+.chip-stack {
+  white-space: nowrap;
+  font-size: 13px;
+  font-weight: 800;
+  color: #fde047;
+}
+
+.bet-pill {
+  white-space: nowrap;
+  font-size: 11px;
+  font-weight: 600;
+  background: rgba(59, 130, 246, 0.2);
+  border: 1px solid rgba(59, 130, 246, 0.45);
+  color: #93c5fd;
+  padding: 1px 6px;
+  border-radius: 999px;
+}
+
+.action-tag {
+  font-size: 11px;
+  text-align: center;
+  background: rgba(255, 255, 255, 0.07);
+  color: #cbd5e1;
+  border-radius: 6px;
+  padding: 2px 6px;
+  min-height: 20px;
+}
+
+.action-tag.thinking {
+  color: #fde047;
+  background: rgba(234, 179, 8, 0.14);
+}
+
+.action-tag.win-tag {
+  color: #86efac;
+  background: rgba(34, 197, 94, 0.18);
+  font-weight: 700;
+}
+
+/* 底部主角区域 */
+.hero-area {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 16px;
+  flex-wrap: wrap;
+  z-index: 5;
+}
+
+.hero-card-panel {
+  background: var(--bg-panel-soft);
+  border: 1.5px solid var(--border-subtle);
+  border-radius: 14px;
+  padding: 10px 16px;
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  min-width: 310px;
+  transition: all 0.2s ease;
+}
+
+.hero-card-panel.active-turn {
+  border-color: var(--gold);
+  box-shadow: 0 0 0 2px rgba(234, 179, 8, 0.28), 0 0 24px rgba(234, 179, 8, 0.25);
+}
+
+.hero-card-panel.winner-seat {
+  border-color: var(--success);
+  box-shadow: 0 0 0 2px rgba(34, 197, 94, 0.35);
+}
+
+.hero-details {
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+}
+
+.hero-hand-rank {
+  font-size: 12px;
+  font-weight: 600;
+  color: #38bdf8;
+}
+
+.equity-bar-wrap {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 11px;
+  color: var(--text-muted);
+}
+
+.equity-track {
+  width: 90px;
+  height: 6px;
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.12);
+  overflow: hidden;
+}
+
+.equity-fill {
+  height: 100%;
+  background: linear-gradient(90deg, #22c55e, #eab308);
+  transition: width 0.25s ease;
+}
+
+/* 底部操作控制台 */
+.control-dock {
+  width: 100%;
+  background: rgba(9, 14, 26, 0.96);
+  border-top: 1px solid var(--border-subtle);
+  padding: 12px 16px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 10px;
+  z-index: 20;
+}
+
+.action-buttons-row {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  flex-wrap: wrap;
+  width: 100%;
+  max-width: 820px;
+}
+
+.raise-controls-row {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  flex-wrap: wrap;
+  width: 100%;
+  max-width: 820px;
+}
+
+.btn-action {
+  border: none;
+  border-radius: 10px;
+  padding: 10px 18px;
+  font-size: 14px;
+  font-weight: 700;
+  cursor: pointer;
+  color: #ffffff;
+  transition: transform 0.12s ease, filter 0.15s ease, opacity 0.15s ease;
+  min-width: 104px;
+}
+
+.btn-action:hover:not(:disabled) {
+  filter: brightness(1.1);
+  transform: translateY(-1px);
+}
+
+.btn-action:active:not(:disabled) {
+  transform: translateY(0);
+}
+
+.btn-action:disabled {
+  opacity: 0.35;
+  cursor: not-allowed;
+}
+
+.btn-fold {
+  background: linear-gradient(180deg, #ef4444, #b91c1c);
+}
+
+.btn-check-call {
+  background: linear-gradient(180deg, #2563eb, #1d4ed8);
+}
+
+.btn-raise {
+  background: linear-gradient(180deg, #16a34a, #15803d);
+}
+
+.btn-allin {
+  background: linear-gradient(180deg, #f59e0b, #b45309);
+  color: #111827;
+}
+
+.btn-next {
+  background: linear-gradient(180deg, #eab308, #ca8a04);
+  color: #111827;
+  min-width: 180px;
+}
+
+.btn-preset {
+  background: rgba(255, 255, 255, 0.08);
+  color: #e2e8f0;
+  border: 1px solid var(--border-subtle);
+  border-radius: 7px;
+  padding: 5px 10px;
+  font-size: 12px;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.btn-preset:hover:not(:disabled) {
+  background: rgba(255, 255, 255, 0.16);
+}
+
+.raise-slider {
+  width: 180px;
+  accent-color: var(--gold);
+  cursor: pointer;
+}
+
+.raise-value-badge {
+  font-size: 13px;
+  font-weight: 700;
+  color: #fde047;
+  min-width: 68px;
+  text-align: center;
+}
+
+.status-hint {
+  font-size: 13px;
+  color: var(--text-muted);
+}
+
+/* 侧边日志抽屉 */
+.log-drawer {
+  position: fixed;
+  top: 56px;
+  right: 0;
+  bottom: 0;
+  width: 310px;
+  max-width: 88vw;
+  background: rgba(15, 23, 42, 0.97);
+  border-left: 1px solid var(--border-subtle);
+  padding: 14px;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  z-index: 40;
+  transform: translateX(100%);
+  transition: transform 0.22s ease;
+}
+
+.log-drawer.open {
+  transform: translateX(0);
+}
+
+.log-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  font-size: 14px;
+  font-weight: 700;
+}
+
+.log-list {
+  flex: 1;
+  overflow-y: auto;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  font-size: 12px;
+}
+
+.log-item {
+  background: rgba(255, 255, 255, 0.04);
+  padding: 6px 8px;
+  border-radius: 6px;
+  color: #cbd5e1;
+  line-height: 1.4;
+}
+
+.log-item.highlight {
+  border-left: 3px solid var(--gold);
+  color: #fef08a;
+}
+
+/* 弹窗 Modal */
+.modal-backdrop {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.72);
+  display: none;
+  align-items: center;
+  justify-content: center;
+  padding: 16px;
+  z-index: 60;
+}
+
+.modal-backdrop.open {
+  display: flex;
+}
+
+.modal-card {
+  background: #111827;
+  border: 1px solid rgba(255, 255, 255, 0.14);
+  border-radius: 14px;
+  width: 100%;
+  max-width: 480px;
+  max-height: 86vh;
+  overflow-y: auto;
+  padding: 18px 20px;
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  box-shadow: 0 20px 50px rgba(0, 0, 0, 0.65);
+}
+
+.modal-title-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.modal-title {
+  font-size: 16px;
+  font-weight: 700;
+}
+
+.form-group {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  font-size: 13px;
+}
+
+.form-select {
+  background: #1e293b;
+  color: #f8fafc;
+  border: 1px solid rgba(255, 255, 255, 0.18);
+  border-radius: 8px;
+  padding: 8px 10px;
+  font-size: 13px;
+}
+
+.hand-rank-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 12px;
+}
+
+.hand-rank-table th,
+.hand-rank-table td {
+  padding: 7px 8px;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+  text-align: left;
+}
+
+.hand-rank-table th {
+  color: #fde047;
+}
+
+@media (max-width: 680px) {
+  .poker-table {
+    border-radius: 46px;
+    border-width: 7px;
+    min-height: 185px;
+    padding: 14px 10px;
+  }
+  .seat-card {
+    width: 142px;
+    padding: 6px 8px;
+  }
+  .card {
+    width: 46px;
+    height: 66px;
+  }
+  .card-slot {
+    width: 46px;
+    height: 66px;
+  }
+  .card.hero-card {
+    width: 56px;
+    height: 80px;
+  }
+  .btn-action {
+    padding: 9px 12px;
+    min-width: 84px;
+    font-size: 13px;
+  }
+}
+
+  </style>
+</head>
+<body>
+  <header class="topbar">
+    <div class="brand">
+      <div class="brand-logo">♠</div>
+      <div>
+        <div class="brand-title">Royal Hold'em 德州扑克</div>
+        <div id="hand-meta" class="brand-meta">准备发牌...</div>
+      </div>
+    </div>
+    <div class="topbar-controls">
+      <button id="btn-toggle-equity" class="btn-ghost active" type="button">📊 胜率辅助</button>
+      <button id="btn-toggle-sound" class="btn-ghost active" type="button">🔊 音效</button>
+      <button id="btn-open-rules" class="btn-ghost" type="button">📖 牌型表</button>
+      <button id="btn-toggle-log" class="btn-ghost" type="button">📜 牌局记录</button>
+      <button id="btn-open-settings" class="btn-ghost" type="button">⚙️ 设置 / 新局</button>
+    </div>
+  </header>
+
+  <main class="stage">
+    <div class="table-wrapper">
+      <section id="opponents-row" class="opponents-row" aria-label="对手座位"></section>
+
+      <section class="poker-table" aria-label="公共牌桌">
+        <div class="table-header-row">
+          <div id="phase-badge" class="phase-badge">翻牌前</div>
+          <div id="pot-display" class="pot-display">🪙 总底池: 0</div>
+        </div>
+        <div id="side-pots-bar" class="side-pots-bar"></div>
+        <div id="community-cards" class="community-cards"></div>
+        <div id="showdown-banner" class="showdown-banner" style="display:none;"></div>
+      </section>
+
+      <section id="hero-area" class="hero-area" aria-label="玩家手牌"></section>
+    </div>
+  </main>
+
+  <footer class="control-dock">
+    <div id="action-buttons-row" class="action-buttons-row"></div>
+    <div id="raise-controls-row" class="raise-controls-row"></div>
+    <div id="status-hint" class="status-hint">欢迎来到无限注德州扑克</div>
+  </footer>
+
+  <!-- 牌局日志抽屉 -->
+  <aside id="log-drawer" class="log-drawer" aria-label="牌局记录">
+    <div class="log-header">
+      <span>📜 牌局行动记录</span>
+      <button id="btn-close-log" class="btn-ghost" type="button">关闭</button>
+    </div>
+    <div id="log-list" class="log-list"></div>
+  </aside>
+
+  <!-- 牌型大小表弹窗 -->
+  <div id="rules-modal" class="modal-backdrop" role="dialog" aria-modal="true">
+    <div class="modal-card">
+      <div class="modal-title-row">
+        <div class="modal-title">📖 德州扑克牌型大小表（由大到小）</div>
+        <button id="btn-close-rules" class="btn-ghost" type="button">关闭</button>
+      </div>
+      <table class="hand-rank-table">
+        <thead>
+          <tr><th>牌型</th><th>英文</th><th>示例</th></tr>
+        </thead>
+        <tbody>
+          <tr><td>1. 皇家同花顺</td><td>Royal Flush</td><td>A♠ K♠ Q♠ J♠ 10♠</td></tr>
+          <tr><td>2. 同花顺</td><td>Straight Flush</td><td>9♥ 8♥ 7♥ 6♥ 5♥</td></tr>
+          <tr><td>3. 四条</td><td>Four of a Kind</td><td>K♠ K♥ K♦ K♣ 2♦</td></tr>
+          <tr><td>4. 葫芦</td><td>Full House</td><td>Q♠ Q♥ Q♦ 9♣ 9♦</td></tr>
+          <tr><td>5. 同花</td><td>Flush</td><td>A♦ J♦ 9♦ 5♦ 2♦</td></tr>
+          <tr><td>6. 顺子</td><td>Straight</td><td>10♥ 9♦ 8♠ 7♣ 6♥</td></tr>
+          <tr><td>7. 三条</td><td>Three of a Kind</td><td>8♠ 8♥ 8♦ K♣ 4♠</td></tr>
+          <tr><td>8. 两对</td><td>Two Pair</td><td>A♠ A♥ J♦ J♣ 3♠</td></tr>
+          <tr><td>9. 一对</td><td>One Pair</td><td>10♦ 10♥ A♣ 9♠ 4♦</td></tr>
+          <tr><td>10. 高牌</td><td>High Card</td><td>A♠ K♦ 9♣ 6♥ 2♠</td></tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+
+  <!-- 设置弹窗 -->
+  <div id="settings-modal" class="modal-backdrop" role="dialog" aria-modal="true">
+    <div class="modal-card">
+      <div class="modal-title-row">
+        <div class="modal-title">⚙️ 牌局设置</div>
+        <button id="btn-close-settings" class="btn-ghost" type="button">取消</button>
+      </div>
+      <div class="form-group">
+        <label for="setting-players">牌桌人数（含玩家）</label>
+        <select id="setting-players" class="form-select">
+          <option value="2">2 人单挑 (Heads-Up)</option>
+          <option value="4">4 人桌</option>
+          <option value="6" selected>6 人标准桌 (6-Max)</option>
+        </select>
+      </div>
+      <div class="form-group">
+        <label for="setting-chips">初始筹码</label>
+        <select id="setting-chips" class="form-select">
+          <option value="1000">1,000</option>
+          <option value="2000" selected>2,000</option>
+          <option value="5000">5,000</option>
+        </select>
+      </div>
+      <div class="form-group">
+        <label for="setting-blinds">盲注级别 (SB / BB)</label>
+        <select id="setting-blinds" class="form-select">
+          <option value="10/20" selected>10 / 20</option>
+          <option value="25/50">25 / 50</option>
+          <option value="50/100">50 / 100</option>
+        </select>
+      </div>
+      <div class="form-group">
+        <label for="setting-speed">AI 思考速度</label>
+        <select id="setting-speed" class="form-select">
+          <option value="fast">快速</option>
+          <option value="normal" selected>标准</option>
+          <option value="slow">慢速</option>
+        </select>
+      </div>
+      <button id="btn-apply-settings" class="btn-action btn-next" type="button" style="width:100%;">应用并开始新牌局</button>
+    </div>
+  </div>
+
+  <script>
+(function () {
+'use strict';
+// ===== src/engine/cards.js =====
+/**
+ * cards.js - 扑克牌数据结构、洗牌与格式化工具
+ */
+const SUITS = ['spades', 'hearts', 'diamonds', 'clubs'];
+const SUIT_SYMBOLS = {
+  spades: '♠',
+  hearts: '♥',
+  diamonds: '♦',
+  clubs: '♣',
+};
+const SUIT_SHORT = {
+  spades: 's',
+  hearts: 'h',
+  diamonds: 'd',
+  clubs: 'c',
+};
+
+const SHORT_TO_SUIT = {
+  s: 'spades',
+  h: 'hearts',
+  d: 'diamonds',
+  c: 'clubs',
+};
+const RANKS = [2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14];
+const RANK_LABELS = {
+  2: '2',
+  3: '3',
+  4: '4',
+  5: '5',
+  6: '6',
+  7: '7',
+  8: '8',
+  9: '9',
+  10: '10',
+  11: 'J',
+  12: 'Q',
+  13: 'K',
+  14: 'A',
+};
+
+const CHAR_TO_RANK = {
+  '2': 2,
+  '3': 3,
+  '4': 4,
+  '5': 5,
+  '6': 6,
+  '7': 7,
+  '8': 8,
+  '9': 9,
+  T: 10,
+  '10': 10,
+  J: 11,
+  Q: 12,
+  K: 13,
+  A: 14,
+};
+
+/**
+ * 创建标准 52 张扑克牌组
+ * @returns {Array<{rank: number, suit: string, id: string}>}
+ */
+function createDeck() {
+  const deck = [];
+  for (const suit of SUITS) {
+    for (const rank of RANKS) {
+      deck.push({
+        rank,
+        suit,
+        id: `${RANK_LABELS[rank] === '10' ? 'T' : RANK_LABELS[rank]}${SUIT_SHORT[suit]}`,
+      });
+    }
+  }
+  return deck;
+}
+
+/**
+ * 使用 Fisher-Yates 算法进行无偏原地洗牌（返回新数组，不修改原数组）
+ * @param {Array} deck
+ * @param {Function} [rng=Math.random]
+ * @returns {Array}
+ */
+function shuffleDeck(deck, rng = Math.random) {
+  const copy = deck.slice();
+  for (let i = copy.length - 1; i > 0; i--) {
+    const j = Math.floor(rng() * (i + 1));
+    const tmp = copy[i];
+    copy[i] = copy[j];
+    copy[j] = tmp;
+  }
+  return copy;
+}
+
+/**
+ * 解析简写牌面字符串，如 "As", "Td", "10h", "2c"
+ * @param {string} code
+ * @returns {{rank: number, suit: string, id: string}}
+ */
+function parseCard(code) {
+  if (typeof code !== 'string' || code.length < 2 || code.length > 3) {
+    throw new Error(`Invalid card code: ${code}`);
+  }
+  const suitChar = code.slice(-1).toLowerCase();
+  const rankStr = code.slice(0, -1).toUpperCase();
+  const suit = SHORT_TO_SUIT[suitChar];
+  const rank = CHAR_TO_RANK[rankStr];
+  if (!suit || !rank) {
+    throw new Error(`Invalid card code: ${code}`);
+  }
+  const canonicalRank = rank === 10 ? 'T' : RANK_LABELS[rank];
+  return { rank, suit, id: `${canonicalRank}${suitChar}` };
+}
+
+/**
+ * 批量解析牌面数组
+ * @param {string|string[]} input
+ */
+function parseCards(input) {
+  const list = Array.isArray(input) ? input : input.trim().split(/\s+/);
+  return list.map(parseCard);
+}
+
+/**
+ * 格式化牌面用于展示，如 "A♠"
+ * @param {{rank: number, suit: string}} card
+ * @returns {string}
+ */
+function formatCard(card) {
+  return `${RANK_LABELS[card.rank]}${SUIT_SYMBOLS[card.suit]}`;
+}
+
+/**
+ * 判断花色是否为红色
+ * @param {string} suit
+ * @returns {boolean}
+ */
+function isRedSuit(suit) {
+  return suit === 'hearts' || suit === 'diamonds';
+}
+
+
+// ===== src/engine/evaluator.js =====
+/**
+ * evaluator.js - 德州扑克 5~7 张牌精确牌型评估引擎
+ * 支持 10 种标准牌型（皇家同花顺至高牌）、A-2-3-4-5 最小顺子及完整踢脚牌比较
+ */
+const HAND_CATEGORY = {
+  HIGH_CARD: 0,
+  ONE_PAIR: 1,
+  TWO_PAIR: 2,
+  THREE_OF_A_KIND: 3,
+  STRAIGHT: 4,
+  FLUSH: 5,
+  FULL_HOUSE: 6,
+  FOUR_OF_A_KIND: 7,
+  STRAIGHT_FLUSH: 8,
+};
+const CATEGORY_NAMES = {
+  0: { en: 'High Card', zh: '高牌' },
+  1: { en: 'One Pair', zh: '一对' },
+  2: { en: 'Two Pair', zh: '两对' },
+  3: { en: 'Three of a Kind', zh: '三条' },
+  4: { en: 'Straight', zh: '顺子' },
+  5: { en: 'Flush', zh: '同花' },
+  6: { en: 'Full House', zh: '葫芦' },
+  7: { en: 'Four of a Kind', zh: '四条' },
+  8: { en: 'Straight Flush', zh: '同花顺' },
+};
+
+const BASE = 15;
+const POW = [
+  1,
+  BASE,
+  BASE * BASE,
+  BASE * BASE * BASE,
+  BASE * BASE * BASE * BASE,
+  BASE * BASE * BASE * BASE * BASE,
+];
+
+/**
+ * 将牌型类别与最多 5 个比较权重编码为单一可比整数
+ * @param {number} category 0..8
+ * @param {number[]} tiebreakers 长度补齐为 5
+ * @returns {number}
+ */
+function encodeScore(category, tiebreakers) {
+  let score = category * POW[5];
+  for (let i = 0; i < 5; i++) {
+    score += (tiebreakers[i] || 0) * POW[4 - i];
+  }
+  return score;
+}
+
+/**
+ * 评估恰好 5 张牌的牌型与分数
+ * @param {Array<{rank: number, suit: string, id: string}>} fiveCards
+ */
+function evaluateFiveCards(fiveCards) {
+  if (!Array.isArray(fiveCards) || fiveCards.length !== 5) {
+    throw new Error('evaluateFiveCards requires exactly 5 cards');
+  }
+
+  const sorted = fiveCards.slice().sort((a, b) => b.rank - a.rank);
+  const ranks = sorted.map((c) => c.rank);
+  const isFlush = sorted.every((c) => c.suit === sorted[0].suit);
+
+  // 统计各点数出现次数
+  const countMap = new Map();
+  for (const r of ranks) {
+    countMap.set(r, (countMap.get(r) || 0) + 1);
+  }
+
+  // 按 (出现次数降序, 点数降序) 排序
+  const groups = Array.from(countMap.entries()).sort((a, b) => {
+    if (b[1] !== a[1]) return b[1] - a[1];
+    return b[0] - a[0];
+  });
+
+  // 判断顺子（仅当 5 张牌点数各不相同时可能为顺子）
+  let isStraight = false;
+  let straightHigh = 0;
+  if (groups.length === 5) {
+    if (ranks[0] - ranks[4] === 4) {
+      isStraight = true;
+      straightHigh = ranks[0];
+    } else if (
+      ranks[0] === 14 &&
+      ranks[1] === 5 &&
+      ranks[2] === 4 &&
+      ranks[3] === 3 &&
+      ranks[4] === 2
+    ) {
+      // A-2-3-4-5 最小顺子 (Wheel)
+      isStraight = true;
+      straightHigh = 5;
+    }
+  }
+
+  let category;
+  let tiebreakers;
+
+  if (isStraight && isFlush) {
+    category = HAND_CATEGORY.STRAIGHT_FLUSH;
+    tiebreakers = [straightHigh, 0, 0, 0, 0];
+  } else if (groups[0][1] === 4) {
+    category = HAND_CATEGORY.FOUR_OF_A_KIND;
+    tiebreakers = [groups[0][0], groups[1][0], 0, 0, 0];
+  } else if (groups[0][1] === 3 && groups[1][1] === 2) {
+    category = HAND_CATEGORY.FULL_HOUSE;
+    tiebreakers = [groups[0][0], groups[1][0], 0, 0, 0];
+  } else if (isFlush) {
+    category = HAND_CATEGORY.FLUSH;
+    tiebreakers = ranks;
+  } else if (isStraight) {
+    category = HAND_CATEGORY.STRAIGHT;
+    tiebreakers = [straightHigh, 0, 0, 0, 0];
+  } else if (groups[0][1] === 3) {
+    category = HAND_CATEGORY.THREE_OF_A_KIND;
+    tiebreakers = [groups[0][0], groups[1][0], groups[2][0], 0, 0];
+  } else if (groups[0][1] === 2 && groups[1][1] === 2) {
+    category = HAND_CATEGORY.TWO_PAIR;
+    tiebreakers = [groups[0][0], groups[1][0], groups[2][0], 0, 0];
+  } else if (groups[0][1] === 2) {
+    category = HAND_CATEGORY.ONE_PAIR;
+    tiebreakers = [groups[0][0], groups[1][0], groups[2][0], groups[3][0], 0];
+  } else {
+    category = HAND_CATEGORY.HIGH_CARD;
+    tiebreakers = ranks;
+  }
+
+  const isRoyal = category === HAND_CATEGORY.STRAIGHT_FLUSH && straightHigh === 14;
+  const score = encodeScore(category, tiebreakers);
+
+  return {
+    category,
+    isRoyalFlush: isRoyal,
+    categoryName: isRoyal ? 'Royal Flush' : CATEGORY_NAMES[category].en,
+    categoryNameZh: isRoyal ? '皇家同花顺' : CATEGORY_NAMES[category].zh,
+    score,
+    tiebreakers,
+    bestFive: sorted,
+  };
+}
+
+/**
+ * 从 5~7 张牌中选出最佳 5 张牌组合
+ * 对于 7 张牌仅需遍历 C(7,5) = 21 种组合，精确返回最佳牌型及具体 5 张牌
+ * @param {Array<{rank: number, suit: string, id: string}>} cards
+ */
+function evaluateBestHand(cards) {
+  if (!Array.isArray(cards) || cards.length < 5 || cards.length > 7) {
+    throw new Error(`evaluateBestHand expects 5 to 7 cards, received ${cards?.length}`);
+  }
+
+  if (cards.length === 5) {
+    return evaluateFiveCards(cards);
+  }
+
+  const n = cards.length;
+  let best = null;
+  const combo = new Array(5);
+
+  for (let a = 0; a < n - 4; a++) {
+    combo[0] = cards[a];
+    for (let b = a + 1; b < n - 3; b++) {
+      combo[1] = cards[b];
+      for (let c = b + 1; c < n - 2; c++) {
+        combo[2] = cards[c];
+        for (let d = c + 1; d < n - 1; d++) {
+          combo[3] = cards[d];
+          for (let e = d + 1; e < n; e++) {
+            combo[4] = cards[e];
+            const res = evaluateFiveCards(combo);
+            if (!best || res.score > best.score) {
+              best = res;
+            }
+          }
+        }
+      }
+    }
+  }
+
+  return best;
+}
+
+/**
+ * 比较两个牌型评估结果
+ * @returns {number} 1 表示 a 胜，-1 表示 b 胜，0 表示平局
+ */
+function compareEvaluations(a, b) {
+  if (a.score > b.score) return 1;
+  if (a.score < b.score) return -1;
+  return 0;
+}
+
+
+// ===== src/engine/potManager.js =====
+/**
+ * potManager.js - 主池与多级边池 (Main Pot & Side Pots) 计算与结算引擎
+ * 精确处理多人不同筹码 All-in、弃牌死钱、平分底池及奇数筹码余数分配（顺时针距庄家最近者得）
+ */
+
+/**
+ * 根据本局所有玩家的总投入和弃牌状态构建主池与边池
+ * @param {Array<{id: string, totalContribution: number, folded: boolean}>} players
+ * @returns {Array<{name: string, amount: number, eligibleIds: string[]}>}
+ */
+function calculateSidePots(players) {
+  const contributors = players.filter((p) => p.totalContribution > 0);
+  if (contributors.length === 0) return [];
+
+  // 收集所有正投入层级并升序排列
+  const levels = Array.from(
+    new Set(contributors.map((p) => p.totalContribution))
+  ).sort((a, b) => a - b);
+
+  const rawPots = [];
+  let prevLevel = 0;
+
+  for (const level of levels) {
+    const sliceHeight = level - prevLevel;
+    if (sliceHeight <= 0) continue;
+
+    let sliceAmount = 0;
+    const eligibleIds = [];
+
+    for (const p of contributors) {
+      if (p.totalContribution > prevLevel) {
+        const contribInSlice = Math.min(p.totalContribution, level) - prevLevel;
+        sliceAmount += contribInSlice;
+      }
+      if (!p.folded && p.totalContribution >= level) {
+        eligibleIds.push(p.id);
+      }
+    }
+
+    if (sliceAmount > 0) {
+      if (eligibleIds.length === 0 && rawPots.length > 0) {
+        // 极端情况：弃牌玩家投入高于所有未弃牌玩家，死钱并入上一个有效底池
+        rawPots[rawPots.length - 1].amount += sliceAmount;
+      } else {
+        rawPots.push({
+          amount: sliceAmount,
+          eligibleIds,
+        });
+      }
+    }
+
+    prevLevel = level;
+  }
+
+  // 合并具有完全相同合格竞争者集合的相邻底池
+  const merged = [];
+  for (const pot of rawPots) {
+    const key = pot.eligibleIds.slice().sort().join('|');
+    if (merged.length > 0 && merged[merged.length - 1]._key === key) {
+      merged[merged.length - 1].amount += pot.amount;
+    } else {
+      merged.push({
+        amount: pot.amount,
+        eligibleIds: pot.eligibleIds,
+        _key: key,
+      });
+    }
+  }
+
+  return merged.map((pot, idx) => ({
+    name: idx === 0 ? '主池' : `边池 ${idx}`,
+    amount: pot.amount,
+    eligibleIds: pot.eligibleIds,
+  }));
+}
+
+/**
+ * 根据摊牌评估结果分配所有底池
+ * @param {Array<{name: string, amount: number, eligibleIds: string[]}>} pots
+ * @param {Object<string, {score: number, categoryNameZh: string}>} evaluations 玩家ID -> 牌型评估
+ * @param {string[]} seatOrderFromSB 从小盲位置起顺时针排列的玩家ID列表（用于平分底池时的余数分配）
+ * @returns {{ payouts: Object<string, number>, potResults: Array }}
+ */
+function distributePots(pots, evaluations, seatOrderFromSB = []) {
+  const payouts = {};
+  const potResults = [];
+  const orderIndex = new Map(seatOrderFromSB.map((id, idx) => [id, idx]));
+
+  for (const pot of pots) {
+    const eligible = pot.eligibleIds;
+    if (eligible.length === 0 || pot.amount <= 0) continue;
+
+    let winners = [];
+    if (eligible.length === 1) {
+      // 仅一名玩家有资格（例如其他玩家均已弃牌或未跟注的超额筹码）
+      winners = [eligible[0]];
+    } else {
+      let bestScore = -1;
+      for (const id of eligible) {
+        const ev = evaluations[id];
+        if (!ev) continue;
+        if (ev.score > bestScore) {
+          bestScore = ev.score;
+          winners = [id];
+        } else if (ev.score === bestScore) {
+          winners.push(id);
+        }
+      }
+    }
+
+    if (winners.length === 0) continue;
+
+    // 按距庄家顺时针顺序排序，用于分配奇数筹码余数
+    winners.sort((a, b) => {
+      const ia = orderIndex.has(a) ? orderIndex.get(a) : Number.MAX_SAFE_INTEGER;
+      const ib = orderIndex.has(b) ? orderIndex.get(b) : Number.MAX_SAFE_INTEGER;
+      return ia - ib;
+    });
+
+    const baseShare = Math.floor(pot.amount / winners.length);
+    const remainder = pot.amount % winners.length;
+
+    const distributions = [];
+    winners.forEach((winnerId, idx) => {
+      const won = baseShare + (idx < remainder ? 1 : 0);
+      payouts[winnerId] = (payouts[winnerId] || 0) + won;
+      distributions.push({ playerId: winnerId, amount: won });
+    });
+
+    potResults.push({
+      potName: pot.name,
+      amount: pot.amount,
+      winners,
+      distributions,
+    });
+  }
+
+  return { payouts, potResults };
+}
+
+
+// ===== src/engine/gameEngine.js =====
+/**
+ * gameEngine.js - 无限注德州扑克 (No-Limit Texas Hold'em) 核心状态机
+ * 完整实现：盲注轮转、单挑(Heads-Up)特殊规则、最小加注增量、不完整All-in不重开行动权、
+ * 多级边池结算、全下自动发牌、行动日志与合法动作校验。
+ */
+const PHASE = {
+  IDLE: 'IDLE',
+  PREFLOP: 'PREFLOP',
+  FLOP: 'FLOP',
+  TURN: 'TURN',
+  RIVER: 'RIVER',
+  SHOWDOWN: 'SHOWDOWN',
+  GAME_OVER: 'GAME_OVER',
+};
+const PHASE_LABELS = {
+  IDLE: '准备就绪',
+  PREFLOP: '翻牌前 (Pre-Flop)',
+  FLOP: '翻牌圈 (Flop)',
+  TURN: '转牌圈 (Turn)',
+  RIVER: '河牌圈 (River)',
+  SHOWDOWN: '摊牌结算 (Showdown)',
+  GAME_OVER: '牌局结束',
+};
+class TexasHoldemEngine {
+  /**
+   * @param {Object} options
+   * @param {Array<{id: string, name: string, isHuman: boolean, aiStyle?: string, avatar?: string}>} options.players
+   * @param {number} [options.startingChips=2000]
+   * @param {number} [options.smallBlind=10]
+   * @param {number} [options.bigBlind=20]
+   * @param {Function} [options.rng=Math.random]
+   */
+  constructor({
+    players,
+    startingChips = 2000,
+    smallBlind = 10,
+    bigBlind = 20,
+    rng = Math.random,
+  }) {
+    if (!players || players.length < 2 || players.length > 9) {
+      throw new Error('Texas Holdem requires between 2 and 9 players');
+    }
+    this.startingChips = startingChips;
+    this.smallBlind = smallBlind;
+    this.bigBlind = bigBlind;
+    this.rng = rng;
+
+    this.players = players.map((p, idx) => ({
+      id: p.id,
+      name: p.name,
+      seatIndex: idx,
+      isHuman: Boolean(p.isHuman),
+      aiStyle: p.aiStyle || 'BALANCED',
+      avatar: p.avatar || '🃏',
+      chips: p.chips ?? startingChips,
+      holeCards: [],
+      folded: false,
+      allIn: false,
+      eliminated: false,
+      currentBet: 0,
+      totalContribution: 0,
+      hasActedThisRound: false,
+      lastAction: null,
+    }));
+
+    this.handNumber = 0;
+    this.dealerIndex = -1;
+    this.smallBlindIndex = -1;
+    this.bigBlindIndex = -1;
+    this.activePlayerIndex = -1;
+
+    this.phase = PHASE.IDLE;
+    this.deck = [];
+    this.communityCards = [];
+    this.currentBet = 0;
+    this.minRaiseDelta = this.bigBlind;
+    this.lastAggressorIndex = -1;
+
+    this.logs = [];
+    this.lastShowdown = null;
+  }
+
+  /**
+   * 获取仍拥有筹码的活跃玩家索引列表
+   */
+  getAliveSeatIndices() {
+    return this.players
+      .filter((p) => !p.eliminated && p.chips > 0)
+      .map((p) => p.seatIndex);
+  }
+
+  /**
+   * 顺时针查找从 startIndex 之后的下一个满足条件的座位索引
+   */
+  findNextSeat(startIndex, predicate) {
+    const n = this.players.length;
+    for (let step = 1; step <= n; step++) {
+      const idx = (startIndex + step) % n;
+      if (predicate(this.players[idx])) {
+        return idx;
+      }
+    }
+    return -1;
+  }
+
+  /**
+   * 开始新一手牌
+   * @param {Array} [customDeck] 测试时可传入自定义牌组（从末尾 pop 发牌，或按顺序）
+   */
+  startHand(customDeck = null) {
+    // 标记筹码为 0 的玩家为淘汰
+    for (const p of this.players) {
+      if (p.chips <= 0) {
+        p.eliminated = true;
+      }
+    }
+
+    const alive = this.getAliveSeatIndices();
+    if (alive.length < 2) {
+      this.phase = PHASE.GAME_OVER;
+      this.activePlayerIndex = -1;
+      return this.getState();
+    }
+
+    this.handNumber += 1;
+    this.lastShowdown = null;
+    this.communityCards = [];
+    this.currentBet = 0;
+    this.minRaiseDelta = this.bigBlind;
+    this.lastAggressorIndex = -1;
+
+    // 准备牌组
+    if (customDeck) {
+      this.deck = customDeck.slice().reverse(); // pop() 按 customDeck[0], [1]... 顺序发出
+    } else {
+      this.deck = shuffleDeck(createDeck(), this.rng);
+    }
+
+    // 重置玩家本局状态
+    for (const p of this.players) {
+      p.holeCards = [];
+      p.folded = p.eliminated;
+      p.allIn = false;
+      p.currentBet = 0;
+      p.totalContribution = 0;
+      p.hasActedThisRound = false;
+      p.lastAction = null;
+    }
+
+    // 轮转庄家位 (Button)
+    if (this.dealerIndex === -1) {
+      this.dealerIndex = alive[0];
+    } else {
+      this.dealerIndex = this.findNextSeat(this.dealerIndex, (p) => !p.eliminated);
+    }
+
+    // 确定小盲与大盲（2人单挑时庄家为小盲）
+    if (alive.length === 2) {
+      this.smallBlindIndex = this.dealerIndex;
+      this.bigBlindIndex = this.findNextSeat(this.dealerIndex, (p) => !p.eliminated);
+    } else {
+      this.smallBlindIndex = this.findNextSeat(this.dealerIndex, (p) => !p.eliminated);
+      this.bigBlindIndex = this.findNextSeat(this.smallBlindIndex, (p) => !p.eliminated);
+    }
+
+    this.addLog(`=== 第 ${this.handNumber} 手牌开始 ===`);
+
+    // 收取盲注
+    this._postBlind(this.smallBlindIndex, this.smallBlind, '小盲注');
+    this._postBlind(this.bigBlindIndex, this.bigBlind, '大盲注');
+    this.currentBet = Math.max(
+      this.players[this.smallBlindIndex].currentBet,
+      this.players[this.bigBlindIndex].currentBet
+    );
+
+    // 顺时针发底牌（每人2张）
+    for (let round = 0; round < 2; round++) {
+      let seat = this.smallBlindIndex;
+      for (let i = 0; i < alive.length; i++) {
+        this.players[seat].holeCards.push(this.deck.pop());
+        seat = this.findNextSeat(seat, (p) => !p.eliminated);
+      }
+    }
+
+    this.phase = PHASE.PREFLOP;
+
+    // 翻牌前首个行动者：2人局为庄家(小盲)，多人局为大盲左侧(UTG)
+    const firstActor =
+      alive.length === 2
+        ? this.smallBlindIndex
+        : this.findNextSeat(this.bigBlindIndex, (p) => !p.eliminated);
+
+    this.activePlayerIndex = this._findNextActionableFrom(firstActor, true);
+
+    // 如果所有人都因盲注直接 All-in，直接跑完公共牌并摊牌
+    if (this.activePlayerIndex === -1 || this._shouldAutoRunout()) {
+      this._runoutToShowdown();
+    }
+
+    return this.getState();
+  }
+
+  _postBlind(seatIndex, amount, label) {
+    const p = this.players[seatIndex];
+    const actual = Math.min(p.chips, amount);
+    p.chips -= actual;
+    p.currentBet += actual;
+    p.totalContribution += actual;
+    if (p.chips === 0) {
+      p.allIn = true;
+    }
+    p.lastAction = `${label} ${actual}`;
+    this.addLog(`${p.name} 下${label} ${actual}${p.allIn ? ' (All-in)' : ''}`);
+  }
+
+  /**
+   * 获取当前行动玩家的合法动作及下注范围
+   */
+  getLegalActions(seatIndex = this.activePlayerIndex) {
+    if (
+      seatIndex < 0 ||
+      this.phase === PHASE.IDLE ||
+      this.phase === PHASE.SHOWDOWN ||
+      this.phase === PHASE.GAME_OVER
+    ) {
+      return null;
+    }
+
+    const p = this.players[seatIndex];
+    if (!p || p.folded || p.allIn || p.eliminated) return null;
+
+    const toCall = Math.max(0, this.currentBet - p.currentBet);
+    const canCheck = toCall === 0;
+    const canCall = toCall > 0 && p.chips > 0;
+    const callAmount = Math.min(toCall, p.chips);
+
+    // 判断是否允许加注（必须筹码大于跟注额，且未被“不完整All-in”锁死）
+    // 标准规则：若当前下注额大于0，且玩家此前已行动过、且本次增量不足最小加注额，则仅能跟注或弃牌
+    const maxTotalBet = p.currentBet + p.chips;
+    const minRaiseTotal = this.currentBet === 0
+      ? this.bigBlind
+      : this.currentBet + this.minRaiseDelta;
+
+    const canRaise = p.chips > toCall;
+    const minRaiseTo = Math.min(maxTotalBet, minRaiseTotal);
+
+    return {
+      playerId: p.id,
+      seatIndex,
+      canFold: true,
+      canCheck,
+      canCall,
+      callAmount,
+      toCall,
+      canRaise,
+      minRaiseTo,
+      maxRaiseTo: maxTotalBet,
+      isBet: this.currentBet === 0,
+      potTotal: this.getTotalPot(),
+    };
+  }
+
+  /**
+   * 执行玩家动作
+   * @param {string} playerId
+   * @param {'fold'|'check'|'call'|'bet'|'raise'|'allin'} actionType
+   * @param {number} [amount] 对于 bet/raise，表示本轮目标总下注额 (raiseTo)
+   */
+  performAction(playerId, actionType, amount = 0) {
+    if (this.activePlayerIndex < 0) {
+      throw new Error('No active player to act');
+    }
+    const p = this.players[this.activePlayerIndex];
+    if (p.id !== playerId) {
+      throw new Error(`Not ${playerId}'s turn (expected ${p.id})`);
+    }
+
+    const legal = this.getLegalActions(this.activePlayerIndex);
+    if (!legal) {
+      throw new Error('No legal actions available');
+    }
+
+    switch (actionType) {
+      case 'fold': {
+        p.folded = true;
+        p.hasActedThisRound = true;
+        p.lastAction = '弃牌';
+        this.addLog(`${p.name} 弃牌`);
+        break;
+      }
+
+      case 'check': {
+        if (!legal.canCheck) {
+          throw new Error(`Cannot check when facing bet of ${legal.toCall}`);
+        }
+        p.hasActedThisRound = true;
+        p.lastAction = '过牌';
+        this.addLog(`${p.name} 过牌`);
+        break;
+      }
+
+      case 'call': {
+        if (!legal.canCall) {
+          throw new Error('Cannot call when nothing to call');
+        }
+        const paid = legal.callAmount;
+        p.chips -= paid;
+        p.currentBet += paid;
+        p.totalContribution += paid;
+        p.hasActedThisRound = true;
+        if (p.chips === 0) {
+          p.allIn = true;
+          p.lastAction = `All-in (${p.currentBet})`;
+          this.addLog(`${p.name} 跟注 ${paid} (All-in)`);
+        } else {
+          p.lastAction = `跟注 ${paid}`;
+          this.addLog(`${p.name} 跟注 ${paid}`);
+        }
+        break;
+      }
+
+      case 'bet':
+      case 'raise': {
+        if (!legal.canRaise) {
+          throw new Error('Cannot bet or raise with insufficient chips');
+        }
+        const targetBet = Math.floor(amount);
+        if (targetBet < legal.minRaiseTo || targetBet > legal.maxRaiseTo) {
+          throw new Error(
+            `Invalid ${actionType} target ${targetBet} (allowed ${legal.minRaiseTo}..${legal.maxRaiseTo})`
+          );
+        }
+        const added = targetBet - p.currentBet;
+        const prevBet = this.currentBet;
+        const raiseDelta = targetBet - prevBet;
+
+        p.chips -= added;
+        p.currentBet = targetBet;
+        p.totalContribution += added;
+        p.hasActedThisRound = true;
+        if (p.chips === 0) {
+          p.allIn = true;
+        }
+
+        const isFullRaise = raiseDelta >= this.minRaiseDelta || prevBet === 0;
+        if (targetBet > prevBet) {
+          this.currentBet = targetBet;
+          if (isFullRaise) {
+            this.minRaiseDelta = Math.max(this.bigBlind, raiseDelta);
+            this.lastAggressorIndex = this.activePlayerIndex;
+            // 完整加注重开其他未弃牌、未All-in玩家的行动权
+            for (const other of this.players) {
+              if (other.id !== p.id && !other.folded && !other.allIn) {
+                other.hasActedThisRound = false;
+              }
+            }
+          }
+        }
+
+        const verb = prevBet === 0 ? '下注' : '加注至';
+        p.lastAction = p.allIn ? `All-in (${targetBet})` : `${verb} ${targetBet}`;
+        this.addLog(`${p.name} ${verb} ${targetBet}${p.allIn ? ' (All-in)' : ''}`);
+        break;
+      }
+
+      case 'allin': {
+        const targetBet = p.currentBet + p.chips;
+        if (targetBet <= this.currentBet) {
+          return this.performAction(playerId, 'call');
+        }
+        const added = p.chips;
+        const prevBet = this.currentBet;
+        const raiseDelta = targetBet - prevBet;
+
+        p.chips = 0;
+        p.currentBet = targetBet;
+        p.totalContribution += added;
+        p.allIn = true;
+        p.hasActedThisRound = true;
+
+        this.currentBet = targetBet;
+        const isFullRaise = raiseDelta >= this.minRaiseDelta || prevBet === 0;
+        if (isFullRaise) {
+          this.minRaiseDelta = Math.max(this.bigBlind, raiseDelta);
+          this.lastAggressorIndex = this.activePlayerIndex;
+          for (const other of this.players) {
+            if (other.id !== p.id && !other.folded && !other.allIn) {
+              other.hasActedThisRound = false;
+            }
+          }
+        }
+
+        p.lastAction = `All-in (${targetBet})`;
+        this.addLog(`${p.name} 全下 All-in (${targetBet})`);
+        break;
+      }
+
+      default:
+        throw new Error(`Unknown action type: ${actionType}`);
+    }
+
+    this._advanceTurnOrStreet();
+    return this.getState();
+  }
+
+  _advanceTurnOrStreet() {
+    const remaining = this.players.filter((p) => !p.folded && !p.eliminated);
+
+    // 1. 仅剩一名未弃牌玩家 -> 立即不战而胜
+    if (remaining.length === 1) {
+      this._settleFoldWin(remaining[0]);
+      return;
+    }
+
+    // 2. 寻找下一个还需要行动的玩家
+    const nextIdx = this.findNextSeat(
+      this.activePlayerIndex,
+      (p) => !p.folded && !p.allIn && !p.eliminated && (!p.hasActedThisRound || p.currentBet < this.currentBet)
+    );
+
+    if (nextIdx !== -1) {
+      this.activePlayerIndex = nextIdx;
+      return;
+    }
+
+    // 3. 本轮下注结束 -> 若只剩 <= 1 人有剩余筹码，则自动跑完公共牌到摊牌
+    if (this._shouldAutoRunout()) {
+      this._runoutToShowdown();
+      return;
+    }
+
+    // 4. 进入下一街道
+    this._advanceStreet();
+  }
+
+  _shouldAutoRunout() {
+    const remaining = this.players.filter((p) => !p.folded && !p.eliminated);
+    if (remaining.length <= 1) return false;
+    const canStillAct = remaining.filter((p) => !p.allIn);
+    if (canStillAct.length <= 1) {
+      // 确保唯一有筹码的玩家已经匹配了当前最高下注（无未跟注额）
+      if (canStillAct.length === 1 && canStillAct[0].currentBet < this.currentBet) {
+        return false;
+      }
+      return true;
+    }
+    return false;
+  }
+
+  _advanceStreet() {
+    // 重置本轮下注字段
+    for (const p of this.players) {
+      p.currentBet = 0;
+      p.hasActedThisRound = false;
+      if (!p.folded && !p.allIn) {
+        p.lastAction = null;
+      }
+    }
+    this.currentBet = 0;
+    this.minRaiseDelta = this.bigBlind;
+
+    if (this.phase === PHASE.PREFLOP) {
+      this.phase = PHASE.FLOP;
+      this.communityCards.push(this.deck.pop(), this.deck.pop(), this.deck.pop());
+      this.addLog(
+        `--- 翻牌圈: ${this.communityCards.map(formatCard).join(' ')} ---`
+      );
+    } else if (this.phase === PHASE.FLOP) {
+      this.phase = PHASE.TURN;
+      this.communityCards.push(this.deck.pop());
+      this.addLog(`--- 转牌圈: ${formatCard(this.communityCards[3])} ---`);
+    } else if (this.phase === PHASE.TURN) {
+      this.phase = PHASE.RIVER;
+      this.communityCards.push(this.deck.pop());
+      this.addLog(`--- 河牌圈: ${formatCard(this.communityCards[4])} ---`);
+    } else if (this.phase === PHASE.RIVER) {
+      this._resolveShowdown();
+      return;
+    }
+
+    // 翻牌后从庄家左侧第一个未弃牌、未All-in玩家开始行动
+    this.activePlayerIndex = this.findNextSeat(
+      this.dealerIndex,
+      (p) => !p.folded && !p.allIn && !p.eliminated
+    );
+
+    if (this.activePlayerIndex === -1) {
+      this._runoutToShowdown();
+    }
+  }
+
+  _runoutToShowdown() {
+    while (this.communityCards.length < 5) {
+      if (this.communityCards.length === 0) {
+        this.communityCards.push(this.deck.pop(), this.deck.pop(), this.deck.pop());
+        this.addLog(
+          `--- 翻牌圈 (自动发牌): ${this.communityCards.map(formatCard).join(' ')} ---`
+        );
+      } else {
+        const card = this.deck.pop();
+        this.communityCards.push(card);
+        const stage = this.communityCards.length === 4 ? '转牌圈' : '河牌圈';
+        this.addLog(`--- ${stage} (自动发牌): ${formatCard(card)} ---`);
+      }
+    }
+    this._resolveShowdown();
+  }
+
+  _settleFoldWin(winner) {
+    const totalPot = this.getTotalPot();
+    winner.chips += totalPot;
+    this.phase = PHASE.SHOWDOWN;
+    this.activePlayerIndex = -1;
+
+    this.lastShowdown = {
+      byFold: true,
+      pots: [{ name: '主池', amount: totalPot, eligibleIds: [winner.id] }],
+      payouts: { [winner.id]: totalPot },
+      evaluations: {},
+      potResults: [
+        {
+          potName: '主池',
+          amount: totalPot,
+          winners: [winner.id],
+          distributions: [{ playerId: winner.id, amount: totalPot }],
+        },
+      ],
+    };
+
+    this.addLog(`${winner.name} 赢得底池 ${totalPot}（其余玩家弃牌）`);
+    this._checkGameOver();
+  }
+
+  _resolveShowdown() {
+    this.phase = PHASE.SHOWDOWN;
+    this.activePlayerIndex = -1;
+
+    const contenders = this.players.filter((p) => !p.folded && !p.eliminated);
+    const evaluations = {};
+    for (const p of contenders) {
+      evaluations[p.id] = evaluateBestHand([...p.holeCards, ...this.communityCards]);
+    }
+
+    const pots = calculateSidePots(this.players);
+
+    // 构造从小盲位起顺时针顺序（用于平分余数分配）
+    const seatOrderFromSB = [];
+    const n = this.players.length;
+    const startIdx = this.smallBlindIndex >= 0 ? this.smallBlindIndex : 0;
+    for (let i = 0; i < n; i++) {
+      seatOrderFromSB.push(this.players[(startIdx + i) % n].id);
+    }
+
+    const { payouts, potResults } = distributePots(pots, evaluations, seatOrderFromSB);
+
+    for (const [playerId, amount] of Object.entries(payouts)) {
+      const p = this.players.find((pl) => pl.id === playerId);
+      if (p) p.chips += amount;
+    }
+
+    for (const res of potResults) {
+      const winnerStr = res.distributions
+        .map((d) => {
+          const p = this.players.find((pl) => pl.id === d.playerId);
+          const ev = evaluations[d.playerId];
+          return `${p.name}(+${d.amount}${ev ? `, ${ev.categoryNameZh}` : ''})`;
+        })
+        .join('、');
+      this.addLog(`【${res.potName} ${res.amount}】由 ${winnerStr} 赢得`);
+    }
+
+    this.lastShowdown = {
+      byFold: false,
+      pots,
+      payouts,
+      evaluations,
+      potResults,
+    };
+
+    this._checkGameOver();
+  }
+
+  _checkGameOver() {
+    const withChips = this.players.filter((p) => p.chips > 0);
+    if (withChips.length <= 1) {
+      this.phase = PHASE.GAME_OVER;
+    }
+  }
+
+  _findNextActionableFrom(startIdx, includeStart = false) {
+    const n = this.players.length;
+    const offset = includeStart ? 0 : 1;
+    for (let i = offset; i < n + offset; i++) {
+      const idx = (startIdx + i) % n;
+      const p = this.players[idx];
+      if (!p.folded && !p.allIn && !p.eliminated) {
+        return idx;
+      }
+    }
+    return -1;
+  }
+
+  getTotalPot() {
+    return this.players.reduce((sum, p) => sum + p.totalContribution, 0);
+  }
+
+  getSidePots() {
+    return calculateSidePots(this.players);
+  }
+
+  addLog(message) {
+    this.logs.push({
+      hand: this.handNumber,
+      message,
+      time: new Date().toLocaleTimeString('zh-CN', { hour12: false }),
+    });
+    if (this.logs.length > 200) {
+      this.logs.shift();
+    }
+  }
+
+  /**
+   * 获取当前完整牌局状态快照
+   */
+  getState() {
+    return {
+      handNumber: this.handNumber,
+      phase: this.phase,
+      phaseLabel: PHASE_LABELS[this.phase],
+      smallBlind: this.smallBlind,
+      bigBlind: this.bigBlind,
+      dealerIndex: this.dealerIndex,
+      smallBlindIndex: this.smallBlindIndex,
+      bigBlindIndex: this.bigBlindIndex,
+      activePlayerIndex: this.activePlayerIndex,
+      currentBet: this.currentBet,
+      minRaiseDelta: this.minRaiseDelta,
+      totalPot: this.getTotalPot(),
+      sidePots: this.getSidePots(),
+      communityCards: this.communityCards.slice(),
+      players: this.players.map((p) => ({
+        ...p,
+        holeCards: p.holeCards.slice(),
+      })),
+      legalActions: this.getLegalActions(),
+      lastShowdown: this.lastShowdown,
+      logs: this.logs.slice(-40),
+    };
+  }
+}
+
+
+// ===== src/engine/aiEngine.js =====
+/**
+ * aiEngine.js - 多风格德州扑克 AI 决策与蒙特卡洛胜率评估引擎
+ * 支持 5 种风格画像：TAG(紧凶)、LAG(松凶)、ROCK(岩石)、CALLING_STATION(跟注站)、BALANCED(均衡)
+ */
+const AI_PROFILES = {
+  TAG: {
+    name: '紧凶型 (TAG)',
+    tightness: 0.56,
+    aggression: 0.72,
+    bluffFreq: 0.14,
+    callTolerance: 0.04,
+  },
+  LAG: {
+    name: '松凶型 (LAG)',
+    tightness: 0.36,
+    aggression: 0.85,
+    bluffFreq: 0.28,
+    callTolerance: 0.08,
+  },
+  ROCK: {
+    name: '稳健岩石 (Rock)',
+    tightness: 0.68,
+    aggression: 0.42,
+    bluffFreq: 0.05,
+    callTolerance: 0.02,
+  },
+  CALLING_STATION: {
+    name: '跟注达人 (Loose)',
+    tightness: 0.32,
+    aggression: 0.28,
+    bluffFreq: 0.08,
+    callTolerance: 0.16,
+  },
+  BALANCED: {
+    name: '均衡大师 (Balanced)',
+    tightness: 0.48,
+    aggression: 0.64,
+    bluffFreq: 0.16,
+    callTolerance: 0.06,
+  },
+};
+
+/**
+ * 基于改良 Chen 公式计算翻牌前起手牌强度，归一化至 [0, 1]
+ * @param {Array<{rank: number, suit: string}>} holeCards
+ * @returns {number}
+ */
+function evaluatePreflopStrength(holeCards) {
+  if (!holeCards || holeCards.length !== 2) return 0.3;
+  const [c1, c2] = holeCards[0].rank >= holeCards[1].rank
+    ? [holeCards[0], holeCards[1]]
+    : [holeCards[1], holeCards[0]];
+
+  const r1 = c1.rank;
+  const r2 = c2.rank;
+  const suited = c1.suit === c2.suit;
+  const isPair = r1 === r2;
+  const gap = r1 - r2;
+
+  // 基础分值映射
+  const baseScores = {
+    14: 10,
+    13: 8,
+    12: 7,
+    11: 6,
+    10: 5,
+    9: 4.5,
+    8: 4,
+    7: 3.5,
+    6: 3,
+    5: 2.5,
+    4: 2,
+    3: 1.5,
+    2: 1,
+  };
+
+  let score = baseScores[r1] || 1;
+  if (isPair) {
+    score = Math.max(5, score * 2);
+  }
+  if (suited) {
+    score += 2;
+  }
+  if (!isPair) {
+    if (gap === 1) score += 0;
+    else if (gap === 2) score -= 1;
+    else if (gap === 3) score -= 2;
+    else if (gap === 4) score -= 4;
+    else score -= 5;
+
+    // 连张小牌顺子潜力奖励
+    if (gap <= 2 && r1 < 12) {
+      score += 1;
+    }
+  }
+
+  // 归一化到 [0.05, 0.99]
+  const normalized = (score + 4) / 24;
+  return Math.max(0.05, Math.min(0.99, normalized));
+}
+
+/**
+ * 蒙特卡洛模拟估算当前手牌对阵 N 名未知对手的胜率 (Equity)
+ * @param {Array} holeCards 2张底牌
+ * @param {Array} communityCards 0/3/4/5张公共牌
+ * @param {number} [numOpponents=1]
+ * @param {number} [iterations=120]
+ * @param {Function} [rng=Math.random]
+ * @returns {number} 0..1 胜率
+ */
+function estimateEquity(
+  holeCards,
+  communityCards,
+  numOpponents = 1,
+  iterations = 120,
+  rng = Math.random
+) {
+  if (!holeCards || holeCards.length !== 2) return 0.5;
+  const opps = Math.max(1, Math.min(8, numOpponents));
+
+  const knownIds = new Set([...holeCards, ...communityCards].map((c) => c.id));
+  const remainingDeck = createDeck().filter((c) => !knownIds.has(c.id));
+  const missingBoard = 5 - communityCards.length;
+
+  let wins = 0;
+  let ties = 0;
+
+  for (let i = 0; i < iterations; i++) {
+    const shuffled = shuffleDeck(remainingDeck, rng);
+    let cursor = 0;
+    const simBoard = communityCards.slice();
+    for (let b = 0; b < missingBoard; b++) {
+      simBoard.push(shuffled[cursor++]);
+    }
+
+    const myEval = evaluateBestHand([...holeCards, ...simBoard]);
+    let beaten = false;
+    let tied = false;
+
+    for (let o = 0; o < opps; o++) {
+      const oppHole = [shuffled[cursor++], shuffled[cursor++]];
+      const oppEval = evaluateBestHand([...oppHole, ...simBoard]);
+      if (oppEval.score > myEval.score) {
+        beaten = true;
+        break;
+      } else if (oppEval.score === myEval.score) {
+        tied = true;
+      }
+    }
+
+    if (!beaten) {
+      if (tied) ties += 1;
+      else wins += 1;
+    }
+  }
+
+  return (wins + ties * 0.5) / iterations;
+}
+
+/**
+ * 为当前 AI 玩家计算最佳合法行动
+ * @param {Object} state engine.getState() 返回的牌局快照
+ * @param {Object} player 当前 AI 玩家对象
+ * @param {Object} legalActions engine.getLegalActions()
+ * @param {Function} [rng=Math.random]
+ * @returns {{ action: string, amount?: number, equity: number, reason: string }}
+ */
+function decideAIAction(state, player, legalActions, rng = Math.random) {
+  const profile = AI_PROFILES[player.aiStyle] || AI_PROFILES.BALANCED;
+  const activeOpponents = state.players.filter(
+    (p) => !p.folded && !p.eliminated && p.id !== player.id
+  ).length;
+
+  // 估算胜率：翻牌前采用快速 Chen 强度 + 位置微调；翻牌后采用蒙特卡洛模拟
+  let equity;
+  if (state.communityCards.length === 0) {
+    const preStrength = evaluatePreflopStrength(player.holeCards);
+    // 对手越多，同等起手牌胜率略微折减
+    equity = Math.max(0.1, preStrength - (activeOpponents - 1) * 0.035);
+  } else {
+    equity = estimateEquity(
+      player.holeCards,
+      state.communityCards,
+      activeOpponents,
+      100,
+      rng
+    );
+  }
+
+  const pot = Math.max(1, legalActions.potTotal);
+  const toCall = legalActions.toCall;
+  const potOdds = toCall > 0 ? toCall / (pot + toCall) : 0;
+  const noise = (rng() - 0.5) * 0.08;
+  const perceivedEquity = Math.max(0.01, Math.min(0.99, equity + noise));
+
+  // 辅助函数：构造合法的加注/下注额度
+  const buildRaiseAmount = (potRatio) => {
+    if (!legalActions.canRaise) return 0;
+    const raw = legalActions.isBet
+      ? Math.round(pot * potRatio)
+      : state.currentBet + Math.round(pot * potRatio);
+    const clamped = Math.max(
+      legalActions.minRaiseTo,
+      Math.min(legalActions.maxRaiseTo, raw)
+    );
+    // 筹码极少时直接全下
+    if (legalActions.maxRaiseTo - clamped < state.bigBlind) {
+      return legalActions.maxRaiseTo;
+    }
+    return clamped;
+  };
+
+  // 情况 1：无需跟注（可以过牌）
+  if (legalActions.canCheck) {
+    // 强牌价值下注
+    if (perceivedEquity >= 0.62 && legalActions.canRaise && rng() < profile.aggression + 0.15) {
+      const ratio = perceivedEquity > 0.8 ? 0.75 : 0.5;
+      const target = buildRaiseAmount(ratio);
+      return {
+        action: legalActions.isBet ? 'bet' : 'raise',
+        amount: target,
+        equity,
+        reason: '强牌价值下注',
+      };
+    }
+
+    // 适度诈唬下注
+    if (legalActions.canRaise && rng() < profile.bluffFreq && state.communityCards.length >= 3) {
+      const target = buildRaiseAmount(0.45);
+      return {
+        action: legalActions.isBet ? 'bet' : 'raise',
+        amount: target,
+        equity,
+        reason: '试探性下注/半诈唬',
+      };
+    }
+
+    return { action: 'check', equity, reason: '控池过牌' };
+  }
+
+  // 情况 2：面对下注，需要决定弃牌 / 跟注 / 加注
+  const requiredEquity = Math.max(
+    potOdds - profile.callTolerance,
+    state.communityCards.length === 0 ? profile.tightness * 0.55 : potOdds - profile.callTolerance
+  );
+
+  // 极强牌 -> 价值加注或全下
+  if (perceivedEquity >= 0.72 && legalActions.canRaise && rng() < profile.aggression) {
+    const ratio = perceivedEquity > 0.86 ? 0.9 : 0.6;
+    const target = buildRaiseAmount(ratio);
+    if (target >= legalActions.maxRaiseTo) {
+      return { action: 'allin', equity, reason: '超强牌全下价值' };
+    }
+    return { action: 'raise', amount: target, equity, reason: '强牌反加注' };
+  }
+
+  // 胜率满足底池赔率 -> 跟注（偶尔反加诈唬）
+  if (perceivedEquity >= requiredEquity) {
+    if (
+      legalActions.canRaise &&
+      perceivedEquity > 0.55 &&
+      rng() < profile.bluffFreq * 0.5
+    ) {
+      const target = buildRaiseAmount(0.55);
+      return { action: 'raise', amount: target, equity, reason: '积极加注施压' };
+    }
+    return { action: 'call', equity, reason: '符合底池赔率跟注' };
+  }
+
+  // 偶尔用纯诈唬反加偷池（仅在筹码充裕且面对不大下注时）
+  if (
+    legalActions.canRaise &&
+    toCall <= pot * 0.6 &&
+    rng() < profile.bluffFreq * 0.35
+  ) {
+    const target = buildRaiseAmount(0.6);
+    return { action: 'raise', amount: target, equity, reason: '诈唬偷池' };
+  }
+
+  return { action: 'fold', equity, reason: '赔率不足弃牌' };
+}
+
+
+// ===== src/ui/sound.js =====
+/**
+ * sound.js - 基于 Web Audio API 的零依赖合成音效模块
+ * 首次用户交互时安全初始化 AudioContext，支持静音切换
+ */
+class SoundManager {
+  constructor() {
+    this.ctx = null;
+    this.muted = false;
+  }
+
+  _ensureContext() {
+    if (this.muted) return null;
+    if (!this.ctx && typeof window !== 'undefined') {
+      const AudioCtx = window.AudioContext || window.webkitAudioContext;
+      if (AudioCtx) {
+        try {
+          this.ctx = new AudioCtx();
+        } catch {
+          return null;
+        }
+      }
+    }
+    if (this.ctx && this.ctx.state === 'suspended') {
+      this.ctx.resume().catch(() => {});
+    }
+    return this.ctx;
+  }
+
+  toggleMute() {
+    this.muted = !this.muted;
+    return this.muted;
+  }
+
+  _playTone(freq, duration, type = 'sine', volume = 0.08, delay = 0) {
+    const ctx = this._ensureContext();
+    if (!ctx) return;
+    const now = ctx.currentTime + delay;
+    const osc = ctx.createOscillator();
+    const gain = ctx.createGain();
+    osc.type = type;
+    osc.frequency.setValueAtTime(freq, now);
+    gain.gain.setValueAtTime(0.001, now);
+    gain.gain.exponentialRampToValueAtTime(volume, now + 0.015);
+    gain.gain.exponentialRampToValueAtTime(0.001, now + duration);
+    osc.connect(gain);
+    gain.connect(ctx.destination);
+    osc.start(now);
+    osc.stop(now + duration + 0.02);
+  }
+
+  playDeal() {
+    this._playTone(520, 0.06, 'triangle', 0.05);
+  }
+
+  playChip() {
+    this._playTone(1480, 0.055, 'sine', 0.06, 0);
+    this._playTone(1960, 0.06, 'sine', 0.05, 0.045);
+  }
+
+  playCheck() {
+    this._playTone(260, 0.07, 'triangle', 0.07, 0);
+    this._playTone(220, 0.06, 'triangle', 0.05, 0.07);
+  }
+
+  playFold() {
+    this._playTone(240, 0.12, 'sawtooth', 0.04, 0);
+    this._playTone(165, 0.14, 'sawtooth', 0.03, 0.06);
+  }
+
+  playAllIn() {
+    this._playTone(392, 0.12, 'triangle', 0.08, 0);
+    this._playTone(523.25, 0.14, 'triangle', 0.08, 0.09);
+    this._playTone(659.25, 0.22, 'triangle', 0.09, 0.18);
+  }
+
+  playWin() {
+    const notes = [523.25, 659.25, 783.99, 1046.5];
+    notes.forEach((n, idx) => {
+      this._playTone(n, 0.2, 'triangle', 0.08, idx * 0.08);
+    });
+  }
+}
+
+
+// ===== src/ui/app.js =====
+/**
+ * app.js - 网页德州扑克前端控制器与视图渲染器
+ */
+
+
+
+
+
+const AI_ROSTER = [
+  { id: 'ai_1', name: '艾琳 (紧凶)', aiStyle: 'TAG', avatar: '🦊' },
+  { id: 'ai_2', name: '雷克 (松凶)', aiStyle: 'LAG', avatar: '🦁' },
+  { id: 'ai_3', name: '巴克 (岩石)', aiStyle: 'ROCK', avatar: '🪨' },
+  { id: 'ai_4', name: '小马 (跟注)', aiStyle: 'CALLING_STATION', avatar: '🐬' },
+  { id: 'ai_5', name: '维拉 (均衡)', aiStyle: 'BALANCED', avatar: '🦉' },
+];
+
+const AI_DELAY_MAP = {
+  fast: 360,
+  normal: 720,
+  slow: 1150,
+};
+class PokerAppController {
+  constructor() {
+    this.sound = new SoundManager();
+    this.aiTimer = null;
+    this.settings = {
+      playerCount: 6,
+      startingChips: 2000,
+      smallBlind: 10,
+      bigBlind: 20,
+      aiSpeed: 'normal',
+      showEquity: true,
+    };
+    this.engine = null;
+    this.currentRaiseValue = 40;
+    this.heroEquity = null;
+
+    this._cacheElements();
+    this._bindEvents();
+    this.startNewMatch();
+  }
+
+  _cacheElements() {
+    this.el = {
+      handMeta: document.getElementById('hand-meta'),
+      opponentsRow: document.getElementById('opponents-row'),
+      phaseBadge: document.getElementById('phase-badge'),
+      potDisplay: document.getElementById('pot-display'),
+      sidePotsBar: document.getElementById('side-pots-bar'),
+      communityCards: document.getElementById('community-cards'),
+      showdownBanner: document.getElementById('showdown-banner'),
+      heroArea: document.getElementById('hero-area'),
+      actionButtonsRow: document.getElementById('action-buttons-row'),
+      raiseControlsRow: document.getElementById('raise-controls-row'),
+      statusHint: document.getElementById('status-hint'),
+      logDrawer: document.getElementById('log-drawer'),
+      logList: document.getElementById('log-list'),
+      btnEquity: document.getElementById('btn-toggle-equity'),
+      btnSound: document.getElementById('btn-toggle-sound'),
+      btnLog: document.getElementById('btn-toggle-log'),
+      btnCloseLog: document.getElementById('btn-close-log'),
+      btnRules: document.getElementById('btn-open-rules'),
+      btnSettings: document.getElementById('btn-open-settings'),
+      rulesModal: document.getElementById('rules-modal'),
+      btnCloseRules: document.getElementById('btn-close-rules'),
+      settingsModal: document.getElementById('settings-modal'),
+      btnCloseSettings: document.getElementById('btn-close-settings'),
+      btnApplySettings: document.getElementById('btn-apply-settings'),
+      selectPlayers: document.getElementById('setting-players'),
+      selectChips: document.getElementById('setting-chips'),
+      selectBlinds: document.getElementById('setting-blinds'),
+      selectSpeed: document.getElementById('setting-speed'),
+    };
+  }
+
+  _bindEvents() {
+    this.el.btnEquity.addEventListener('click', () => {
+      this.settings.showEquity = !this.settings.showEquity;
+      this.el.btnEquity.classList.toggle('active', this.settings.showEquity);
+      this.render();
+    });
+
+    this.el.btnSound.addEventListener('click', () => {
+      const muted = this.sound.toggleMute();
+      this.el.btnSound.textContent = muted ? '🔇 静音' : '🔊 音效';
+      this.el.btnSound.classList.toggle('active', !muted);
+    });
+
+    this.el.btnLog.addEventListener('click', () => {
+      this.el.logDrawer.classList.toggle('open');
+    });
+
+    this.el.btnCloseLog.addEventListener('click', () => {
+      this.el.logDrawer.classList.remove('open');
+    });
+
+    this.el.btnRules.addEventListener('click', () => {
+      this.el.rulesModal.classList.add('open');
+    });
+    this.el.btnCloseRules.addEventListener('click', () => {
+      this.el.rulesModal.classList.remove('open');
+    });
+    this.el.rulesModal.addEventListener('click', (e) => {
+      if (e.target === this.el.rulesModal) this.el.rulesModal.classList.remove('open');
+    });
+
+    this.el.btnSettings.addEventListener('click', () => {
+      this.el.selectPlayers.value = String(this.settings.playerCount);
+      this.el.selectChips.value = String(this.settings.startingChips);
+      this.el.selectBlinds.value = `${this.settings.smallBlind}/${this.settings.bigBlind}`;
+      this.el.selectSpeed.value = this.settings.aiSpeed;
+      this.el.settingsModal.classList.add('open');
+    });
+    this.el.btnCloseSettings.addEventListener('click', () => {
+      this.el.settingsModal.classList.remove('open');
+    });
+    this.el.settingsModal.addEventListener('click', (e) => {
+      if (e.target === this.el.settingsModal) this.el.settingsModal.classList.remove('open');
+    });
+
+    this.el.btnApplySettings.addEventListener('click', () => {
+      const [sb, bb] = this.el.selectBlinds.value.split('/').map(Number);
+      this.settings.playerCount = Number(this.el.selectPlayers.value);
+      this.settings.startingChips = Number(this.el.selectChips.value);
+      this.settings.smallBlind = sb;
+      this.settings.bigBlind = bb;
+      this.settings.aiSpeed = this.el.selectSpeed.value;
+      this.el.settingsModal.classList.remove('open');
+      this.startNewMatch();
+    });
+
+    // 快捷键支持
+    window.addEventListener('keydown', (e) => {
+      if (
+        this.el.rulesModal.classList.contains('open') ||
+        this.el.settingsModal.classList.contains('open')
+      ) {
+        if (e.key === 'Escape') {
+          this.el.rulesModal.classList.remove('open');
+          this.el.settingsModal.classList.remove('open');
+        }
+        return;
+      }
+
+      const state = this.engine?.getState();
+      if (!state) return;
+
+      if (e.code === 'Space' && (state.phase === PHASE.SHOWDOWN || state.phase === PHASE.GAME_OVER)) {
+        e.preventDefault();
+        this.handleNextOrRestart();
+        return;
+      }
+
+      const active = state.players[state.activePlayerIndex];
+      if (!active || !active.isHuman || !state.legalActions) return;
+
+      const key = e.key.toLowerCase();
+      if (key === 'f') {
+        this.handleHumanAction('fold');
+      } else if (key === 'c') {
+        this.handleHumanAction(state.legalActions.canCheck ? 'check' : 'call');
+      } else if (key === 'r' && state.legalActions.canRaise) {
+        this.handleHumanAction(state.legalActions.isBet ? 'bet' : 'raise', this.currentRaiseValue);
+      } else if (key === 'a') {
+        this.handleHumanAction('allin');
+      }
+    });
+  }
+
+  _clearAITimer() {
+    if (this.aiTimer) {
+      clearTimeout(this.aiTimer);
+      this.aiTimer = null;
+    }
+  }
+
+  startNewMatch() {
+    this._clearAITimer();
+    const aiCount = Math.max(1, Math.min(5, this.settings.playerCount - 1));
+    const players = [
+      { id: 'hero', name: '你 (玩家)', isHuman: true, avatar: '😎' },
+      ...AI_ROSTER.slice(0, aiCount).map((ai) => ({ ...ai, isHuman: false })),
+    ];
+
+    this.engine = new TexasHoldemEngine({
+      players,
+      startingChips: this.settings.startingChips,
+      smallBlind: this.settings.smallBlind,
+      bigBlind: this.settings.bigBlind,
+    });
+
+    this.startNextHand();
+  }
+
+  startNextHand() {
+    this._clearAITimer();
+    const state = this.engine.startHand();
+    this.sound.playDeal();
+    this._updateHeroEquity(state);
+    this._syncDefaultRaise(state);
+    this.render();
+    this._scheduleAIIfNeeded();
+  }
+
+  handleNextOrRestart() {
+    const state = this.engine.getState();
+    const hero = state.players.find((p) => p.isHuman);
+    if (state.phase === PHASE.GAME_OVER || !hero || hero.chips <= 0) {
+      this.startNewMatch();
+    } else {
+      this.startNextHand();
+    }
+  }
+
+  handleHumanAction(actionType, amount = 0) {
+    const state = this.engine.getState();
+    const active = state.players[state.activePlayerIndex];
+    if (!active || !active.isHuman) return;
+
+    try {
+      this.engine.performAction(active.id, actionType, amount);
+      this._playSoundForAction(actionType);
+      const nextState = this.engine.getState();
+      this._updateHeroEquity(nextState);
+      this._syncDefaultRaise(nextState);
+      if (nextState.phase === PHASE.SHOWDOWN || nextState.phase === PHASE.GAME_OVER) {
+        if (nextState.lastShowdown?.payouts?.hero > 0) {
+          this.sound.playWin();
+        }
+      }
+      this.render();
+      this._scheduleAIIfNeeded();
+    } catch (err) {
+      this.el.statusHint.textContent = `操作提示: ${err.message}`;
+    }
+  }
+
+  _playSoundForAction(actionType) {
+    if (actionType === 'fold') this.sound.playFold();
+    else if (actionType === 'check') this.sound.playCheck();
+    else if (actionType === 'allin') this.sound.playAllIn();
+    else this.sound.playChip();
+  }
+
+  _scheduleAIIfNeeded() {
+    this._clearAITimer();
+    const state = this.engine.getState();
+    if (
+      state.phase === PHASE.SHOWDOWN ||
+      state.phase === PHASE.GAME_OVER ||
+      state.activePlayerIndex < 0
+    ) {
+      return;
+    }
+
+    const active = state.players[state.activePlayerIndex];
+    if (!active || active.isHuman) return;
+
+    const delay = AI_DELAY_MAP[this.settings.aiSpeed] || 700;
+    this.aiTimer = setTimeout(() => {
+      const currentState = this.engine.getState();
+      const currentActive = currentState.players[currentState.activePlayerIndex];
+      if (!currentActive || currentActive.isHuman || !currentState.legalActions) return;
+
+      const decision = decideAIAction(currentState, currentActive, currentState.legalActions);
+      this.engine.performAction(currentActive.id, decision.action, decision.amount || 0);
+      this._playSoundForAction(decision.action);
+
+      const updated = this.engine.getState();
+      this._updateHeroEquity(updated);
+      this._syncDefaultRaise(updated);
+      if (
+        (updated.phase === PHASE.SHOWDOWN || updated.phase === PHASE.GAME_OVER) &&
+        updated.lastShowdown?.payouts?.hero > 0
+      ) {
+        this.sound.playWin();
+      }
+      this.render();
+      this._scheduleAIIfNeeded();
+    }, delay);
+  }
+
+  _syncDefaultRaise(state) {
+    if (state.legalActions && state.legalActions.canRaise) {
+      this.currentRaiseValue = state.legalActions.minRaiseTo;
+    }
+  }
+
+  _updateHeroEquity(state) {
+    const hero = state.players.find((p) => p.isHuman);
+    if (!hero || hero.folded || hero.holeCards.length !== 2) {
+      this.heroEquity = null;
+      return;
+    }
+    const opps = state.players.filter((p) => !p.folded && !p.eliminated && !p.isHuman).length;
+    if (opps === 0) {
+      this.heroEquity = 1;
+      return;
+    }
+    if (state.communityCards.length === 0) {
+      this.heroEquity = Math.max(0.08, evaluatePreflopStrength(hero.holeCards) - (opps - 1) * 0.04);
+    } else {
+      this.heroEquity = estimateEquity(hero.holeCards, state.communityCards, opps, 120);
+    }
+  }
+
+  _renderCardHtml(card, { hidden = false, extraClass = '', highlight = false } = {}) {
+    if (hidden || !card) {
+      return `<div class="card back ${extraClass}"></div>`;
+    }
+    const redClass = isRedSuit(card.suit) ? 'red' : '';
+    const winClass = highlight ? 'winner-card' : '';
+    const rankStr = RANK_LABELS[card.rank];
+    const suitStr = SUIT_SYMBOLS[card.suit];
+    return `
+      <div class="card ${redClass} ${extraClass} ${winClass}">
+        <div class="card-corner">
+          <span>${rankStr}</span>
+          <span>${suitStr}</span>
+        </div>
+        <div class="card-center">${suitStr}</div>
+      </div>
+    `;
+  }
+
+  render() {
+    const state = this.engine.getState();
+    const isShowdown = state.phase === PHASE.SHOWDOWN || state.phase === PHASE.GAME_OVER;
+    const winnerIds = new Set(Object.keys(state.lastShowdown?.payouts || {}));
+
+    // 收集赢家最佳 5 张牌 ID 用于高亮
+    const winningCardIds = new Set();
+    if (isShowdown && state.lastShowdown && !state.lastShowdown.byFold) {
+      for (const wid of winnerIds) {
+        const ev = state.lastShowdown.evaluations[wid];
+        if (ev?.bestFive) {
+          ev.bestFive.forEach((c) => winningCardIds.add(c.id));
+        }
+      }
+    }
+
+    // 1. 顶部信息
+    this.el.handMeta.textContent = `第 ${state.handNumber} 手 · 盲注 ${state.smallBlind}/${state.bigBlind}`;
+    this.el.phaseBadge.textContent = state.phaseLabel;
+    this.el.potDisplay.textContent = `🪙 总底池: ${state.totalPot}`;
+
+    // 2. 边池展示
+    const hasActiveAllIn = state.players.some((p) => !p.folded && p.allIn);
+    if (state.sidePots.length > 1 && hasActiveAllIn) {
+      this.el.sidePotsBar.innerHTML = state.sidePots
+        .map((sp) => `<span class="side-pot-chip">${sp.name}: ${sp.amount}</span>`)
+        .join('');
+    } else {
+      this.el.sidePotsBar.innerHTML = '';
+    }
+
+    // 3. 公共牌
+    let boardHtml = '';
+    for (let i = 0; i < 5; i++) {
+      const card = state.communityCards[i];
+      if (card) {
+        boardHtml += this._renderCardHtml(card, {
+          highlight: winningCardIds.has(card.id),
+        });
+      } else {
+        boardHtml += `<div class="card-slot"></div>`;
+      }
+    }
+    this.el.communityCards.innerHTML = boardHtml;
+
+    // 4. 摊牌结果横幅
+    if (isShowdown && state.lastShowdown) {
+      const summaryParts = state.lastShowdown.potResults.map((pr) => {
+        const names = pr.distributions
+          .map((d) => {
+            const p = state.players.find((pl) => pl.id === d.playerId);
+            const ev = state.lastShowdown.evaluations[d.playerId];
+            return `${p.name} +${d.amount}${ev ? ` (${ev.categoryNameZh})` : ''}`;
+          })
+          .join(' / ');
+        return `${pr.potName}: ${names}`;
+      });
+      this.el.showdownBanner.style.display = 'block';
+      this.el.showdownBanner.textContent = summaryParts.join('  |  ');
+    } else {
+      this.el.showdownBanner.style.display = 'none';
+    }
+
+    // 5. 对手座位
+    const opponents = state.players.filter((p) => !p.isHuman);
+    this.el.opponentsRow.innerHTML = opponents
+      .map((p) => {
+        const isTurn = state.activePlayerIndex === p.seatIndex;
+        const isWinner = isShowdown && winnerIds.has(p.id);
+        const revealCards = isShowdown && !p.folded && !state.lastShowdown?.byFold && p.holeCards.length === 2;
+
+        const badges = [];
+        if (state.dealerIndex === p.seatIndex) badges.push('<span class="role-pill dealer">D</span>');
+        if (state.smallBlindIndex === p.seatIndex) badges.push('<span class="role-pill sb">SB</span>');
+        if (state.bigBlindIndex === p.seatIndex) badges.push('<span class="role-pill bb">BB</span>');
+
+        const cardsHtml = p.eliminated
+          ? ''
+          : p.holeCards.length === 2
+          ? p.holeCards
+              .map((c) =>
+                this._renderCardHtml(c, {
+                  hidden: !revealCards,
+                  extraClass: 'mini',
+                  highlight: revealCards && winningCardIds.has(c.id),
+                })
+              )
+              .join('')
+          : '';
+
+        let statusText = p.eliminated
+          ? '已淘汰'
+          : isTurn
+          ? '思考中...'
+          : isWinner
+          ? `获胜 +${state.lastShowdown.payouts[p.id]}`
+          : p.lastAction || '等待行动';
+
+        if (revealCards && state.lastShowdown?.evaluations[p.id]) {
+          statusText = `${state.lastShowdown.evaluations[p.id].categoryNameZh}${isWinner ? ` (+${state.lastShowdown.payouts[p.id]})` : ''}`;
+        }
+
+        const tagClass = isWinner ? 'win-tag' : isTurn ? 'thinking' : '';
+        const profileName = AI_PROFILES[p.aiStyle]?.name || p.aiStyle;
+
+        return `
+          <div class="seat-card ${isTurn ? 'active-turn' : ''} ${p.folded ? 'folded' : ''} ${p.eliminated ? 'eliminated' : ''} ${isWinner ? 'winner-seat' : ''}">
+            <div class="seat-top">
+              <div class="seat-name-wrap">
+                <span class="seat-avatar">${p.avatar}</span>
+                <div>
+                  <div class="seat-name">${p.name}</div>
+                  <div class="seat-style">${profileName}</div>
+                </div>
+              </div>
+              <div class="seat-badges">${badges.join('')}</div>
+            </div>
+            <div class="seat-middle">
+              <div class="seat-cards">${cardsHtml}</div>
+              <div class="seat-info-right">
+                <div class="chip-stack">🪙 ${p.chips}</div>
+                ${p.currentBet > 0 ? `<div class="bet-pill">下注 ${p.currentBet}</div>` : ''}
+              </div>
+            </div>
+            <div class="action-tag ${tagClass}">${statusText}</div>
+          </div>
+        `;
+      })
+      .join('');
+
+    // 6. 主角座位
+    const hero = state.players.find((p) => p.isHuman);
+    const isHeroTurn = state.activePlayerIndex === hero.seatIndex;
+    const isHeroWinner = isShowdown && winnerIds.has(hero.id);
+
+    const heroBadges = [];
+    if (state.dealerIndex === hero.seatIndex) heroBadges.push('<span class="role-pill dealer">D</span>');
+    if (state.smallBlindIndex === hero.seatIndex) heroBadges.push('<span class="role-pill sb">SB</span>');
+    if (state.bigBlindIndex === hero.seatIndex) heroBadges.push('<span class="role-pill bb">BB</span>');
+
+    let heroHandRankStr = '';
+    if (!hero.folded && hero.holeCards.length === 2 && state.communityCards.length >= 3) {
+      const ev = evaluateBestHand([...hero.holeCards, ...state.communityCards]);
+      heroHandRankStr = `当前最佳牌型: ${ev.categoryNameZh}`;
+    } else if (!hero.folded && hero.holeCards.length === 2) {
+      heroHandRankStr = '底牌已发，等待翻牌';
+    } else if (hero.folded) {
+      heroHandRankStr = '本手已弃牌';
+    }
+
+    const eqPct = this.heroEquity !== null ? Math.round(this.heroEquity * 100) : null;
+    const equityHtml =
+      this.settings.showEquity && eqPct !== null && !isShowdown
+        ? `
+        <div class="equity-bar-wrap">
+          <span>胜率参考 ${eqPct}%</span>
+          <div class="equity-track"><div class="equity-fill" style="width:${eqPct}%"></div></div>
+        </div>`
+        : '';
+
+    const heroCardsHtml = hero.holeCards
+      .map((c) =>
+        this._renderCardHtml(c, {
+          extraClass: 'hero-card',
+          highlight: isShowdown && winningCardIds.has(c.id),
+        })
+      )
+      .join('');
+
+    this.el.heroArea.innerHTML = `
+      <div class="hero-card-panel ${isHeroTurn ? 'active-turn' : ''} ${hero.folded ? 'folded' : ''} ${isHeroWinner ? 'winner-seat' : ''}">
+        <div class="seat-cards">${heroCardsHtml}</div>
+        <div class="hero-details">
+          <div class="seat-top">
+            <div class="seat-name-wrap">
+              <span class="seat-avatar">${hero.avatar}</span>
+              <span class="seat-name">${hero.name}</span>
+            </div>
+            <div class="seat-badges">${heroBadges.join('')}</div>
+          </div>
+          <div class="chip-stack">🪙 ${hero.chips} ${hero.currentBet > 0 ? `<span class="bet-pill">本轮已下 ${hero.currentBet}</span>` : ''}</div>
+          <div class="hero-hand-rank">${heroHandRankStr}</div>
+          ${equityHtml}
+        </div>
+      </div>
+    `;
+
+    // 7. 底部操作栏
+    this._renderControls(state, hero, isHeroTurn, isShowdown);
+
+    // 8. 日志抽屉
+    this.el.logList.innerHTML = state.logs
+      .slice()
+      .reverse()
+      .map((item) => {
+        const hl = item.message.startsWith('===') || item.message.startsWith('【') ? 'highlight' : '';
+        return `<div class="log-item ${hl}">[${item.time}] ${item.message}</div>`;
+      })
+      .join('');
+  }
+
+  _renderControls(state, hero, isHeroTurn, isShowdown) {
+    if (isShowdown) {
+      const heroBusted = hero.chips <= 0;
+      const heroWonTournament = state.phase === PHASE.GAME_OVER && hero.chips > 0;
+      const btnText = heroWonTournament
+        ? '🏆 夺冠！再来一局 (Space)'
+        : heroBusted
+        ? '🔄 筹码耗尽，重新开局 (Space)'
+        : '▶ 下一手牌 (Space)';
+
+      this.el.actionButtonsRow.innerHTML = `<button id="btn-next-hand" class="btn-action btn-next">${btnText}</button>`;
+      this.el.raiseControlsRow.innerHTML = '';
+      this.el.statusHint.textContent = heroWonTournament
+        ? '恭喜你击败了全部 AI 对手！'
+        : heroBusted
+        ? '你已被淘汰，点击按钮可立即重新开始新一局。'
+        : '本手已结算，按空格键或点击按钮继续下一手。';
+
+      document.getElementById('btn-next-hand').addEventListener('click', () => {
+        this.handleNextOrRestart();
+      });
+      return;
+    }
+
+    if (!isHeroTurn || !state.legalActions) {
+      const active = state.players[state.activePlayerIndex];
+      this.el.actionButtonsRow.innerHTML = '';
+      this.el.raiseControlsRow.innerHTML = '';
+      this.el.statusHint.textContent = active
+        ? `等待 ${active.name} 思考并行动...`
+        : '正在发牌...';
+      return;
+    }
+
+    const legal = state.legalActions;
+    const minR = legal.minRaiseTo;
+    const maxR = legal.maxRaiseTo;
+    if (this.currentRaiseValue < minR) this.currentRaiseValue = minR;
+    if (this.currentRaiseValue > maxR) this.currentRaiseValue = maxR;
+
+    const callLabel = legal.canCheck ? '过牌 (C)' : `跟注 ${legal.callAmount} (C)`;
+    const raiseVerb = legal.isBet ? '下注' : '加注至';
+
+    this.el.actionButtonsRow.innerHTML = `
+      <button id="act-fold" class="btn-action btn-fold">弃牌 (F)</button>
+      <button id="act-call" class="btn-action btn-check-call">${callLabel}</button>
+      ${
+        legal.canRaise
+          ? `<button id="act-raise" class="btn-action btn-raise">${raiseVerb} ${this.currentRaiseValue} (R)</button>`
+          : ''
+      }
+      <button id="act-allin" class="btn-action btn-allin">全下 ${hero.currentBet + hero.chips} (A)</button>
+    `;
+
+    if (legal.canRaise && maxR > minR) {
+      const pot = Math.max(state.bigBlind * 2, legal.potTotal);
+      const halfPot = Math.min(maxR, Math.max(minR, Math.round(state.currentBet + pot * 0.5)));
+      const threeQuarter = Math.min(maxR, Math.max(minR, Math.round(state.currentBet + pot * 0.75)));
+      const fullPot = Math.min(maxR, Math.max(minR, Math.round(state.currentBet + pot)));
+
+      this.el.raiseControlsRow.innerHTML = `
+        <button class="btn-preset" data-val="${minR}">最小 (${minR})</button>
+        <button class="btn-preset" data-val="${halfPot}">1/2 池</button>
+        <button class="btn-preset" data-val="${threeQuarter}">3/4 池</button>
+        <button class="btn-preset" data-val="${fullPot}">底池</button>
+        <input id="raise-slider" class="raise-slider" type="range" min="${minR}" max="${maxR}" step="${Math.max(1, Math.floor(state.smallBlind / 2))}" value="${this.currentRaiseValue}" />
+        <span id="raise-val-display" class="raise-value-badge">${this.currentRaiseValue}</span>
+      `;
+
+      const slider = document.getElementById('raise-slider');
+      const valDisplay = document.getElementById('raise-val-display');
+      const raiseBtn = document.getElementById('act-raise');
+
+      const updateRaiseVal = (v) => {
+        this.currentRaiseValue = Math.min(maxR, Math.max(minR, Number(v)));
+        slider.value = String(this.currentRaiseValue);
+        valDisplay.textContent = String(this.currentRaiseValue);
+        if (raiseBtn) {
+          raiseBtn.textContent = `${raiseVerb} ${this.currentRaiseValue} (R)`;
+        }
+      };
+
+      slider.addEventListener('input', (e) => updateRaiseVal(e.target.value));
+      this.el.raiseControlsRow.querySelectorAll('.btn-preset').forEach((btn) => {
+        btn.addEventListener('click', () => updateRaiseVal(btn.dataset.val));
+      });
+    } else {
+      this.el.raiseControlsRow.innerHTML = '';
+    }
+
+    this.el.statusHint.textContent = '轮到你行动 · 快捷键: F弃牌 / C过牌跟注 / R加注 / A全下';
+
+    document.getElementById('act-fold').addEventListener('click', () => this.handleHumanAction('fold'));
+    document.getElementById('act-call').addEventListener('click', () =>
+      this.handleHumanAction(legal.canCheck ? 'check' : 'call')
+    );
+    const raiseBtnEl = document.getElementById('act-raise');
+    if (raiseBtnEl) {
+      raiseBtnEl.addEventListener('click', () =>
+        this.handleHumanAction(legal.isBet ? 'bet' : 'raise', this.currentRaiseValue)
+      );
+    }
+    document.getElementById('act-allin').addEventListener('click', () => this.handleHumanAction('allin'));
+  }
+}
+
+window.addEventListener('DOMContentLoaded', () => {
+  new PokerAppController();
+});
+
+})();
+  </script>
+</body>
+</html>

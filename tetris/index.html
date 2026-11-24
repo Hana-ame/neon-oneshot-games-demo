@@ -1,0 +1,133 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>网页俄罗斯方块 · Web Tetris</title>
+  <link rel="stylesheet" href="./src/styles.css" />
+</head>
+<body>
+  <div class="app-shell">
+    <header class="top-bar">
+      <div class="brand-group">
+        <h1 class="brand-title">WEB TETRIS</h1>
+        <span id="status-badge" class="status-badge" data-state="idle">待开始</span>
+      </div>
+      <div class="toolbar-actions">
+        <button id="btn-pause" class="btn" type="button" disabled>暂停</button>
+        <button id="btn-restart" class="btn" type="button">重开</button>
+        <button id="btn-ghost" class="btn" type="button" aria-pressed="true">投影: 开</button>
+        <button id="btn-mute" class="btn" type="button" aria-pressed="true">音效: 开</button>
+        <button id="btn-help" class="btn" type="button">规则说明</button>
+      </div>
+    </header>
+
+    <main class="game-layout">
+      <!-- 左侧：暂存区与实时统计 -->
+      <aside class="side-col left-col">
+        <section class="panel-card">
+          <h2 class="panel-title">暂存区 HOLD</h2>
+          <div class="mini-canvas-wrap">
+            <canvas id="hold-canvas" width="112" height="76" aria-label="暂存方块预览"></canvas>
+          </div>
+        </section>
+
+        <section class="panel-card">
+          <h2 class="panel-title">对局数据</h2>
+          <div class="stats-list">
+            <div class="stat-item">
+              <span class="stat-label">当前得分</span>
+              <span id="stat-score" class="stat-value accent">0</span>
+            </div>
+            <div class="stat-item">
+              <span class="stat-label">历史最高</span>
+              <span id="stat-best" class="stat-value">0</span>
+            </div>
+            <div class="stat-item">
+              <span class="stat-label">当前等级</span>
+              <span id="stat-level" class="stat-value">1</span>
+            </div>
+            <div class="stat-item">
+              <span class="stat-label">已消行数</span>
+              <span id="stat-lines" class="stat-value">0</span>
+            </div>
+            <div class="stat-item">
+              <span class="stat-label">下落速度</span>
+              <span id="stat-speed" class="stat-value">1.00s/格</span>
+            </div>
+          </div>
+        </section>
+      </aside>
+
+      <!-- 中央：主棋盘与触控键盘 -->
+      <section class="board-col">
+        <div class="board-stage">
+          <canvas id="board-canvas" width="300" height="600" aria-label="俄罗斯方块主棋盘"></canvas>
+          <div id="board-overlay" class="board-overlay">
+            <h2 id="overlay-title" class="overlay-title">网页俄罗斯方块</h2>
+            <p id="overlay-desc" class="overlay-desc">标准 SRS 旋转系统 · 7-Bag 公平发牌 · T-Spin 与连击计分</p>
+            <div id="overlay-stats" class="overlay-stats" hidden></div>
+            <button id="overlay-action-btn" class="btn btn-primary" type="button">开始游戏</button>
+          </div>
+        </div>
+
+        <div class="touch-controls" aria-label="快捷控制按钮">
+          <button class="touch-btn" type="button" data-action="left">← 左移</button>
+          <button class="touch-btn" type="button" data-action="right">右移 →</button>
+          <button class="touch-btn" type="button" data-action="rotateCCW">↺ 逆旋</button>
+          <button class="touch-btn" type="button" data-action="rotateCW">顺旋 ↻</button>
+          <button class="touch-btn" type="button" data-action="softDrop">↓ 软降</button>
+          <button class="touch-btn" type="button" data-action="hold">暂存 (C)</button>
+          <button class="touch-btn span-2" type="button" data-action="hardDrop">▼ 硬降到底 (Space)</button>
+        </div>
+      </section>
+
+      <!-- 右侧：预览队列与键位速查 -->
+      <aside class="side-col right-col">
+        <section class="panel-card">
+          <h2 class="panel-title">下一个 NEXT</h2>
+          <div class="mini-canvas-wrap">
+            <canvas id="next-canvas" width="112" height="224" aria-label="后续方块预览队列"></canvas>
+          </div>
+        </section>
+
+        <section class="panel-card">
+          <h2 class="panel-title">键盘操作</h2>
+          <ul class="shortcut-list">
+            <li><span>左右移动</span><span class="kbd">← / →</span></li>
+            <li><span>顺时针旋转</span><span class="kbd">↑ / X</span></li>
+            <li><span>逆时针旋转</span><span class="kbd">Z / Ctrl</span></li>
+            <li><span>软降 (+1/格)</span><span class="kbd">↓</span></li>
+            <li><span>硬降 (+2/格)</span><span class="kbd">Space</span></li>
+            <li><span>暂存交换</span><span class="kbd">C / Shift</span></li>
+            <li><span>暂停 / 重开</span><span class="kbd">P / R</span></li>
+            <li><span>静音切换</span><span class="kbd">M</span></li>
+          </ul>
+        </section>
+      </aside>
+    </main>
+  </div>
+
+  <!-- 规则说明弹窗 -->
+  <div id="help-modal" class="modal-backdrop" hidden>
+    <div class="modal-card" role="dialog" aria-modal="true" aria-labelledby="help-modal-title">
+      <div class="modal-header">
+        <h2 id="help-modal-title">玩法与计分规则</h2>
+        <button id="btn-close-help" class="btn" type="button">关闭</button>
+      </div>
+      <div class="modal-body">
+        <p>本游戏采用现代俄罗斯方块标准规则（Guideline）：</p>
+        <ul>
+          <li><strong>7-Bag 公平发牌</strong>：每 7 个方块必包含 I/O/T/S/Z/J/L 各 1 个，避免长时间缺条。</li>
+          <li><strong>SRS 超级旋转与踢墙</strong>：贴墙或卡槽时自动尝试最多 5 组偏移位，支持 T-Spin 旋转入槽。</li>
+          <li><strong>消行计分</strong>：单消 100 / 双消 300 / 三消 500 / 四消 Tetris 800（乘当前等级）。</li>
+          <li><strong>进阶加成</strong>：T-Spin 消行最高 1600×等级；连续高难消行触发 Back-to-Back 1.5 倍加成；连续消行触发 Combo 额外加分。</li>
+          <li><strong>升级机制</strong>：每累计消除 10 行提升 1 级（最高 Lv.20），方块触底拥有 500ms 锁延迟以便微调。</li>
+        </ul>
+      </div>
+    </div>
+  </div>
+
+  <script type="module" src="./src/main.js"></script>
+</body>
+</html>

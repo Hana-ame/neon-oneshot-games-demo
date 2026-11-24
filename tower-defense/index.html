@@ -1,0 +1,222 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
+  <title>堡垒防线 · 经典塔防 TD</title>
+  <script src="https://cdn.tailwindcss.com/3.4.17"></script>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="./styles/main.css" />
+</head>
+<body class="min-h-screen flex flex-col bg-slate-950 text-slate-100">
+
+  <header class="glass-panel sticky top-0 z-20 px-3 py-2 border-b border-slate-800/90">
+    <div class="max-w-7xl mx-auto flex flex-wrap items-center justify-between gap-2">
+      <div class="flex items-center gap-2.5">
+        <div class="w-8 h-8 rounded-lg bg-gradient-to-br from-sky-500 to-indigo-600 flex items-center justify-center shadow-lg shadow-sky-500/20 shrink-0">
+          <svg class="w-5 h-5 text-white" fill="none" stroke="currentColor" stroke-width="2.2" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" d="M3 21h18M5 21V7l7-4 7 4v14M9 21v-6h6v6" />
+          </svg>
+        </div>
+        <div class="leading-tight">
+          <h1 class="text-sm sm:text-base font-bold tracking-tight text-white">堡垒防线 TD</h1>
+          <div class="flex items-center gap-1.5 text-[11px] text-slate-400">
+            <select id="mapSelect" aria-label="选择地图" class="bg-slate-800/90 text-slate-200 border border-slate-700 rounded px-1.5 py-0.5 text-[11px] focus:outline-none focus:border-sky-400 cursor-pointer">
+              <option value="canyon">地图1：蜿蜒峡谷</option>
+              <option value="crossroad">地图2：十字要塞</option>
+              <option value="twin">地图3：双线突围</option>
+            </select>
+            <span id="bestRecordLabel" class="hidden sm:inline text-slate-400">最高波次: 0</span>
+          </div>
+        </div>
+      </div>
+
+      <div class="flex items-center gap-1.5 sm:gap-2.5 flex-wrap">
+        <div class="flex items-center gap-1.5 bg-slate-900/90 border border-slate-800 rounded-lg px-2.5 py-1" title="基地生命值">
+          <span class="text-rose-400 text-sm">❤</span>
+          <span id="livesVal" class="font-bold text-sm tabular-nums text-rose-300">20</span>
+        </div>
+        <div class="flex items-center gap-1.5 bg-slate-900/90 border border-slate-800 rounded-lg px-2.5 py-1" title="可用金币">
+          <span class="text-amber-400 text-sm">●</span>
+          <span id="goldVal" class="font-bold text-sm tabular-nums text-amber-300">160</span>
+        </div>
+        <div class="flex items-center gap-1.5 bg-slate-900/90 border border-slate-800 rounded-lg px-2.5 py-1" title="当前波次">
+          <span class="text-sky-400 text-xs font-semibold">波次</span>
+          <span id="waveVal" class="font-bold text-sm tabular-nums text-sky-300">0/15</span>
+        </div>
+        <div class="hidden md:flex items-center gap-1.5 bg-slate-900/90 border border-slate-800 rounded-lg px-2.5 py-1" title="得分">
+          <span class="text-emerald-400 text-xs font-semibold">得分</span>
+          <span id="scoreVal" class="font-bold text-sm tabular-nums text-emerald-300">0</span>
+        </div>
+      </div>
+
+      <div class="flex items-center gap-1.5">
+        <button id="btnStartWave" class="btn-action bg-emerald-600 hover:bg-emerald-500 text-white text-xs sm:text-sm font-semibold px-3 py-1.5 rounded-lg shadow-md shadow-emerald-900/40 flex items-center gap-1 cursor-pointer">
+          <span id="btnStartWaveIcon">▶</span>
+          <span id="btnStartWaveText">开始第 1 波</span>
+        </button>
+        <button id="btnSpeed" class="btn-action bg-slate-800 hover:bg-slate-700 border border-slate-700 text-slate-200 text-xs font-bold px-2.5 py-1.5 rounded-lg cursor-pointer" title="切换倍速 (快捷键 F)">
+          1x
+        </button>
+        <button id="btnPause" class="btn-action bg-slate-800 hover:bg-slate-700 border border-slate-700 text-slate-200 text-xs font-semibold px-2.5 py-1.5 rounded-lg cursor-pointer" title="暂停/继续 (快捷键 Space)">
+          暂停
+        </button>
+        <button id="btnAutoWave" class="btn-action bg-slate-800 hover:bg-slate-700 border border-slate-700 text-slate-300 text-xs font-medium px-2.5 py-1.5 rounded-lg cursor-pointer hidden sm:inline-flex items-center gap-1" title="波次结束后自动开启下一波">
+          <span>自动:</span><span id="autoWaveState" class="font-bold text-slate-400">关</span>
+        </button>
+        <button id="btnMute" class="btn-action bg-slate-800 hover:bg-slate-700 border border-slate-700 text-slate-200 text-xs px-2.5 py-1.5 rounded-lg cursor-pointer" title="音效开关">
+          🔊
+        </button>
+        <button id="btnRestart" class="btn-action bg-slate-800 hover:bg-rose-900/60 border border-slate-700 hover:border-rose-600/60 text-slate-300 hover:text-rose-200 text-xs px-2.5 py-1.5 rounded-lg cursor-pointer" title="重新开始">
+          重置
+        </button>
+      </div>
+    </div>
+  </header>
+
+  <main class="flex-1 w-full max-w-7xl mx-auto p-2 sm:p-3 flex flex-col lg:flex-row gap-3 items-stretch">
+    <section class="flex-1 flex flex-col gap-2 min-w-0">
+      <div class="glass-panel rounded-xl px-3 py-1.5 flex flex-wrap items-center justify-between gap-2 text-xs">
+        <div class="flex items-center gap-2 min-w-0">
+          <span class="px-1.5 py-0.5 rounded bg-sky-500/20 text-sky-300 font-semibold shrink-0">情报</span>
+          <span id="waveInfoText" class="text-slate-300 truncate">选择右侧防御塔点击空地建造，准备好后点击「开始第 1 波」</span>
+        </div>
+        <div class="flex items-center gap-3 text-[11px] text-slate-400 shrink-0">
+          <span id="enemiesLeftLabel">场上敌人: <strong class="text-slate-200">0</strong></span>
+          <span class="hidden sm:inline">快捷键: 1-5 选塔 · Space 暂停 · F 倍速 · Esc 取消</span>
+        </div>
+      </div>
+
+      <div id="canvasContainer" class="relative w-full bg-slate-900 rounded-xl border border-slate-800 shadow-2xl overflow-hidden flex items-center justify-center" style="aspect-ratio: 16 / 10;">
+        <canvas id="gameCanvas"></canvas>
+
+        <div id="toastBanner" class="pointer-events-none absolute top-3 left-1/2 -translate-x-1/2 px-3.5 py-1.5 rounded-full bg-slate-900/90 border border-sky-500/40 text-sky-200 text-xs font-semibold shadow-lg opacity-0 transition-opacity duration-200"></div>
+
+        <div id="pauseOverlay" class="hidden absolute inset-0 bg-slate-950/65 backdrop-blur-[2px] flex flex-col items-center justify-center z-10">
+          <div class="glass-panel rounded-2xl p-6 text-center max-w-xs w-[88%] shadow-2xl">
+            <div class="text-2xl font-extrabold text-white mb-1">游戏已暂停</div>
+            <p class="text-xs text-slate-400 mb-4">你可以查看防御塔状态，或点击下方继续战斗</p>
+            <button id="btnResumeOverlay" class="btn-action w-full bg-sky-600 hover:bg-sky-500 text-white font-semibold py-2 rounded-lg text-sm cursor-pointer">
+              继续游戏
+            </button>
+          </div>
+        </div>
+
+        <div id="endModal" class="hidden absolute inset-0 bg-slate-950/75 backdrop-blur-sm flex items-center justify-center z-20 p-4">
+          <div class="glass-panel rounded-2xl p-6 text-center max-w-sm w-full shadow-2xl border border-slate-700">
+            <div id="endIcon" class="text-4xl mb-2">🏆</div>
+            <h2 id="endTitle" class="text-xl font-extrabold text-white mb-1">防线守卫成功！</h2>
+            <p id="endSubtitle" class="text-xs text-slate-300 mb-4">你成功抵御了全部 15 波敌人进攻。</p>
+            <div class="grid grid-cols-3 gap-2 mb-5">
+              <div class="bg-slate-900/90 border border-slate-800 rounded-lg p-2">
+                <div class="text-[11px] text-slate-400">到达波次</div>
+                <div id="endWave" class="text-base font-bold text-sky-300 tabular-nums">15</div>
+              </div>
+              <div class="bg-slate-900/90 border border-slate-800 rounded-lg p-2">
+                <div class="text-[11px] text-slate-400">总击杀</div>
+                <div id="endKills" class="text-base font-bold text-amber-300 tabular-nums">0</div>
+              </div>
+              <div class="bg-slate-900/90 border border-slate-800 rounded-lg p-2">
+                <div class="text-[11px] text-slate-400">最终得分</div>
+                <div id="endScore" class="text-base font-bold text-emerald-300 tabular-nums">0</div>
+              </div>
+            </div>
+            <div class="flex flex-col gap-2">
+              <button id="btnEndless" class="hidden btn-action w-full bg-indigo-600 hover:bg-indigo-500 text-white font-semibold py-2.5 rounded-lg text-sm cursor-pointer">
+                继续挑战无尽模式
+              </button>
+              <button id="btnPlayAgain" class="btn-action w-full bg-emerald-600 hover:bg-emerald-500 text-white font-semibold py-2.5 rounded-lg text-sm cursor-pointer">
+                再来一局
+              </button>
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <aside class="w-full lg:w-72 xl:w-80 shrink-0 flex flex-col gap-3">
+      <div class="glass-panel rounded-xl p-3">
+        <div class="flex items-center justify-between mb-2">
+          <h2 class="text-xs font-bold uppercase tracking-wider text-slate-300">建造防御塔</h2>
+          <button id="btnCancelBuild" class="hidden text-[11px] text-sky-400 hover:text-sky-300 cursor-pointer">取消选择 (Esc)</button>
+        </div>
+        <div id="towerPalette" class="grid grid-cols-2 sm:grid-cols-5 lg:grid-cols-1 gap-2"></div>
+      </div>
+
+      <div id="inspectorPanel" class="glass-panel rounded-xl p-3 flex-1 flex flex-col justify-between">
+        <div id="guideView" class="space-y-2.5 text-xs text-slate-300">
+          <h3 class="text-xs font-bold uppercase tracking-wider text-slate-300">战术手册</h3>
+          <ul class="space-y-1.5 text-[11px] text-slate-400 leading-relaxed">
+            <li><strong class="text-sky-300">建造与升级：</strong>选中防御塔后点击深色空地放置；点击已建造的炮塔可升级（最高 Lv.3）、切换目标或出售。</li>
+            <li><strong class="text-cyan-300">减速配合：</strong>冰霜塔可显著降低敌人移速，搭配加农炮（范围溅射）和电磁塔（连锁闪电）效率翻倍。</li>
+            <li><strong class="text-amber-300">重甲与 Boss：</strong>第 5、10、15 波会出现强力 Boss，建议提前部署激光塔集中火力。</li>
+            <li><strong class="text-emerald-300">提前出兵：</strong>波次进行中可点击顶部按钮提前召唤下一波，获得额外金币奖励。</li>
+          </ul>
+          <div class="pt-2 border-t border-slate-800 flex items-center justify-between text-[11px]">
+            <span class="text-slate-400">当前地图</span>
+            <span id="guideMapName" class="font-semibold text-slate-200">蜿蜒峡谷</span>
+          </div>
+        </div>
+
+        <div id="towerDetailView" class="hidden space-y-3">
+          <div class="flex items-start justify-between gap-2">
+            <div>
+              <div class="flex items-center gap-1.5">
+                <span id="inspDot" class="w-2.5 h-2.5 rounded-full inline-block"></span>
+                <h3 id="inspName" class="font-bold text-sm text-white">机枪塔</h3>
+                <span id="inspLevel" class="text-[11px] px-1.5 py-0.5 rounded bg-sky-500/20 text-sky-300 font-bold">Lv.1</span>
+              </div>
+              <p id="inspDesc" class="text-[11px] text-slate-400 mt-0.5">高射速单体火力</p>
+            </div>
+            <button id="btnCloseInspector" class="text-slate-400 hover:text-white text-xs px-1.5 py-0.5 rounded hover:bg-slate-800 cursor-pointer" title="关闭">✕</button>
+          </div>
+
+          <div class="grid grid-cols-2 gap-1.5 text-xs">
+            <div class="bg-slate-900/80 border border-slate-800 rounded-lg px-2.5 py-1.5">
+              <div class="text-[10px] text-slate-400">伤害</div>
+              <div id="inspDmg" class="font-bold text-slate-100 tabular-nums">15</div>
+            </div>
+            <div class="bg-slate-900/80 border border-slate-800 rounded-lg px-2.5 py-1.5">
+              <div class="text-[10px] text-slate-400">射程</div>
+              <div id="inspRange" class="font-bold text-slate-100 tabular-nums">135</div>
+            </div>
+            <div class="bg-slate-900/80 border border-slate-800 rounded-lg px-2.5 py-1.5">
+              <div class="text-[10px] text-slate-400">射速</div>
+              <div id="inspRate" class="font-bold text-slate-100 tabular-nums">3.1/秒</div>
+            </div>
+            <div class="bg-slate-900/80 border border-slate-800 rounded-lg px-2.5 py-1.5">
+              <div class="text-[10px] text-slate-400">已击杀</div>
+              <div id="inspKills" class="font-bold text-emerald-300 tabular-nums">0</div>
+            </div>
+          </div>
+
+          <div>
+            <div class="text-[11px] text-slate-400 mb-1">索敌优先</div>
+            <div id="targetModeGroup" class="grid grid-cols-4 gap-1">
+              <button data-mode="first" class="target-btn text-[11px] py-1 rounded border border-slate-700 bg-slate-800 text-slate-300 cursor-pointer">最前</button>
+              <button data-mode="strong" class="target-btn text-[11px] py-1 rounded border border-slate-700 bg-slate-800 text-slate-300 cursor-pointer">最强</button>
+              <button data-mode="weak" class="target-btn text-[11px] py-1 rounded border border-slate-700 bg-slate-800 text-slate-300 cursor-pointer">最弱</button>
+              <button data-mode="close" class="target-btn text-[11px] py-1 rounded border border-slate-700 bg-slate-800 text-slate-300 cursor-pointer">最近</button>
+            </div>
+          </div>
+
+          <div class="grid grid-cols-2 gap-2 pt-1">
+            <button id="btnUpgrade" class="btn-action bg-sky-600 hover:bg-sky-500 disabled:bg-slate-800 disabled:text-slate-500 disabled:cursor-not-allowed text-white font-semibold py-2 px-2 rounded-lg text-xs flex flex-col items-center justify-center cursor-pointer">
+              <span id="btnUpgradeLabel">升级 Lv.2</span>
+              <span id="btnUpgradeCost" class="text-[11px] text-amber-200 font-bold">● 45</span>
+            </button>
+            <button id="btnSell" class="btn-action bg-rose-950/70 hover:bg-rose-900/80 border border-rose-700/50 text-rose-200 font-semibold py-2 px-2 rounded-lg text-xs flex flex-col items-center justify-center cursor-pointer">
+              <span>出售炮塔</span>
+              <span id="btnSellRefund" class="text-[11px] text-amber-300 font-bold">+35</span>
+            </button>
+          </div>
+        </div>
+      </div>
+    </aside>
+  </main>
+
+  <script type="module" src="./src/main.js"></script>
+</body>
+</html>

@@ -1,0 +1,122 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
+  <title>百战天虫 2D (Worms 2D Web)</title>
+  <link rel="stylesheet" href="styles.css" />
+</head>
+<body>
+  <div class="app-shell">
+    <header class="top-bar">
+      <div class="brand">
+        <span class="brand-title">🐛 百战天虫 2D</span>
+        <span class="brand-badge">WEB EDITION</span>
+      </div>
+      <div class="controls-group">
+        <select id="select-mode" class="ui-select" aria-label="对战模式">
+          <option value="ai" selected>单人 vs AI</option>
+          <option value="pvp">双人同屏</option>
+        </select>
+        <select id="select-theme" class="ui-select" aria-label="战场地图">
+          <option value="emerald" selected>翡翠群岛</option>
+          <option value="volcano">熔岩峡谷</option>
+          <option value="arctic">极地冰原</option>
+        </select>
+        <select id="select-worms" class="ui-select" aria-label="每队虫数">
+          <option value="2">2v2 快战</option>
+          <option value="3" selected>3v3 经典</option>
+          <option value="4">4v4 混战</option>
+        </select>
+        <button id="btn-new" type="button" class="ui-btn primary">🔄 新开一局</button>
+        <button id="btn-pause" type="button" class="ui-btn">⏸ 暂停</button>
+        <button id="btn-mute" type="button" class="ui-btn">🔊 音效</button>
+        <button id="btn-help" type="button" class="ui-btn">❓ 键位</button>
+      </div>
+    </header>
+
+    <main id="stage-wrap" class="stage-wrap">
+      <canvas id="game-canvas"></canvas>
+
+      <div class="hud-top-overlay">
+        <div class="team-bars">
+          <div class="team-row">
+            <div class="team-meta">
+              <span style="color:#ff7875">红队</span>
+              <span id="red-hp-text">300 HP (3)</span>
+            </div>
+            <div class="hp-track"><div id="red-hp-fill" class="hp-fill red" style="width:100%"></div></div>
+          </div>
+          <div class="team-row">
+            <div class="team-meta">
+              <span style="color:#7dd3fc">蓝队</span>
+              <span id="blue-hp-text">300 HP (3)</span>
+            </div>
+            <div class="hp-track"><div id="blue-hp-fill" class="hp-fill blue" style="width:100%"></div></div>
+          </div>
+        </div>
+
+        <div class="center-status">
+          <span id="turn-badge" class="turn-badge">R1 · 红队</span>
+          <span id="timer-val" class="timer-val">30</span>
+          <div class="wind-box">
+            <span id="wind-val" class="wind-label">→ 20</span>
+            <div class="wind-track">
+              <div class="wind-midline"></div>
+              <div id="wind-bar-fill" class="wind-bar-fill" style="left:50%;width:10%"></div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div id="turn-banner" class="turn-banner">回合 1 · 红队行动</div>
+    </main>
+
+    <footer class="bottom-dock">
+      <div class="dock-row">
+        <div id="weapon-bar" class="weapon-bar"></div>
+        <div class="action-pad">
+          <button id="ctrl-left" type="button" class="pad-btn" title="向左移动 (A / ←)">◀</button>
+          <button id="ctrl-right" type="button" class="pad-btn" title="向右移动 (D / →)">▶</button>
+          <button id="ctrl-aim-up" type="button" class="pad-btn" title="抬高瞄准 (W / ↑)">瞄↑</button>
+          <button id="ctrl-aim-down" type="button" class="pad-btn" title="压低瞄准 (S / ↓)">瞄↓</button>
+          <button id="ctrl-jump" type="button" class="pad-btn" title="前跳 (Enter / J)">前跳</button>
+          <button id="ctrl-backflip" type="button" class="pad-btn" title="后空翻 (Backspace / K)">后翻</button>
+          <button id="ctrl-fire" type="button" class="pad-btn fire-btn" title="按住蓄力发射 (Space)">🔥 蓄力开火</button>
+        </div>
+      </div>
+      <div id="weapon-hint" class="weapon-hint">火箭筒：按住空格或“蓄力开火”发射，注意右上角风向！</div>
+    </footer>
+  </div>
+
+  <!-- Help Modal -->
+  <div id="help-modal" class="modal-backdrop">
+    <div class="modal-card">
+      <h2>🎮 操作指南</h2>
+      <div class="help-grid">
+        <span class="help-key">A / D 或 ← / →</span><span>左右移动（自动爬坡）</span>
+        <span class="help-key">W / S 或 ↑ / ↓</span><span>调整瞄准角度</span>
+        <span class="help-key">Enter / J</span><span>向前跳跃</span>
+        <span class="help-key">Backspace / K</span><span>高跳后空翻</span>
+        <span class="help-key">按住 Space</span><span>蓄力并松开发射（霰弹枪/炸药即点即用）</span>
+        <span class="help-key">数字键 1 ~ 6</span><span>快速切换武器</span>
+        <span class="help-key">鼠标拖拽画布</span><span>自由平移镜头查看战场</span>
+        <span class="help-key">空袭模式点击</span><span>点击地图任意位置呼叫 5 枚导弹轰炸</span>
+      </div>
+      <p>提示：第 12 回合起将触发<strong>骤死模式</strong>，海平面每回合上升；留意空投医疗箱与弹药箱！</p>
+      <button id="btn-close-help" type="button" class="ui-btn primary" style="width:100%">开始战斗</button>
+    </div>
+  </div>
+
+  <!-- Game Over Modal -->
+  <div id="gameover-modal" class="modal-backdrop">
+    <div class="modal-card" style="text-align:center">
+      <h2 id="gameover-title">红队胜利！</h2>
+      <p id="gameover-sub">精彩对决！</p>
+      <button id="btn-restart-modal" type="button" class="ui-btn primary" style="width:100%">再来一局</button>
+    </div>
+  </div>
+
+  <script type="module" src="src/main.js"></script>
+</body>
+</html>

@@ -1,0 +1,2621 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
+  <title>黏黏世界 · Web World of Goo</title>
+  <style>
+    :root {
+      --bg-dark: #0b1320;
+      --surface: rgba(15, 23, 36, 0.88);
+      --surface-hover: rgba(30, 41, 59, 0.95);
+      --border: rgba(148, 163, 184, 0.22);
+      --text: #f1f5f9;
+      --text-muted: #94a3b8;
+      --accent: #7bf1a8;
+      --accent-dark: #15803d;
+      --danger: #fb7185;
+    }
+
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+
+    html, body {
+      width: 100%;
+      height: 100%;
+      overflow: hidden;
+      background: var(--bg-dark);
+      color: var(--text);
+      font-family: Inter, -apple-system, BlinkMacSystemFont, "PingFang SC", "Microsoft YaHei", sans-serif;
+      user-select: none;
+      -webkit-user-select: none;
+    }
+
+    .app-shell {
+      display: flex;
+      flex-direction: column;
+      width: 100%;
+      height: 100%;
+    }
+
+    .topbar {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 10px;
+      padding: 8px 14px;
+      background: var(--surface);
+      border-bottom: 1px solid var(--border);
+      backdrop-filter: blur(10px);
+      z-index: 20;
+      flex-wrap: wrap;
+    }
+
+    .brand-group {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      min-width: 0;
+    }
+
+    .brand-dot {
+      width: 12px;
+      height: 12px;
+      border-radius: 50%;
+      background: radial-gradient(circle at 35% 35%, #95d5b2, #1b4332);
+      box-shadow: 0 0 10px rgba(123, 241, 168, 0.65);
+      flex-shrink: 0;
+    }
+
+    .level-title {
+      font-size: 14px;
+      font-weight: 700;
+      letter-spacing: 0.2px;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+
+    .stats-bar {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      font-size: 12px;
+      color: var(--text-muted);
+    }
+
+    .stat-pill {
+      display: inline-flex;
+      align-items: center;
+      gap: 5px;
+      padding: 4px 10px;
+      border-radius: 999px;
+      background: rgba(30, 41, 59, 0.72);
+      border: 1px solid var(--border);
+    }
+
+    .stat-pill strong {
+      color: var(--text);
+      font-weight: 700;
+    }
+
+    .stat-pill.accent strong {
+      color: var(--accent);
+    }
+
+    .controls {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      flex-wrap: wrap;
+    }
+
+    .btn {
+      appearance: none;
+      border: 1px solid var(--border);
+      background: rgba(30, 41, 59, 0.85);
+      color: var(--text);
+      padding: 6px 11px;
+      border-radius: 8px;
+      font-size: 12px;
+      font-weight: 600;
+      cursor: pointer;
+      transition: background 0.15s ease, transform 0.1s ease, border-color 0.15s ease;
+    }
+
+    .btn:hover:not(:disabled) {
+      background: var(--surface-hover);
+      border-color: rgba(123, 241, 168, 0.5);
+    }
+
+    .btn:active:not(:disabled) {
+      transform: scale(0.96);
+    }
+
+    .btn:disabled {
+      opacity: 0.42;
+      cursor: not-allowed;
+    }
+
+    .btn-primary {
+      background: #16a34a;
+      border-color: #22c55e;
+      color: #ffffff;
+    }
+
+    .btn-primary:hover:not(:disabled) {
+      background: #15803d;
+      border-color: #4ade80;
+    }
+
+    .btn.muted {
+      color: var(--text-muted);
+      border-color: rgba(148, 163, 184, 0.18);
+    }
+
+    .stage-wrap {
+      position: relative;
+      flex: 1;
+      width: 100%;
+      min-height: 0;
+      overflow: hidden;
+    }
+
+    #game-canvas {
+      display: block;
+      width: 100%;
+      height: 100%;
+      touch-action: none;
+      cursor: grab;
+    }
+
+    #game-canvas:active {
+      cursor: grabbing;
+    }
+
+    .hint-banner {
+      position: absolute;
+      left: 50%;
+      bottom: 14px;
+      transform: translateX(-50%);
+      max-width: min(92%, 620px);
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      padding: 10px 14px;
+      border-radius: 12px;
+      background: rgba(10, 18, 30, 0.86);
+      border: 1px solid rgba(123, 241, 168, 0.32);
+      box-shadow: 0 8px 24px rgba(0, 0, 0, 0.35);
+      font-size: 13px;
+      line-height: 1.45;
+      color: #e2e8f0;
+      z-index: 10;
+    }
+
+    .hint-close {
+      background: transparent;
+      border: none;
+      color: var(--text-muted);
+      font-size: 16px;
+      cursor: pointer;
+      padding: 2px 6px;
+      flex-shrink: 0;
+    }
+
+    .hint-close:hover { color: #ffffff; }
+
+    .legend-bar {
+      position: absolute;
+      left: 12px;
+      top: 12px;
+      display: flex;
+      flex-direction: column;
+      gap: 6px;
+      padding: 8px 10px;
+      border-radius: 10px;
+      background: rgba(10, 18, 30, 0.72);
+      border: 1px solid var(--border);
+      font-size: 11px;
+      color: #cbd5e1;
+      pointer-events: none;
+      z-index: 8;
+    }
+
+    .legend-item {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+    }
+
+    .dot {
+      width: 10px;
+      height: 10px;
+      border-radius: 50%;
+      display: inline-block;
+    }
+    .dot-black { background: #1e293b; border: 1.5px solid #94a3b8; }
+    .dot-green { background: #40916c; border: 1.5px solid #95d5b2; }
+    .dot-pink { background: #ff70a6; border: 1.5px solid #ffc8dd; }
+
+    .modal-backdrop {
+      position: absolute;
+      inset: 0;
+      background: rgba(5, 10, 18, 0.72);
+      backdrop-filter: blur(6px);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 16px;
+      z-index: 30;
+    }
+
+    .modal-card {
+      width: 100%;
+      max-width: 520px;
+      background: #111c2d;
+      border: 1px solid rgba(148, 163, 184, 0.28);
+      border-radius: 16px;
+      padding: 20px;
+      box-shadow: 0 20px 50px rgba(0, 0, 0, 0.55);
+    }
+
+    .modal-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      margin-bottom: 14px;
+    }
+
+    .modal-header h2 {
+      font-size: 18px;
+      font-weight: 700;
+    }
+
+    .level-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(210px, 1fr));
+      gap: 10px;
+    }
+
+    .level-card {
+      text-align: left;
+      padding: 12px;
+      border-radius: 12px;
+      background: rgba(30, 41, 59, 0.7);
+      border: 1px solid var(--border);
+      color: var(--text);
+      cursor: pointer;
+      transition: border-color 0.15s ease, background 0.15s ease;
+    }
+
+    .level-card:hover {
+      background: rgba(51, 65, 85, 0.75);
+      border-color: rgba(123, 241, 168, 0.6);
+    }
+
+    .level-card.active {
+      border-color: var(--accent);
+      background: rgba(22, 163, 74, 0.18);
+    }
+
+    .level-card-head {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 4px;
+    }
+
+    .level-num {
+      font-size: 11px;
+      font-weight: 700;
+      color: var(--accent);
+      text-transform: uppercase;
+    }
+
+    .level-tag {
+      font-size: 11px;
+      color: #fde047;
+      font-weight: 600;
+    }
+
+    .level-name {
+      font-size: 15px;
+      font-weight: 700;
+      margin-bottom: 2px;
+    }
+
+    .level-sub {
+      font-size: 12px;
+      color: var(--text-muted);
+    }
+
+    .win-box {
+      text-align: center;
+    }
+
+    .win-badge {
+      display: inline-block;
+      padding: 5px 14px;
+      border-radius: 999px;
+      background: rgba(123, 241, 168, 0.16);
+      border: 1px solid rgba(123, 241, 168, 0.5);
+      color: var(--accent);
+      font-size: 13px;
+      font-weight: 700;
+      margin-bottom: 10px;
+    }
+
+    .win-title {
+      font-size: 24px;
+      font-weight: 800;
+      margin-bottom: 8px;
+    }
+
+    .win-stats {
+      font-size: 14px;
+      color: #cbd5e1;
+      margin-bottom: 18px;
+    }
+
+    .win-actions {
+      display: flex;
+      justify-content: center;
+      gap: 10px;
+    }
+
+    .hidden { display: none !important; }
+
+    @media (max-width: 680px) {
+      .topbar { padding: 6px 10px; gap: 6px; }
+      .stats-bar { gap: 6px; }
+      .stat-pill { padding: 3px 8px; font-size: 11px; }
+      .btn { padding: 5px 8px; font-size: 11px; }
+      .legend-bar { display: none; }
+    }
+  </style>
+</head>
+<body>
+  <div class="app-shell">
+    <header class="topbar">
+      <div class="brand-group">
+        <span class="brand-dot"></span>
+        <span class="level-title" id="hud-level-title">第 1 关 · 初遇管道</span>
+      </div>
+
+      <div class="stats-bar">
+        <span class="stat-pill accent">管道收集 <strong id="hud-collected">0 / 4</strong></span>
+        <span class="stat-pill">自由球 <strong id="hud-remaining">14</strong></span>
+        <span class="stat-pill">步数 <strong id="hud-moves">0</strong></span>
+      </div>
+
+      <div class="controls">
+        <button type="button" class="btn" id="btn-levels">关卡</button>
+        <button type="button" class="btn" id="btn-undo" title="时间虫撤销 (Z)">撤销</button>
+        <button type="button" class="btn" id="btn-restart" title="重开本关 (R)">重开</button>
+        <button type="button" class="btn" id="btn-pause" title="暂停/继续 (Space)">暂停</button>
+        <button type="button" class="btn" id="btn-mute" title="开关音效 (M)">音效</button>
+        <button type="button" class="btn" id="btn-hint">提示</button>
+      </div>
+    </header>
+
+    <main class="stage-wrap">
+      <canvas id="game-canvas"></canvas>
+
+      <div class="legend-bar">
+        <div class="legend-item"><span class="dot dot-black"></span>黑球：稳固桁架</div>
+        <div class="legend-item"><span class="dot dot-green"></span>绿球：可拆卸复用</div>
+        <div class="legend-item"><span class="dot dot-pink"></span>气球：向上浮力</div>
+      </div>
+
+      <div class="hint-banner" id="hint-banner">
+        <span id="hint-text">拖拽爬行的黏黏球靠近结构即可自动吸附搭建。</span>
+        <button type="button" class="hint-close" id="btn-close-hint" aria-label="关闭提示">×</button>
+      </div>
+
+      <div class="modal-backdrop hidden" id="overlay-pause">
+        <div class="modal-card win-box" style="max-width: 340px;">
+          <div class="win-title" style="font-size: 20px;">物理仿真已暂停</div>
+          <p class="win-stats" style="margin-bottom: 14px;">快捷键：Z 撤销 · R 重开 · Space 暂停 · M 静音</p>
+          <button type="button" class="btn btn-primary" id="btn-resume">继续游戏</button>
+        </div>
+      </div>
+
+      <div class="modal-backdrop hidden" id="modal-levels">
+        <div class="modal-card">
+          <div class="modal-header">
+            <h2>选择关卡 · 黏黏世界</h2>
+            <button type="button" class="btn" id="btn-close-levels">关闭</button>
+          </div>
+          <div class="level-grid" id="level-grid"></div>
+        </div>
+      </div>
+
+      <div class="modal-backdrop hidden" id="modal-win">
+        <div class="modal-card win-box" style="max-width: 400px;">
+          <div class="win-badge" id="win-badge">✓ 关卡完成</div>
+          <div class="win-title">管道成功接通！</div>
+          <div class="win-stats" id="win-stats"></div>
+          <div class="win-actions">
+            <button type="button" class="btn" id="btn-win-replay">再玩一次</button>
+            <button type="button" class="btn btn-primary" id="btn-win-next">下一关 →</button>
+          </div>
+        </div>
+      </div>
+    </main>
+  </div>
+
+  <script>
+/* ===== src/engine/math.js ===== */
+(function (root, factory) {
+  {
+    root.GooMath = factory();
+  }
+})(typeof globalThis !== 'undefined' ? globalThis : this, function () {
+  'use strict';
+
+  function clamp(val, min, max) {
+    return val < min ? min : val > max ? max : val;
+  }
+
+  function lerp(a, b, t) {
+    return a + (b - a) * t;
+  }
+
+  function distSq(x1, y1, x2, y2) {
+    const dx = x2 - x1;
+    const dy = y2 - y1;
+    return dx * dx + dy * dy;
+  }
+
+  function dist(x1, y1, x2, y2) {
+    return Math.hypot(x2 - x1, y2 - y1);
+  }
+
+  function normalize(x, y) {
+    const len = Math.hypot(x, y);
+    if (len < 1e-8) return { x: 0, y: 0, len: 0 };
+    return { x: x / len, y: y / len, len };
+  }
+
+  /**
+   * Project point P(px, py) onto segment AB(x1,y1)-(x2,y2).
+   * Returns { x, y, t, dist }.
+   */
+  function closestPointOnSegment(px, py, x1, y1, x2, y2) {
+    const dx = x2 - x1;
+    const dy = y2 - y1;
+    const lenSq = dx * dx + dy * dy;
+    let t = 0;
+    if (lenSq > 1e-8) {
+      t = clamp(((px - x1) * dx + (py - y1) * dy) / lenSq, 0, 1);
+    }
+    const cx = x1 + t * dx;
+    const cy = y1 + t * dy;
+    return { x: cx, y: cy, t, dist: Math.hypot(px - cx, py - cy) };
+  }
+
+  /**
+   * Check whether segment AB intersects an axis-aligned rectangle (AABB).
+   */
+  function segmentIntersectsRect(x1, y1, x2, y2, rect) {
+    const minX = rect.x;
+    const maxX = rect.x + rect.w;
+    const minY = rect.y;
+    const maxY = rect.y + rect.h;
+
+    let t0 = 0;
+    let t1 = 1;
+    const dx = x2 - x1;
+    const dy = y2 - y1;
+
+    const p = [-dx, dx, -dy, dy];
+    const q = [x1 - minX, maxX - x1, y1 - minY, maxY - y1];
+
+    for (let i = 0; i < 4; i++) {
+      if (Math.abs(p[i]) < 1e-9) {
+        if (q[i] < 0) return false;
+      } else {
+        const r = q[i] / p[i];
+        if (p[i] < 0) {
+          if (r > t1) return false;
+          if (r > t0) t0 = r;
+        } else {
+          if (r < t0) return false;
+          if (r < t1) t1 = r;
+        }
+      }
+    }
+    return t0 <= t1;
+  }
+
+  /**
+   * Resolve circle (cx, cy, r) against AABB rect {x, y, w, h}.
+   * Returns null if no collision, or { nx, ny, penetration, cx, cy }.
+   */
+  function circleRectCollision(cx, cy, r, rect) {
+    const nearestX = clamp(cx, rect.x, rect.x + rect.w);
+    const nearestY = clamp(cy, rect.y, rect.y + rect.h);
+    const dx = cx - nearestX;
+    const dy = cy - nearestY;
+    const dSq = dx * dx + dy * dy;
+
+    if (dSq >= r * r) return null;
+
+    if (dSq > 1e-8) {
+      const d = Math.sqrt(dSq);
+      const nx = dx / d;
+      const ny = dy / d;
+      const penetration = r - d;
+      return { nx, ny, penetration, cx: cx + nx * penetration, cy: cy + ny * penetration };
+    }
+
+    // Center is inside the rectangle: push out along shallowest axis
+    const left = cx - rect.x;
+    const right = rect.x + rect.w - cx;
+    const top = cy - rect.y;
+    const bottom = rect.y + rect.h - cy;
+    const minPen = Math.min(left, right, top, bottom);
+
+    if (minPen === top) {
+      return { nx: 0, ny: -1, penetration: top + r, cx, cy: rect.y - r };
+    } else if (minPen === bottom) {
+      return { nx: 0, ny: 1, penetration: bottom + r, cx, cy: rect.y + rect.h + r };
+    } else if (minPen === left) {
+      return { nx: -1, ny: 0, penetration: left + r, cx: rect.x - r, cy };
+    }
+    return { nx: 1, ny: 0, penetration: right + r, cx: rect.x + rect.w + r, cy };
+  }
+
+  return {
+    clamp,
+    lerp,
+    distSq,
+    dist,
+    normalize,
+    closestPointOnSegment,
+    segmentIntersectsRect,
+    circleRectCollision
+  };
+});
+
+
+/* ===== src/engine/physics.js ===== */
+(function (root, factory) {
+  {
+    root.GooPhysics = factory(root.GooMath);
+  }
+})(typeof globalThis !== 'undefined' ? globalThis : this, function (GooMath) {
+  'use strict';
+
+  const BALL_SPECS = {
+    black: {
+      radius: 13,
+      mass: 1.0,
+      buoyancy: 0,
+      minLinks: 2,
+      maxLinks: 3,
+      detachable: false,
+      stiffness: 0.92,
+      maxStretch: 1.95
+    },
+    green: {
+      radius: 13,
+      mass: 0.92,
+      buoyancy: 0,
+      minLinks: 2,
+      maxLinks: 3,
+      detachable: true,
+      stiffness: 0.9,
+      maxStretch: 2.0
+    },
+    balloon: {
+      radius: 17,
+      mass: 0.45,
+      buoyancy: 980,
+      minLinks: 1,
+      maxLinks: 1,
+      detachable: true,
+      stiffness: 0.72,
+      maxStretch: 2.35
+    }
+  };
+
+  class PhysicsWorld {
+    constructor(options = {}) {
+      this.width = options.width || 1100;
+      this.height = options.height || 660;
+      this.gravity = options.gravity !== undefined ? options.gravity : 540;
+      this.damping = options.damping !== undefined ? options.damping : 0.992;
+      this.iterations = options.iterations || 14;
+      this.windBase = options.wind || 0;
+      this.windGust = options.windGust || 0;
+      this.time = 0;
+
+      this.nodes = [];
+      this.strands = [];
+      this.platforms = [];
+      this.nextNodeId = 1;
+      this.nextStrandId = 1;
+
+      this.onStrandBreak = options.onStrandBreak || null;
+      this.onNodeHazard = options.onNodeHazard || null;
+    }
+
+    getCurrentWind() {
+      if (!this.windBase && !this.windGust) return 0;
+      return this.windBase + Math.sin(this.time * 1.15) * this.windGust;
+    }
+
+    addPlatform(p) {
+      this.platforms.push({
+        x: p.x,
+        y: p.y,
+        w: p.w,
+        h: p.h,
+        type: p.type || 'ground' // 'ground' | 'hazard' | 'sticky'
+      });
+    }
+
+    addNode(cfg) {
+      const type = cfg.type || 'black';
+      const spec = BALL_SPECS[type] || BALL_SPECS.black;
+      const node = {
+        id: cfg.id || this.nextNodeId++,
+        x: cfg.x,
+        y: cfg.y,
+        oldX: cfg.oldX !== undefined ? cfg.oldX : cfg.x,
+        oldY: cfg.oldY !== undefined ? cfg.oldY : cfg.y,
+        radius: cfg.radius || spec.radius,
+        mass: cfg.mass !== undefined ? cfg.mass : spec.mass,
+        buoyancy: cfg.buoyancy !== undefined ? cfg.buoyancy : spec.buoyancy,
+        type,
+        pinned: Boolean(cfg.pinned),
+        state: cfg.state || 'structural', // 'structural' | 'walker' | 'dragging' | 'sucked' | 'collected' | 'dead'
+        grounded: false,
+        // Animation / walker fields
+        walkStrandId: cfg.walkStrandId || null,
+        walkT: cfg.walkT !== undefined ? cfg.walkT : 0.5,
+        walkDir: cfg.walkDir || 1,
+        walkSpeed: cfg.walkSpeed || 68,
+        blinkTimer: (cfg.id || this.nextNodeId) * 0.7 % 4,
+        scaleX: 1,
+        scaleY: 1
+      };
+      if (node.id >= this.nextNodeId) {
+        this.nextNodeId = node.id + 1;
+      }
+      this.nodes.push(node);
+      return node;
+    }
+
+    getNodeById(id) {
+      for (let i = 0; i < this.nodes.length; i++) {
+        if (this.nodes[i].id === id) return this.nodes[i];
+      }
+      return null;
+    }
+
+    hasStrandBetween(idA, idB) {
+      for (let i = 0; i < this.strands.length; i++) {
+        const s = this.strands[i];
+        if ((s.a === idA && s.b === idB) || (s.a === idB && s.b === idA)) {
+          return true;
+        }
+      }
+      return false;
+    }
+
+    addStrand(idA, idB, cfg = {}) {
+      if (idA === idB || this.hasStrandBetween(idA, idB)) return null;
+      const a = this.getNodeById(idA);
+      const b = this.getNodeById(idB);
+      if (!a || !b) return null;
+
+      const d = GooMath.dist(a.x, a.y, b.x, b.y);
+      const specA = BALL_SPECS[a.type] || BALL_SPECS.black;
+      const specB = BALL_SPECS[b.type] || BALL_SPECS.black;
+      const isBalloonLink = a.type === 'balloon' || b.type === 'balloon';
+
+      const strand = {
+        id: cfg.id || this.nextStrandId++,
+        a: idA,
+        b: idB,
+        restLength: cfg.restLength !== undefined ? cfg.restLength : Math.max(24, d),
+        stiffness: cfg.stiffness !== undefined ? cfg.stiffness : Math.min(specA.stiffness, specB.stiffness),
+        maxStretch: cfg.maxStretch !== undefined ? cfg.maxStretch : Math.max(specA.maxStretch, specB.maxStretch),
+        isBalloonLink,
+        stress: 0,
+        broken: false
+      };
+      if (strand.id >= this.nextStrandId) {
+        this.nextStrandId = strand.id + 1;
+      }
+      this.strands.push(strand);
+      return strand;
+    }
+
+    getConnectedStrands(nodeId) {
+      return this.strands.filter(s => !s.broken && (s.a === nodeId || s.b === nodeId));
+    }
+
+    removeStrandsOfNode(nodeId) {
+      this.strands = this.strands.filter(s => s.a !== nodeId && s.b !== nodeId);
+    }
+
+    /**
+     * Step Verlet physics simulation by dt seconds.
+     */
+    step(dt) {
+      const clampedDt = Math.min(dt, 1 / 30);
+      const dtSq = clampedDt * clampedDt;
+      this.time += clampedDt;
+
+      const wind = this.getCurrentWind();
+
+      // 1. Verlet integration for structural nodes
+      for (let i = 0; i < this.nodes.length; i++) {
+        const n = this.nodes[i];
+        if (n.state !== 'structural' || n.pinned) continue;
+
+        const vx = (n.x - n.oldX) * this.damping;
+        const vy = (n.y - n.oldY) * this.damping;
+
+        n.oldX = n.x;
+        n.oldY = n.y;
+
+        const ax = wind / Math.max(0.25, n.mass);
+        const ay = this.gravity - (n.buoyancy / Math.max(0.25, n.mass));
+
+        n.x += vx + ax * dtSq;
+        n.y += vy + ay * dtSq;
+        n.grounded = false;
+      }
+
+      // 2. Iterative distance constraint relaxation + platform collisions
+      const nodeMap = new Map();
+      for (let i = 0; i < this.nodes.length; i++) {
+        nodeMap.set(this.nodes[i].id, this.nodes[i]);
+      }
+
+      for (let iter = 0; iter < this.iterations; iter++) {
+        for (let i = 0; i < this.strands.length; i++) {
+          const s = this.strands[i];
+          if (s.broken) continue;
+          const a = nodeMap.get(s.a);
+          const b = nodeMap.get(s.b);
+          if (!a || !b || a.state !== 'structural' || b.state !== 'structural') continue;
+
+          const dx = b.x - a.x;
+          const dy = b.y - a.y;
+          const curDist = Math.hypot(dx, dy);
+          if (curDist < 1e-6) continue;
+
+          // Balloon tethers only resist stretching (like a string), not compression
+          if (s.isBalloonLink && curDist < s.restLength) {
+            s.stress = 0;
+            continue;
+          }
+
+          const diff = (curDist - s.restLength) / curDist;
+          const invMassA = a.pinned ? 0 : 1 / a.mass;
+          const invMassB = b.pinned ? 0 : 1 / b.mass;
+          const invMassSum = invMassA + invMassB;
+          if (invMassSum === 0) continue;
+
+          const corr = diff * s.stiffness;
+          const corrX = dx * corr;
+          const corrY = dy * corr;
+
+          if (!a.pinned) {
+            a.x += corrX * (invMassA / invMassSum);
+            a.y += corrY * (invMassA / invMassSum);
+          }
+          if (!b.pinned) {
+            b.x -= corrX * (invMassB / invMassSum);
+            b.y -= corrY * (invMassB / invMassSum);
+          }
+        }
+
+        // Resolve platform collisions during constraint passes for solid contact
+        this._resolveCollisions();
+      }
+
+      // 3. Evaluate strand stress & breaking threshold
+      const brokenIds = [];
+      for (let i = 0; i < this.strands.length; i++) {
+        const s = this.strands[i];
+        if (s.broken) continue;
+        const a = nodeMap.get(s.a);
+        const b = nodeMap.get(s.b);
+        if (!a || !b || a.state !== 'structural' || b.state !== 'structural') {
+          s.broken = true;
+          continue;
+        }
+        const curDist = GooMath.dist(a.x, a.y, b.x, b.y);
+        const ratio = curDist / s.restLength;
+        if (s.isBalloonLink && ratio < 1) {
+          s.stress = 0;
+        } else {
+          const deviation = Math.abs(ratio - 1);
+          const maxDev = Math.max(0.15, s.maxStretch - 1);
+          s.stress = GooMath.clamp(deviation / maxDev, 0, 1.5);
+          if (ratio > s.maxStretch) {
+            s.broken = true;
+            brokenIds.push(s);
+          }
+        }
+      }
+
+      if (brokenIds.length > 0) {
+        this.strands = this.strands.filter(s => !s.broken);
+        if (this.onStrandBreak) {
+          for (const s of brokenIds) this.onStrandBreak(s);
+        }
+      }
+
+      // 4. Out-of-bounds death check (abyss)
+      for (let i = 0; i < this.nodes.length; i++) {
+        const n = this.nodes[i];
+        if (n.state === 'structural' && !n.pinned && n.y > this.height + 120) {
+          n.state = 'dead';
+          this.removeStrandsOfNode(n.id);
+        }
+      }
+    }
+
+    _resolveCollisions() {
+      for (let i = 0; i < this.nodes.length; i++) {
+        const n = this.nodes[i];
+        if (n.state !== 'structural' || n.pinned) continue;
+
+        // Keep inside horizontal world bounds
+        if (n.x < n.radius) {
+          n.x = n.radius;
+        } else if (n.x > this.width - n.radius) {
+          n.x = this.width - n.radius;
+        }
+        if (n.y < n.radius) {
+          n.y = n.radius;
+        }
+
+        for (let j = 0; j < this.platforms.length; j++) {
+          const plat = this.platforms[j];
+          const hit = GooMath.circleRectCollision(n.x, n.y, n.radius, plat);
+          if (!hit) continue;
+
+          if (plat.type === 'hazard') {
+            n.state = 'dead';
+            this.removeStrandsOfNode(n.id);
+            if (this.onNodeHazard) this.onNodeHazard(n);
+            break;
+          }
+
+          n.x = hit.cx;
+          n.y = hit.cy;
+          if (hit.ny < -0.5) {
+            n.grounded = true;
+          }
+          // Apply ground friction to reduce sliding on terrain
+          const friction = plat.type === 'sticky' ? 0.55 : 0.78;
+          const vx = n.x - n.oldX;
+          const vy = n.y - n.oldY;
+          if (Math.abs(hit.ny) > 0.5) {
+            n.oldX = n.x - vx * friction;
+          }
+          if (Math.abs(hit.nx) > 0.5) {
+            n.oldY = n.y - vy * friction;
+          }
+        }
+      }
+    }
+
+    /**
+     * Measure total kinetic energy of structural nodes (useful for stability testing).
+     */
+    getTotalKineticEnergy() {
+      let ke = 0;
+      for (let i = 0; i < this.nodes.length; i++) {
+        const n = this.nodes[i];
+        if (n.state !== 'structural' || n.pinned) continue;
+        const vx = n.x - n.oldX;
+        const vy = n.y - n.oldY;
+        ke += 0.5 * n.mass * (vx * vx + vy * vy);
+      }
+      return ke;
+    }
+
+    /**
+     * Snapshot serializable physics state for Undo / Time Bug.
+     */
+    serialize() {
+      return {
+        nextNodeId: this.nextNodeId,
+        nextStrandId: this.nextStrandId,
+        nodes: this.nodes.map(n => ({ ...n })),
+        strands: this.strands.map(s => ({ ...s }))
+      };
+    }
+
+    restore(snap) {
+      this.nextNodeId = snap.nextNodeId;
+      this.nextStrandId = snap.nextStrandId;
+      this.nodes = snap.nodes.map(n => ({ ...n }));
+      this.strands = snap.strands.map(s => ({ ...s }));
+    }
+  }
+
+  return {
+    BALL_SPECS,
+    PhysicsWorld
+  };
+});
+
+
+/* ===== src/levels/levels.js ===== */
+(function (root, factory) {
+  {
+    root.GooLevels = factory();
+  }
+})(typeof globalThis !== 'undefined' ? globalThis : this, function () {
+  'use strict';
+
+  const LEVELS = [
+    {
+      id: 1,
+      name: '初遇管道',
+      subtitle: 'Chapter 1 · 向上搭建三角形高塔',
+      hint: '拖拽爬行的黑色黏黏球，靠近已有结构会出现虚线连接，松手即可搭建。把塔搭到上方发光管道附近，自由黏黏球就会被吸入！',
+      width: 1100,
+      height: 660,
+      gravity: 520,
+      wind: 0,
+      windGust: 0,
+      targetCount: 4,
+      ocdTarget: 7,
+      theme: {
+        skyTop: '#0d1b2a',
+        skyBottom: '#1b3b4b',
+        hillFar: '#132a38',
+        hillNear: '#0e202b',
+        groundFill: '#1a242c',
+        groundTop: '#3a5a40',
+        accent: '#7bf1a8'
+      },
+      pipe: { x: 550, y: 185, suctionRadius: 105, mouthRadius: 28 },
+      platforms: [
+        { x: 0, y: 540, w: 1100, h: 120, type: 'ground' }
+      ],
+      initialNodes: [
+        { id: 1, x: 460, y: 526, type: 'black', pinned: true, state: 'structural' },
+        { id: 2, x: 550, y: 526, type: 'black', pinned: true, state: 'structural' },
+        { id: 3, x: 640, y: 526, type: 'black', pinned: true, state: 'structural' },
+        { id: 4, x: 505, y: 452, type: 'black', pinned: false, state: 'structural' },
+        { id: 5, x: 595, y: 452, type: 'black', pinned: false, state: 'structural' }
+      ],
+      initialStrands: [
+        [1, 2], [2, 3], [1, 4], [2, 4], [2, 5], [3, 5], [4, 5]
+      ],
+      walkers: [
+        { type: 'black', count: 14 }
+      ]
+    },
+    {
+      id: 2,
+      name: '跨越深渊',
+      subtitle: 'Chapter 2 · 建造悬臂与拱桥跨越峡谷',
+      hint: '利用三角形桁架向右延伸跨越峡谷，注意底部配重和拱形支撑，避免桥梁因重力折断！',
+      width: 1100,
+      height: 660,
+      gravity: 520,
+      wind: 0,
+      windGust: 0,
+      targetCount: 5,
+      ocdTarget: 8,
+      theme: {
+        skyTop: '#161b33',
+        skyBottom: '#3a3052',
+        hillFar: '#26213d',
+        hillNear: '#1b182e',
+        groundFill: '#1f1c2c',
+        groundTop: '#5e548e',
+        accent: '#f4a261'
+      },
+      pipe: { x: 875, y: 405, suctionRadius: 110, mouthRadius: 28 },
+      platforms: [
+        { x: 0, y: 495, w: 360, h: 165, type: 'ground' },
+        { x: 740, y: 495, w: 360, h: 165, type: 'ground' }
+      ],
+      initialNodes: [
+        { id: 1, x: 170, y: 481, type: 'black', pinned: true, state: 'structural' },
+        { id: 2, x: 255, y: 481, type: 'black', pinned: true, state: 'structural' },
+        { id: 3, x: 340, y: 481, type: 'black', pinned: true, state: 'structural' },
+        { id: 4, x: 212, y: 406, type: 'black', pinned: false, state: 'structural' },
+        { id: 5, x: 298, y: 406, type: 'black', pinned: false, state: 'structural' }
+      ],
+      initialStrands: [
+        [1, 2], [2, 3], [1, 4], [2, 4], [2, 5], [3, 5], [4, 5]
+      ],
+      walkers: [
+        { type: 'black', count: 22 }
+      ]
+    },
+    {
+      id: 3,
+      name: '绿球循环桥',
+      subtitle: 'Chapter 3 · 可拆解的常春藤绿球',
+      hint: '绿色黏黏球即使已经接入结构，也可以再次拖拽拆下来重复利用！用它们灵活调整重心并接通对岸管道。',
+      width: 1100,
+      height: 660,
+      gravity: 510,
+      wind: 0,
+      windGust: 0,
+      targetCount: 5,
+      ocdTarget: 8,
+      theme: {
+        skyTop: '#0b2520',
+        skyBottom: '#1f5146',
+        hillFar: '#143831',
+        hillNear: '#0e2923',
+        groundFill: '#172824',
+        groundTop: '#52b788',
+        accent: '#95d5b2'
+      },
+      pipe: { x: 890, y: 315, suctionRadius: 110, mouthRadius: 28 },
+      platforms: [
+        { x: 0, y: 500, w: 340, h: 160, type: 'ground' },
+        { x: 510, y: 540, w: 120, h: 120, type: 'ground' },
+        { x: 770, y: 420, w: 330, h: 240, type: 'ground' }
+      ],
+      initialNodes: [
+        { id: 1, x: 165, y: 486, type: 'black', pinned: true, state: 'structural' },
+        { id: 2, x: 248, y: 486, type: 'black', pinned: true, state: 'structural' },
+        { id: 3, x: 325, y: 486, type: 'black', pinned: true, state: 'structural' },
+        { id: 4, x: 206, y: 412, type: 'green', pinned: false, state: 'structural' },
+        { id: 5, x: 288, y: 412, type: 'green', pinned: false, state: 'structural' }
+      ],
+      initialStrands: [
+        [1, 2], [2, 3], [1, 4], [2, 4], [2, 5], [3, 5], [4, 5]
+      ],
+      walkers: [
+        { type: 'green', count: 16 },
+        { type: 'black', count: 8 }
+      ]
+    },
+    {
+      id: 4,
+      name: '逆风高塔',
+      subtitle: 'Chapter 4 · 阵风环境下的抗弯桁架',
+      hint: '山谷中持续吹着向右的阵风！请先把底座加宽做稳，再逐层向上搭建高塔直达高空管道。',
+      width: 1100,
+      height: 660,
+      gravity: 520,
+      wind: 32,
+      windGust: 24,
+      targetCount: 5,
+      ocdTarget: 8,
+      theme: {
+        skyTop: '#1b263b',
+        skyBottom: '#415a77',
+        hillFar: '#273852',
+        hillNear: '#1d2b40',
+        groundFill: '#1e242b',
+        groundTop: '#778da9',
+        accent: '#e0fbfc'
+      },
+      pipe: { x: 585, y: 150, suctionRadius: 108, mouthRadius: 28 },
+      platforms: [
+        { x: 240, y: 545, w: 620, h: 115, type: 'ground' }
+      ],
+      initialNodes: [
+        { id: 1, x: 430, y: 531, type: 'black', pinned: true, state: 'structural' },
+        { id: 2, x: 520, y: 531, type: 'black', pinned: true, state: 'structural' },
+        { id: 3, x: 610, y: 531, type: 'black', pinned: true, state: 'structural' },
+        { id: 4, x: 700, y: 531, type: 'black', pinned: true, state: 'structural' },
+        { id: 5, x: 475, y: 458, type: 'black', pinned: false, state: 'structural' },
+        { id: 6, x: 565, y: 458, type: 'black', pinned: false, state: 'structural' },
+        { id: 7, x: 655, y: 458, type: 'black', pinned: false, state: 'structural' }
+      ],
+      initialStrands: [
+        [1, 2], [2, 3], [3, 4],
+        [1, 5], [2, 5], [2, 6], [3, 6], [3, 7], [4, 7],
+        [5, 6], [6, 7]
+      ],
+      walkers: [
+        { type: 'black', count: 16 },
+        { type: 'green', count: 6 }
+      ]
+    },
+    {
+      id: 5,
+      name: '气球悬桥',
+      subtitle: 'Chapter 5 · 浮力气球与尖刺深渊',
+      hint: '下方红色区域是尖刺陷阱！把粉色气球挂在桥梁节点上提供向上浮力，托起桥梁直抵右上方管道。',
+      width: 1100,
+      height: 660,
+      gravity: 520,
+      wind: 0,
+      windGust: 0,
+      targetCount: 5,
+      ocdTarget: 8,
+      theme: {
+        skyTop: '#231942',
+        skyBottom: '#5e548e',
+        hillFar: '#382a63',
+        hillNear: '#271d47',
+        groundFill: '#241e33',
+        groundTop: '#be95c4',
+        accent: '#ff70a6'
+      },
+      pipe: { x: 880, y: 270, suctionRadius: 112, mouthRadius: 28 },
+      platforms: [
+        { x: 0, y: 470, w: 320, h: 190, type: 'ground' },
+        { x: 320, y: 615, w: 460, h: 45, type: 'hazard' },
+        { x: 780, y: 430, w: 320, h: 230, type: 'ground' }
+      ],
+      initialNodes: [
+        { id: 1, x: 145, y: 456, type: 'black', pinned: true, state: 'structural' },
+        { id: 2, x: 225, y: 456, type: 'black', pinned: true, state: 'structural' },
+        { id: 3, x: 300, y: 456, type: 'black', pinned: true, state: 'structural' },
+        { id: 4, x: 185, y: 382, type: 'black', pinned: false, state: 'structural' },
+        { id: 5, x: 262, y: 382, type: 'black', pinned: false, state: 'structural' }
+      ],
+      initialStrands: [
+        [1, 2], [2, 3], [1, 4], [2, 4], [2, 5], [3, 5], [4, 5]
+      ],
+      walkers: [
+        { type: 'black', count: 16 },
+        { type: 'balloon', count: 5 },
+        { type: 'green', count: 5 }
+      ]
+    }
+  ];
+
+  return {
+    LEVELS,
+    getLevelById(id) {
+      return LEVELS.find(l => l.id === id) || LEVELS[0];
+    }
+  };
+});
+
+
+/* ===== src/audio/sound.js ===== */
+(function (root, factory) {
+  {
+    root.GooSound = factory();
+  }
+})(typeof globalThis !== 'undefined' ? globalThis : this, function () {
+  'use strict';
+
+  class SoundEngine {
+    constructor() {
+      this.ctx = null;
+      this.muted = false;
+    }
+
+    unlock() {
+      if (this.ctx || typeof window === 'undefined') return;
+      const AudioCtx = window.AudioContext || window.webkitAudioContext;
+      if (!AudioCtx) return;
+      try {
+        this.ctx = new AudioCtx();
+      } catch (e) {
+        this.ctx = null;
+      }
+    }
+
+    toggleMute() {
+      this.muted = !this.muted;
+      return this.muted;
+    }
+
+    _tone(freqStart, freqEnd, duration, type = 'sine', gainPeak = 0.12) {
+      if (this.muted) return;
+      this.unlock();
+      if (!this.ctx) return;
+      if (this.ctx.state === 'suspended') {
+        this.ctx.resume().catch(() => {});
+      }
+
+      const now = this.ctx.currentTime;
+      const osc = this.ctx.createOscillator();
+      const gain = this.ctx.createGain();
+      osc.type = type;
+      osc.frequency.setValueAtTime(freqStart, now);
+      osc.frequency.exponentialRampToValueAtTime(Math.max(20, freqEnd), now + duration);
+
+      gain.gain.setValueAtTime(0.001, now);
+      gain.gain.linearRampToValueAtTime(gainPeak, now + 0.015);
+      gain.gain.exponentialRampToValueAtTime(0.001, now + duration);
+
+      osc.connect(gain);
+      gain.connect(this.ctx.destination);
+      osc.start(now);
+      osc.stop(now + duration + 0.02);
+    }
+
+    playPickup() {
+      this._tone(240, 420, 0.09, 'sine', 0.11);
+    }
+
+    playAttach() {
+      this._tone(180, 340, 0.11, 'triangle', 0.14);
+      setTimeout(() => this._tone(360, 520, 0.08, 'sine', 0.08), 30);
+    }
+
+    playBreak() {
+      this._tone(280, 85, 0.18, 'sawtooth', 0.1);
+    }
+
+    playSuction() {
+      this._tone(320, 680, 0.16, 'sine', 0.09);
+    }
+
+    playCollect() {
+      this._tone(523.25, 783.99, 0.16, 'triangle', 0.13);
+    }
+
+    playUndo() {
+      this._tone(440, 260, 0.12, 'sine', 0.1);
+    }
+
+    playWin() {
+      const notes = [523.25, 659.25, 783.99, 1046.5];
+      notes.forEach((f, i) => {
+        setTimeout(() => this._tone(f, f * 1.01, 0.28, 'triangle', 0.14), i * 95);
+      });
+    }
+  }
+
+  return { SoundEngine };
+});
+
+
+/* ===== src/engine/game.js ===== */
+(function (root, factory) {
+  {
+    root.GooGame = factory(root.GooMath, root.GooPhysics, root.GooLevels);
+  }
+})(typeof globalThis !== 'undefined' ? globalThis : this, function (GooMath, GooPhysics, GooLevels) {
+  'use strict';
+
+  const { BALL_SPECS, PhysicsWorld } = GooPhysics;
+
+  const ATTACH_MIN_DIST = 28;
+  const ATTACH_MAX_DIST = 158;
+  const PICK_RADIUS = 30;
+  const MAX_UNDO_HISTORY = 25;
+
+  class GooGameEngine {
+    constructor(options = {}) {
+      this.sound = options.sound || null;
+      this.onStateChange = options.onStateChange || null;
+
+      this.currentLevelId = 1;
+      this.level = null;
+      this.world = null;
+
+      this.status = 'playing'; // 'playing' | 'paused' | 'won'
+      this.collectedCount = 0;
+      this.movesCount = 0;
+      this.elapsedTime = 0;
+      this.pipeActive = false;
+      this.pipePulse = 0;
+
+      // Dragging state
+      this.draggingNode = null;
+      this.dragWasStructural = false;
+      this.pointer = { x: 0, y: 0, down: false };
+      this.previewTargets = [];
+
+      // Visual particles & floating texts
+      this.particles = [];
+      this.undoStack = [];
+      this.completedLevels = {};
+
+      this.loadLevel(options.levelId || 1);
+    }
+
+    loadLevel(levelId) {
+      const def = GooLevels.getLevelById(levelId);
+      this.currentLevelId = def.id;
+      this.level = def;
+      this.status = 'playing';
+      this.collectedCount = 0;
+      this.movesCount = 0;
+      this.elapsedTime = 0;
+      this.pipeActive = false;
+      this.draggingNode = null;
+      this.previewTargets = [];
+      this.particles = [];
+      this.undoStack = [];
+
+      this.world = new PhysicsWorld({
+        width: def.width,
+        height: def.height,
+        gravity: def.gravity,
+        wind: def.wind || 0,
+        windGust: def.windGust || 0,
+        onStrandBreak: (s) => {
+          if (this.sound) this.sound.playBreak();
+          const a = this.world.getNodeById(s.a);
+          const b = this.world.getNodeById(s.b);
+          if (a && b) {
+            this.spawnParticles((a.x + b.x) * 0.5, (a.y + b.y) * 0.5, '#ff7b54', 7);
+          }
+        },
+        onNodeHazard: (n) => {
+          if (this.sound) this.sound.playBreak();
+          this.spawnParticles(n.x, n.y, '#ff4d6d', 12);
+        }
+      });
+
+      for (const p of def.platforms) {
+        this.world.addPlatform(p);
+      }
+
+      for (const n of def.initialNodes) {
+        this.world.addNode({ ...n });
+      }
+
+      for (const pair of def.initialStrands) {
+        this.world.addStrand(pair[0], pair[1]);
+      }
+
+      // Spawn free walker goo balls onto existing strands
+      const strandList = this.world.strands;
+      let idx = 0;
+      for (const group of def.walkers) {
+        for (let i = 0; i < group.count; i++) {
+          const s = strandList[idx % strandList.length];
+          const a = this.world.getNodeById(s.a);
+          const b = this.world.getNodeById(s.b);
+          const t = ((idx * 0.37) % 0.8) + 0.1;
+          this.world.addNode({
+            x: GooMath.lerp(a.x, b.x, t),
+            y: GooMath.lerp(a.y, b.y, t),
+            type: group.type,
+            state: 'walker',
+            walkStrandId: s.id,
+            walkT: t,
+            walkDir: idx % 2 === 0 ? 1 : -1,
+            walkSpeed: 58 + (idx % 5) * 9
+          });
+          idx++;
+        }
+      }
+
+      this._notifyState();
+    }
+
+    restartLevel() {
+      this.loadLevel(this.currentLevelId);
+    }
+
+    togglePause() {
+      if (this.status === 'won') return;
+      this.status = this.status === 'paused' ? 'playing' : 'paused';
+      this._notifyState();
+    }
+
+    saveUndoSnapshot() {
+      const snap = {
+        world: this.world.serialize(),
+        collectedCount: this.collectedCount,
+        movesCount: this.movesCount
+      };
+      this.undoStack.push(snap);
+      if (this.undoStack.length > MAX_UNDO_HISTORY) {
+        this.undoStack.shift();
+      }
+    }
+
+    undo() {
+      if (this.undoStack.length === 0 || this.status === 'won') return false;
+      const snap = this.undoStack.pop();
+      this.world.restore(snap.world);
+      this.collectedCount = snap.collectedCount;
+      this.movesCount = snap.movesCount;
+      this.draggingNode = null;
+      this.previewTargets = [];
+      if (this.sound) this.sound.playUndo();
+      this._notifyState();
+      return true;
+    }
+
+    getRemainingWalkersCount() {
+      let count = 0;
+      for (const n of this.world.nodes) {
+        if (n.state === 'walker' || n.state === 'dragging' || n.state === 'sucked') {
+          count++;
+        }
+      }
+      return count;
+    }
+
+    /**
+     * Find best valid structural nodes to connect to from position (x, y).
+     */
+    findAttachmentCandidates(x, y, ballType, excludeNodeId = null) {
+      const spec = BALL_SPECS[ballType] || BALL_SPECS.black;
+      const candidates = [];
+
+      for (const n of this.world.nodes) {
+        if (n.state !== 'structural' || n.id === excludeNodeId) continue;
+        // Balloons cannot be structural anchor bases for other balls
+        if (n.type === 'balloon') continue;
+
+        const d = GooMath.dist(x, y, n.x, n.y);
+        if (d < ATTACH_MIN_DIST || d > ATTACH_MAX_DIST) continue;
+
+        // Check that strand does not cut through solid terrain
+        let blocked = false;
+        for (const p of this.world.platforms) {
+          if (p.type === 'hazard') continue;
+          // Shrink rect slightly so nodes sitting on ground can still link
+          const inner = { x: p.x + 4, y: p.y + 4, w: Math.max(0, p.w - 8), h: Math.max(0, p.h - 8) };
+          if (GooMath.segmentIntersectsRect(x, y, n.x, n.y, inner)) {
+            blocked = true;
+            break;
+          }
+        }
+        if (blocked) continue;
+
+        candidates.push({ node: n, dist: d });
+      }
+
+      candidates.sort((a, b) => a.dist - b.dist);
+      const selected = candidates.slice(0, spec.maxLinks).map(c => c.node);
+      if (selected.length < spec.minLinks) return [];
+      return selected;
+    }
+
+    /**
+     * Pointer down: grab nearest walker ball or detachable structural ball (green / balloon).
+     */
+    pointerDown(x, y) {
+      this.pointer.x = x;
+      this.pointer.y = y;
+      this.pointer.down = true;
+      if (this.status !== 'playing') return null;
+
+      let best = null;
+      let bestDist = PICK_RADIUS;
+
+      // Priority 1: grab free walkers first
+      for (const n of this.world.nodes) {
+        if (n.state !== 'walker') continue;
+        const d = GooMath.dist(x, y, n.x, n.y);
+        if (d < bestDist) {
+          bestDist = d;
+          best = n;
+        }
+      }
+
+      // Priority 2: grab detachable structural balls (green / balloon)
+      if (!best) {
+        for (const n of this.world.nodes) {
+          if (n.state !== 'structural' || n.pinned) continue;
+          const spec = BALL_SPECS[n.type] || BALL_SPECS.black;
+          if (!spec.detachable) continue;
+          const d = GooMath.dist(x, y, n.x, n.y);
+          if (d < bestDist) {
+            bestDist = d;
+            best = n;
+          }
+        }
+      }
+
+      if (!best) return null;
+
+      this.saveUndoSnapshot();
+      this.dragWasStructural = best.state === 'structural';
+      if (this.dragWasStructural) {
+        this.world.removeStrandsOfNode(best.id);
+      }
+
+      best.state = 'dragging';
+      best.x = x;
+      best.y = y;
+      best.oldX = x;
+      best.oldY = y;
+      best.scaleX = 1.25;
+      best.scaleY = 0.8;
+      this.draggingNode = best;
+      this.previewTargets = this.findAttachmentCandidates(x, y, best.type, best.id);
+
+      if (this.sound) this.sound.playPickup();
+      return best;
+    }
+
+    pointerMove(x, y) {
+      this.pointer.x = x;
+      this.pointer.y = y;
+      if (!this.draggingNode || this.status !== 'playing') return;
+
+      const n = this.draggingNode;
+      n.x = GooMath.clamp(x, n.radius, this.world.width - n.radius);
+      n.y = GooMath.clamp(y, n.radius, this.world.height - n.radius);
+      n.oldX = n.x;
+      n.oldY = n.y;
+      this.previewTargets = this.findAttachmentCandidates(n.x, n.y, n.type, n.id);
+    }
+
+    pointerUp(x, y) {
+      this.pointer.x = x;
+      this.pointer.y = y;
+      this.pointer.down = false;
+
+      if (!this.draggingNode) return false;
+      const n = this.draggingNode;
+      this.draggingNode = null;
+
+      const targets = this.findAttachmentCandidates(n.x, n.y, n.type, n.id);
+      this.previewTargets = [];
+
+      // Prevent dropping directly inside a solid platform
+      let insidePlatform = false;
+      for (const p of this.world.platforms) {
+        if (p.type !== 'hazard' && GooMath.circleRectCollision(n.x, n.y, n.radius * 0.7, p)) {
+          insidePlatform = true;
+          break;
+        }
+      }
+
+      if (targets.length > 0 && !insidePlatform) {
+        n.state = 'structural';
+        n.oldX = n.x;
+        n.oldY = n.y;
+        n.scaleX = 0.78;
+        n.scaleY = 1.28;
+
+        for (const t of targets) {
+          this.world.addStrand(n.id, t.id);
+        }
+
+        this.movesCount++;
+        this.spawnParticles(n.x, n.y, this._getBallColor(n.type), 8);
+        if (this.sound) this.sound.playAttach();
+        this._notifyState();
+        return true;
+      }
+
+      // Failed placement: return ball to walker on nearest strand
+      this._attachWalkerToNearestStrand(n);
+      // Pop unused undo snapshot if nothing actually changed
+      if (!this.dragWasStructural && this.undoStack.length > 0) {
+        this.undoStack.pop();
+      }
+      this._notifyState();
+      return false;
+    }
+
+    _getBallColor(type) {
+      if (type === 'green') return '#52b788';
+      if (type === 'balloon') return '#ff70a6';
+      return '#a8dadc';
+    }
+
+    _attachWalkerToNearestStrand(node) {
+      node.state = 'walker';
+      let bestStrand = null;
+      let bestT = 0.5;
+      let bestDist = Infinity;
+
+      for (const s of this.world.strands) {
+        if (s.broken || s.isBalloonLink) continue;
+        const a = this.world.getNodeById(s.a);
+        const b = this.world.getNodeById(s.b);
+        if (!a || !b) continue;
+        const proj = GooMath.closestPointOnSegment(node.x, node.y, a.x, a.y, b.x, b.y);
+        if (proj.dist < bestDist) {
+          bestDist = proj.dist;
+          bestStrand = s;
+          bestT = proj.t;
+        }
+      }
+
+      if (bestStrand) {
+        node.walkStrandId = bestStrand.id;
+        node.walkT = bestT;
+        const a = this.world.getNodeById(bestStrand.a);
+        const b = this.world.getNodeById(bestStrand.b);
+        node.x = GooMath.lerp(a.x, b.x, bestT);
+        node.y = GooMath.lerp(a.y, b.y, bestT);
+        node.oldX = node.x;
+        node.oldY = node.y;
+      }
+    }
+
+    spawnParticles(x, y, color, count = 8) {
+      for (let i = 0; i < count; i++) {
+        const angle = (Math.PI * 2 * i) / count + (Math.random() - 0.5) * 0.5;
+        const speed = 55 + Math.random() * 110;
+        this.particles.push({
+          x,
+          y,
+          vx: Math.cos(angle) * speed,
+          vy: Math.sin(angle) * speed - 35,
+          life: 0.45 + Math.random() * 0.35,
+          maxLife: 0.8,
+          size: 2.5 + Math.random() * 3.5,
+          color
+        });
+      }
+    }
+
+    /**
+     * Advance game simulation by dt seconds.
+     */
+    update(dt) {
+      if (this.status !== 'playing') return;
+      const clampedDt = Math.min(dt, 1 / 30);
+      this.elapsedTime += clampedDt;
+      this.pipePulse += clampedDt * 3.2;
+
+      // 1. Physics substeps for crisp truss rigidity
+      const substeps = 2;
+      for (let s = 0; s < substeps; s++) {
+        this.world.step(clampedDt / substeps);
+      }
+
+      // 2. Check pipe activation (any structural node within suctionRadius)
+      const pipe = this.level.pipe;
+      let structureNearPipe = false;
+      for (const n of this.world.nodes) {
+        if (n.state !== 'structural') continue;
+        if (GooMath.dist(n.x, n.y, pipe.x, pipe.y) <= pipe.suctionRadius) {
+          structureNearPipe = true;
+          break;
+        }
+      }
+      this.pipeActive = structureNearPipe;
+
+      // 3. Update walker goo balls crawling along strands
+      this._updateWalkers(clampedDt);
+
+      // 4. Update sucked goo balls flying into pipe mouth
+      this._updateSuckedBalls(clampedDt);
+
+      // 5. Update node squash/stretch & blink timers
+      for (const n of this.world.nodes) {
+        n.scaleX = GooMath.lerp(n.scaleX, 1, clampedDt * 12);
+        n.scaleY = GooMath.lerp(n.scaleY, 1, clampedDt * 12);
+        n.blinkTimer -= clampedDt;
+        if (n.blinkTimer <= -0.14) {
+          n.blinkTimer = 2.2 + ((n.id * 1.37) % 3.4);
+        }
+      }
+
+      // 6. Update particles
+      for (let i = this.particles.length - 1; i >= 0; i--) {
+        const p = this.particles[i];
+        p.x += p.vx * clampedDt;
+        p.y += p.vy * clampedDt;
+        p.vy += 280 * clampedDt;
+        p.life -= clampedDt;
+        if (p.life <= 0) {
+          this.particles.splice(i, 1);
+        }
+      }
+
+      // 7. Check victory condition
+      if (this.collectedCount >= this.level.targetCount && this.status === 'playing') {
+        this.status = 'won';
+        const prev = this.completedLevels[this.currentLevelId] || { collected: 0, ocd: false };
+        this.completedLevels[this.currentLevelId] = {
+          collected: Math.max(prev.collected, this.collectedCount),
+          ocd: prev.ocd || this.collectedCount >= this.level.ocdTarget
+        };
+        if (this.sound) this.sound.playWin();
+        this.spawnParticles(pipe.x, pipe.y, this.level.theme.accent, 28);
+        this._notifyState();
+      }
+    }
+
+    _updateWalkers(dt) {
+      const pipe = this.level.pipe;
+      const strandMap = new Map();
+      for (const s of this.world.strands) {
+        if (!s.broken && !s.isBalloonLink) {
+          strandMap.set(s.id, s);
+        }
+      }
+
+      for (const n of this.world.nodes) {
+        if (n.state !== 'walker') continue;
+
+        let strand = strandMap.get(n.walkStrandId);
+        if (!strand) {
+          this._attachWalkerToNearestStrand(n);
+          strand = strandMap.get(n.walkStrandId);
+          if (!strand) continue;
+        }
+
+        const a = this.world.getNodeById(strand.a);
+        const b = this.world.getNodeById(strand.b);
+        if (!a || !b) continue;
+
+        const len = Math.max(10, GooMath.dist(a.x, a.y, b.x, b.y));
+        const stepT = (n.walkSpeed * dt) / len;
+        n.walkT += stepT * n.walkDir;
+
+        // If reached either end of strand, pick next connected strand (biased toward pipe)
+        if (n.walkT >= 1 || n.walkT <= 0) {
+          const arrivedNodeId = n.walkT >= 1 ? strand.b : strand.a;
+          const nextCandidates = this.world.strands.filter(
+            s => !s.broken && !s.isBalloonLink && (s.a === arrivedNodeId || s.b === arrivedNodeId)
+          );
+
+          if (nextCandidates.length > 0) {
+            let chosen = nextCandidates[0];
+            if (nextCandidates.length > 1) {
+              // Bias toward the strand whose other endpoint is closer to the pipe
+              let bestScore = Infinity;
+              for (const cand of nextCandidates) {
+                const otherId = cand.a === arrivedNodeId ? cand.b : cand.a;
+                const other = this.world.getNodeById(otherId);
+                if (!other) continue;
+                const dPipe = GooMath.dist(other.x, other.y, pipe.x, pipe.y);
+                const samePenalty = cand.id === strand.id ? 95 : 0;
+                const jitter = ((n.id * 31 + Math.floor(this.elapsedTime * 2) * 17) % 60);
+                const score = dPipe + samePenalty + jitter;
+                if (score < bestScore) {
+                  bestScore = score;
+                  chosen = cand;
+                }
+              }
+            }
+            n.walkStrandId = chosen.id;
+            if (chosen.a === arrivedNodeId) {
+              n.walkT = 0.02;
+              n.walkDir = 1;
+            } else {
+              n.walkT = 0.98;
+              n.walkDir = -1;
+            }
+            strand = chosen;
+          } else {
+            n.walkT = GooMath.clamp(n.walkT, 0, 1);
+            n.walkDir *= -1;
+          }
+        }
+
+        const na = this.world.getNodeById(strand.a);
+        const nb = this.world.getNodeById(strand.b);
+        if (na && nb) {
+          n.x = GooMath.lerp(na.x, nb.x, n.walkT);
+          n.y = GooMath.lerp(na.y, nb.y, n.walkT);
+          n.oldX = n.x;
+          n.oldY = n.y;
+        }
+
+        // Pipe suction capture!
+        const distToPipe = GooMath.dist(n.x, n.y, pipe.x, pipe.y);
+        if (distToPipe <= pipe.suctionRadius && n.type !== 'balloon') {
+          n.state = 'sucked';
+          this.pipeActive = true;
+          if (this.sound) this.sound.playSuction();
+        }
+      }
+    }
+
+    _updateSuckedBalls(dt) {
+      const pipe = this.level.pipe;
+      for (const n of this.world.nodes) {
+        if (n.state !== 'sucked') continue;
+        const dx = pipe.x - n.x;
+        const dy = pipe.y - n.y;
+        const d = Math.hypot(dx, dy);
+        if (d < pipe.mouthRadius * 0.7) {
+          n.state = 'collected';
+          this.collectedCount++;
+          this.spawnParticles(pipe.x, pipe.y, this.level.theme.accent, 10);
+          if (this.sound) this.sound.playCollect();
+          this._notifyState();
+        } else {
+          const pullSpeed = 290 + (1 - Math.min(1, d / pipe.suctionRadius)) * 220;
+          n.x += (dx / d) * pullSpeed * dt;
+          n.y += (dy / d) * pullSpeed * dt;
+          n.scaleX = 1.25;
+          n.scaleY = 0.75;
+        }
+      }
+    }
+
+    _notifyState() {
+      if (this.onStateChange) {
+        this.onStateChange(this.getHUDState());
+      }
+    }
+
+    getHUDState() {
+      return {
+        levelId: this.currentLevelId,
+        levelName: this.level.name,
+        subtitle: this.level.subtitle,
+        hint: this.level.hint,
+        status: this.status,
+        collectedCount: this.collectedCount,
+        targetCount: this.level.targetCount,
+        ocdTarget: this.level.ocdTarget,
+        remainingWalkers: this.getRemainingWalkersCount(),
+        movesCount: this.movesCount,
+        canUndo: this.undoStack.length > 0 && this.status !== 'won',
+        pipeActive: this.pipeActive,
+        completedLevels: { ...this.completedLevels },
+        totalLevels: GooLevels.LEVELS.length
+      };
+    }
+  }
+
+  return {
+    ATTACH_MIN_DIST,
+    ATTACH_MAX_DIST,
+    PICK_RADIUS,
+    GooGameEngine
+  };
+});
+
+
+/* ===== src/ui/renderer.js ===== */
+(function (root, factory) {
+  {
+    root.GooRenderer = factory();
+  }
+})(typeof globalThis !== 'undefined' ? globalThis : this, function () {
+  'use strict';
+
+  class CanvasRenderer {
+    constructor(canvas, game) {
+      this.canvas = canvas;
+      this.ctx = canvas.getContext('2d');
+      this.game = game;
+
+      // Viewport transform (world -> screen)
+      this.scale = 1;
+      this.offsetX = 0;
+      this.offsetY = 0;
+
+      // Ambient floating dust particles
+      this.motes = [];
+      for (let i = 0; i < 32; i++) {
+        this.motes.push({
+          x: Math.random() * 1100,
+          y: Math.random() * 660,
+          r: 1 + Math.random() * 2.2,
+          speed: 8 + Math.random() * 16,
+          alpha: 0.15 + Math.random() * 0.3
+        });
+      }
+    }
+
+    resize() {
+      const rect = this.canvas.parentElement.getBoundingClientRect();
+      const dpr = Math.min(window.devicePixelRatio || 1, 2);
+      const w = Math.max(320, Math.floor(rect.width));
+      const h = Math.max(260, Math.floor(rect.height));
+
+      this.canvas.width = w * dpr;
+      this.canvas.height = h * dpr;
+      this.canvas.style.width = w + 'px';
+      this.canvas.style.height = h + 'px';
+
+      this.ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+      this.viewW = w;
+      this.viewH = h;
+
+      const worldW = this.game.level.width;
+      const worldH = this.game.level.height;
+      this.scale = Math.min(w / worldW, h / worldH);
+      this.offsetX = (w - worldW * this.scale) * 0.5;
+      this.offsetY = (h - worldH * this.scale) * 0.5;
+    }
+
+    screenToWorld(clientX, clientY) {
+      const rect = this.canvas.getBoundingClientRect();
+      const sx = clientX - rect.left;
+      const sy = clientY - rect.top;
+      return {
+        x: (sx - this.offsetX) / this.scale,
+        y: (sy - this.offsetY) / this.scale
+      };
+    }
+
+    render(dt = 1 / 60) {
+      const ctx = this.ctx;
+      const level = this.game.level;
+      const theme = level.theme;
+
+      // Fill letterbox background
+      ctx.fillStyle = theme.skyTop;
+      ctx.fillRect(0, 0, this.viewW, this.viewH);
+
+      ctx.save();
+      ctx.translate(this.offsetX, this.offsetY);
+      ctx.scale(this.scale, this.scale);
+
+      // Clip to world bounds
+      ctx.beginPath();
+      ctx.rect(0, 0, level.width, level.height);
+      ctx.clip();
+
+      this._drawBackground(ctx, level, theme, dt);
+      this._drawPipe(ctx, level, theme);
+      this._drawPlatforms(ctx, level, theme);
+      this._drawPreviewStrands(ctx);
+      this._drawStrands(ctx);
+      this._drawNodes(ctx, level);
+      this._drawParticles(ctx);
+
+      ctx.restore();
+    }
+
+    _drawBackground(ctx, level, theme, dt) {
+      const grad = ctx.createLinearGradient(0, 0, 0, level.height);
+      grad.addColorStop(0, theme.skyTop);
+      grad.addColorStop(1, theme.skyBottom);
+      ctx.fillStyle = grad;
+      ctx.fillRect(0, 0, level.width, level.height);
+
+      // Distant moon / ambient glow behind pipe
+      const pipe = level.pipe;
+      const glow = ctx.createRadialGradient(pipe.x, pipe.y, 12, pipe.x, pipe.y, 240);
+      glow.addColorStop(0, theme.accent + '28');
+      glow.addColorStop(1, theme.accent + '00');
+      ctx.fillStyle = glow;
+      ctx.fillRect(0, 0, level.width, level.height);
+
+      // Far silhouette hills
+      ctx.fillStyle = theme.hillFar;
+      ctx.beginPath();
+      ctx.moveTo(0, level.height);
+      ctx.lineTo(0, 440);
+      ctx.quadraticCurveTo(220, 340, 460, 430);
+      ctx.quadraticCurveTo(760, 520, 1100, 380);
+      ctx.lineTo(level.width, level.height);
+      ctx.closePath();
+      ctx.fill();
+
+      // Near silhouette hills
+      ctx.fillStyle = theme.hillNear;
+      ctx.beginPath();
+      ctx.moveTo(0, level.height);
+      ctx.lineTo(0, 505);
+      ctx.quadraticCurveTo(310, 435, 620, 515);
+      ctx.quadraticCurveTo(880, 560, 1100, 465);
+      ctx.lineTo(level.width, level.height);
+      ctx.closePath();
+      ctx.fill();
+
+      // Floating dust motes / wind streaks
+      const wind = this.game.world.getCurrentWind();
+      ctx.fillStyle = '#ffffff';
+      for (const m of this.motes) {
+        m.x += (wind * 1.4 + (wind ? 18 : 4)) * dt;
+        m.y -= m.speed * dt * (wind ? 0.2 : 0.6);
+        if (m.x > level.width + 10) m.x = -10;
+        if (m.x < -10) m.x = level.width + 10;
+        if (m.y < -10) m.y = level.height + 10;
+
+        ctx.globalAlpha = m.alpha;
+        if (Math.abs(wind) > 10) {
+          ctx.fillRect(m.x, m.y, 16, 1.5);
+        } else {
+          ctx.beginPath();
+          ctx.arc(m.x, m.y, m.r, 0, Math.PI * 2);
+          ctx.fill();
+        }
+      }
+      ctx.globalAlpha = 1;
+    }
+
+    _drawPipe(ctx, level, theme) {
+      const pipe = level.pipe;
+      const pulse = Math.sin(this.game.pipePulse) * 0.5 + 0.5;
+
+      // Suction radius aura
+      ctx.save();
+      ctx.beginPath();
+      ctx.arc(pipe.x, pipe.y, pipe.suctionRadius, 0, Math.PI * 2);
+      ctx.strokeStyle = this.game.pipeActive ? theme.accent : '#ffffff';
+      ctx.globalAlpha = this.game.pipeActive ? 0.35 + pulse * 0.25 : 0.14;
+      ctx.lineWidth = this.game.pipeActive ? 2.5 : 1.5;
+      ctx.setLineDash([7, 7]);
+      ctx.stroke();
+      ctx.setLineDash([]);
+
+      // Inner suction swirl ring when active
+      if (this.game.pipeActive) {
+        const rInner = pipe.mouthRadius + (1 - pulse) * (pipe.suctionRadius - pipe.mouthRadius);
+        ctx.beginPath();
+        ctx.arc(pipe.x, pipe.y, rInner, 0, Math.PI * 2);
+        ctx.strokeStyle = theme.accent;
+        ctx.globalAlpha = pulse * 0.45;
+        ctx.lineWidth = 3;
+        ctx.stroke();
+      }
+      ctx.restore();
+
+      // Pipe shaft extending to top of screen
+      const shaftW = 46;
+      const pipeGrad = ctx.createLinearGradient(pipe.x - shaftW / 2, 0, pipe.x + shaftW / 2, 0);
+      pipeGrad.addColorStop(0, '#1f2933');
+      pipeGrad.addColorStop(0.35, '#52606d');
+      pipeGrad.addColorStop(0.7, '#323f4b');
+      pipeGrad.addColorStop(1, '#12181f');
+      ctx.fillStyle = pipeGrad;
+      ctx.fillRect(pipe.x - shaftW / 2, 0, shaftW, pipe.y - 8);
+
+      // Pipe rim / bell mouth
+      ctx.fillStyle = '#3e4c59';
+      ctx.beginPath();
+      ctx.roundRect(pipe.x - 34, pipe.y - 16, 68, 22, 6);
+      ctx.fill();
+      ctx.strokeStyle = '#7b8794';
+      ctx.lineWidth = 2;
+      ctx.stroke();
+
+      // Dark suction interior
+      ctx.fillStyle = '#090d12';
+      ctx.beginPath();
+      ctx.ellipse(pipe.x, pipe.y + 4, 24, 9, 0, 0, Math.PI * 2);
+      ctx.fill();
+
+      // Target counter badge on pipe shaft
+      ctx.fillStyle = 'rgba(10, 16, 24, 0.82)';
+      ctx.beginPath();
+      ctx.roundRect(pipe.x - 28, Math.max(18, pipe.y - 68), 56, 26, 8);
+      ctx.fill();
+      ctx.strokeStyle = this.game.pipeActive ? theme.accent : '#64748b';
+      ctx.lineWidth = 1.5;
+      ctx.stroke();
+
+      ctx.fillStyle = '#f8fafc';
+      ctx.font = 'bold 13px Inter, system-ui, sans-serif';
+      ctx.textAlign = 'center';
+      ctx.textBaseline = 'middle';
+      ctx.fillText(
+        `${this.game.collectedCount}/${level.targetCount}`,
+        pipe.x,
+        Math.max(31, pipe.y - 55)
+      );
+    }
+
+    _drawPlatforms(ctx, level, theme) {
+      for (const p of this.game.world.platforms) {
+        if (p.type === 'hazard') {
+          // Glowing red hazard pit with spikes
+          ctx.fillStyle = '#3a0d18';
+          ctx.fillRect(p.x, p.y, p.w, p.h);
+
+          const spikeW = 20;
+          const count = Math.ceil(p.w / spikeW);
+          ctx.fillStyle = '#ff4d6d';
+          ctx.beginPath();
+          for (let i = 0; i < count; i++) {
+            const sx = p.x + i * spikeW;
+            ctx.moveTo(sx, p.y + 14);
+            ctx.lineTo(sx + spikeW * 0.5, p.y - 6);
+            ctx.lineTo(sx + spikeW, p.y + 14);
+          }
+          ctx.closePath();
+          ctx.fill();
+        } else {
+          // Ground body
+          ctx.fillStyle = theme.groundFill;
+          ctx.beginPath();
+          ctx.roundRect(p.x, p.y, p.w, p.h, [8, 8, 0, 0]);
+          ctx.fill();
+
+          // Lush top grass/moss crust
+          ctx.fillStyle = theme.groundTop;
+          ctx.beginPath();
+          ctx.roundRect(p.x, p.y, p.w, 12, [8, 8, 2, 2]);
+          ctx.fill();
+
+          // Subtle highlight line
+          ctx.fillStyle = 'rgba(255,255,255,0.12)';
+          ctx.fillRect(p.x + 6, p.y + 2, Math.max(0, p.w - 12), 2);
+        }
+      }
+    }
+
+    _drawPreviewStrands(ctx) {
+      const drag = this.game.draggingNode;
+      if (!drag) return;
+
+      const targets = this.game.previewTargets;
+      const valid = targets.length > 0;
+
+      ctx.save();
+      for (const t of targets) {
+        ctx.beginPath();
+        ctx.moveTo(drag.x, drag.y);
+        ctx.lineTo(t.x, t.y);
+        ctx.strokeStyle = drag.type === 'balloon' ? '#ff99c8' : '#7bf1a8';
+        ctx.lineWidth = 3.5;
+        ctx.setLineDash([7, 6]);
+        ctx.stroke();
+
+        // Highlight ring around anchor node
+        ctx.setLineDash([]);
+        ctx.beginPath();
+        ctx.arc(t.x, t.y, t.radius + 6, 0, Math.PI * 2);
+        ctx.strokeStyle = 'rgba(123, 241, 168, 0.75)';
+        ctx.lineWidth = 2;
+        ctx.stroke();
+      }
+
+      // Outer snap aura around dragged ball
+      ctx.beginPath();
+      ctx.arc(drag.x, drag.y, drag.radius + 9, 0, Math.PI * 2);
+      ctx.strokeStyle = valid ? 'rgba(123, 241, 168, 0.8)' : 'rgba(248, 113, 113, 0.65)';
+      ctx.lineWidth = 2.5;
+      ctx.stroke();
+      ctx.restore();
+    }
+
+    _drawStrands(ctx) {
+      const world = this.game.world;
+      for (const s of world.strands) {
+        if (s.broken) continue;
+        const a = world.getNodeById(s.a);
+        const b = world.getNodeById(s.b);
+        if (!a || !b || a.state !== 'structural' || b.state !== 'structural') continue;
+
+        ctx.save();
+        if (s.isBalloonLink) {
+          // Thin flexible balloon string
+          ctx.beginPath();
+          ctx.moveTo(a.x, a.y);
+          ctx.lineTo(b.x, b.y);
+          ctx.strokeStyle = '#ffd6e7';
+          ctx.lineWidth = 2;
+          ctx.stroke();
+        } else {
+          // Organic goo truss strand: thins slightly and glows red-orange under high stress
+          const stress = Math.min(1, s.stress);
+          const thickness = Math.max(2.6, 6.2 - stress * 2.8);
+
+          // Color blend from dark ink/green to warning crimson
+          const isGreen = a.type === 'green' || b.type === 'green';
+          let strokeColor = isGreen ? '#2d6a4f' : '#1b262c';
+          if (stress > 0.45) {
+            const t = (stress - 0.45) / 0.55;
+            const r = Math.round(45 + t * 210);
+            const g = Math.round(106 - t * 65);
+            const bl = Math.round(79 - t * 50);
+            strokeColor = `rgb(${r},${g},${bl})`;
+          }
+
+          ctx.beginPath();
+          ctx.moveTo(a.x, a.y);
+          ctx.lineTo(b.x, b.y);
+          ctx.lineCap = 'round';
+          ctx.strokeStyle = strokeColor;
+          ctx.lineWidth = thickness + 2;
+          ctx.stroke();
+
+          // Glossy inner core
+          ctx.strokeStyle = isGreen ? '#52b788' : '#3d5a6c';
+          ctx.lineWidth = Math.max(1.2, thickness * 0.42);
+          ctx.stroke();
+        }
+        ctx.restore();
+      }
+    }
+
+    _drawNodes(ctx, level) {
+      const nodes = this.game.world.nodes;
+      const lookTarget = this.game.draggingNode
+        ? { x: this.game.draggingNode.x, y: this.game.draggingNode.y }
+        : this.game.pipeActive
+          ? level.pipe
+          : this.game.pointer;
+
+      // Draw structural first, then walkers, then dragging on top
+      const order = { structural: 1, walker: 2, sucked: 3, dragging: 4 };
+      const visible = nodes
+        .filter(n => n.state !== 'collected' && n.state !== 'dead')
+        .sort((a, b) => (order[a.state] || 0) - (order[b.state] || 0));
+
+      for (const n of visible) {
+        ctx.save();
+        ctx.translate(n.x, n.y);
+        ctx.scale(n.scaleX, n.scaleY);
+
+        const r = n.state === 'walker' ? n.radius * 0.86 : n.radius;
+
+        if (n.type === 'balloon') {
+          this._drawBalloonBody(ctx, r);
+        } else {
+          this._drawGooBody(ctx, n, r, lookTarget);
+        }
+
+        // Pin indicator for terrain anchors
+        if (n.pinned) {
+          ctx.beginPath();
+          ctx.arc(0, r * 0.65, 3.2, 0, Math.PI * 2);
+          ctx.fillStyle = '#94a3b8';
+          ctx.fill();
+        }
+
+        ctx.restore();
+      }
+    }
+
+    _drawBalloonBody(ctx, r) {
+      const grad = ctx.createRadialGradient(-r * 0.3, -r * 0.35, 2, 0, 0, r * 1.1);
+      grad.addColorStop(0, '#ffc8dd');
+      grad.addColorStop(0.55, '#ff70a6');
+      grad.addColorStop(1, '#c9184a');
+
+      ctx.beginPath();
+      ctx.ellipse(0, 0, r * 0.92, r * 1.08, 0, 0, Math.PI * 2);
+      ctx.fillStyle = grad;
+      ctx.fill();
+      ctx.strokeStyle = '#ff99c8';
+      ctx.lineWidth = 1.5;
+      ctx.stroke();
+
+      // Gloss highlight
+      ctx.fillStyle = 'rgba(255,255,255,0.45)';
+      ctx.beginPath();
+      ctx.ellipse(-r * 0.32, -r * 0.35, r * 0.22, r * 0.34, -0.5, 0, Math.PI * 2);
+      ctx.fill();
+
+      // Balloon knot
+      ctx.fillStyle = '#c9184a';
+      ctx.beginPath();
+      ctx.moveTo(-4, r * 1.02);
+      ctx.lineTo(4, r * 1.02);
+      ctx.lineTo(0, r * 1.28);
+      ctx.closePath();
+      ctx.fill();
+    }
+
+    _drawGooBody(ctx, n, r, lookTarget) {
+      const isGreen = n.type === 'green';
+      const grad = ctx.createRadialGradient(-r * 0.3, -r * 0.35, 1.5, 0, 0, r);
+      if (isGreen) {
+        grad.addColorStop(0, '#95d5b2');
+        grad.addColorStop(0.55, '#40916c');
+        grad.addColorStop(1, '#1b4332');
+      } else {
+        grad.addColorStop(0, '#4a5568');
+        grad.addColorStop(0.55, '#1a202c');
+        grad.addColorStop(1, '#090d12');
+      }
+
+      ctx.beginPath();
+      ctx.arc(0, 0, r, 0, Math.PI * 2);
+      ctx.fillStyle = grad;
+      ctx.fill();
+
+      // Subtle rim for green detachable balls
+      if (isGreen) {
+        ctx.strokeStyle = 'rgba(149, 213, 178, 0.7)';
+        ctx.lineWidth = 1.5;
+        ctx.stroke();
+      } else if (n.state === 'walker') {
+        ctx.strokeStyle = 'rgba(168, 218, 220, 0.45)';
+        ctx.lineWidth = 1.2;
+        ctx.stroke();
+      }
+
+      // Expressive blinking eyes
+      const blinking = n.blinkTimer < 0;
+      const eyeOffsetX = r * 0.33;
+      const eyeY = -r * 0.1;
+      const eyeR = r * 0.3;
+
+      if (blinking) {
+        ctx.strokeStyle = '#e2e8f0';
+        ctx.lineWidth = 1.6;
+        ctx.beginPath();
+        ctx.moveTo(-eyeOffsetX - eyeR * 0.7, eyeY);
+        ctx.lineTo(-eyeOffsetX + eyeR * 0.7, eyeY);
+        ctx.moveTo(eyeOffsetX - eyeR * 0.7, eyeY);
+        ctx.lineTo(eyeOffsetX + eyeR * 0.7, eyeY);
+        ctx.stroke();
+      } else {
+        const dx = lookTarget.x - n.x;
+        const dy = lookTarget.y - n.y;
+        const ang = Math.atan2(dy, dx);
+        const pupilShift = eyeR * 0.36;
+        const px = Math.cos(ang) * pupilShift;
+        const py = Math.sin(ang) * pupilShift;
+
+        for (const side of [-1, 1]) {
+          const ex = side * eyeOffsetX;
+          ctx.beginPath();
+          ctx.arc(ex, eyeY, eyeR, 0, Math.PI * 2);
+          ctx.fillStyle = '#f8fafc';
+          ctx.fill();
+
+          ctx.beginPath();
+          ctx.arc(ex + px, eyeY + py, eyeR * 0.48, 0, Math.PI * 2);
+          ctx.fillStyle = '#0f172a';
+          ctx.fill();
+        }
+      }
+    }
+
+    _drawParticles(ctx) {
+      for (const p of this.game.particles) {
+        ctx.save();
+        ctx.globalAlpha = Math.max(0, p.life / p.maxLife);
+        ctx.fillStyle = p.color;
+        ctx.beginPath();
+        ctx.arc(p.x, p.y, p.size, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.restore();
+      }
+    }
+  }
+
+  return { CanvasRenderer };
+});
+
+
+/* ===== src/ui/app.js ===== */
+(function (root) {
+  'use strict';
+
+  function initApp() {
+    const canvas = document.getElementById('game-canvas');
+    if (!canvas) return;
+
+    const sound = new root.GooSound.SoundEngine();
+    let game = null;
+    let renderer = null;
+    let rafId = null;
+    let lastTime = 0;
+
+    // Load saved progress safely
+    let savedProgress = {};
+    try {
+      const raw = localStorage.getItem('web_world_of_goo_progress');
+      if (raw) savedProgress = JSON.parse(raw);
+    } catch (e) {
+      savedProgress = {};
+    }
+
+    // DOM refs
+    const elLevelTitle = document.getElementById('hud-level-title');
+    const elCollected = document.getElementById('hud-collected');
+    const elRemaining = document.getElementById('hud-remaining');
+    const elMoves = document.getElementById('hud-moves');
+    const elHintText = document.getElementById('hint-text');
+    const elHintBanner = document.getElementById('hint-banner');
+
+    const btnLevels = document.getElementById('btn-levels');
+    const btnUndo = document.getElementById('btn-undo');
+    const btnRestart = document.getElementById('btn-restart');
+    const btnPause = document.getElementById('btn-pause');
+    const btnMute = document.getElementById('btn-mute');
+    const btnHint = document.getElementById('btn-hint');
+    const btnCloseHint = document.getElementById('btn-close-hint');
+
+    const modalLevels = document.getElementById('modal-levels');
+    const levelGrid = document.getElementById('level-grid');
+    const btnCloseLevels = document.getElementById('btn-close-levels');
+
+    const modalWin = document.getElementById('modal-win');
+    const winStats = document.getElementById('win-stats');
+    const winBadge = document.getElementById('win-badge');
+    const btnWinReplay = document.getElementById('btn-win-replay');
+    const btnWinNext = document.getElementById('btn-win-next');
+
+    const overlayPause = document.getElementById('overlay-pause');
+    const btnResume = document.getElementById('btn-resume');
+
+    function persistProgress(completedLevels) {
+      try {
+        localStorage.setItem('web_world_of_goo_progress', JSON.stringify(completedLevels));
+      } catch (e) {
+        // Ignore storage errors in sandboxed iframes
+      }
+    }
+
+    function renderLevelCards(state) {
+      levelGrid.innerHTML = '';
+      for (const lvl of root.GooLevels.LEVELS) {
+        const done = state.completedLevels[lvl.id];
+        const isCurrent = lvl.id === state.levelId;
+        const card = document.createElement('button');
+        card.type = 'button';
+        card.className = 'level-card' + (isCurrent ? ' active' : '') + (done ? ' completed' : '');
+        card.innerHTML =
+          '<div class="level-card-head">' +
+            '<span class="level-num">第 ' + lvl.id + ' 关</span>' +
+            (done ? '<span class="level-tag">' + (done.ocd ? '★ OCD 完美' : '✓ 已通关') + '</span>' : '') +
+          '</div>' +
+          '<div class="level-name">' + lvl.name + '</div>' +
+          '<div class="level-sub">' + lvl.subtitle + '</div>';
+        card.addEventListener('click', function () {
+          modalLevels.classList.add('hidden');
+          game.loadLevel(lvl.id);
+          renderer.resize();
+        });
+        levelGrid.appendChild(card);
+      }
+    }
+
+    function updateHUD(state) {
+      elLevelTitle.textContent = '第 ' + state.levelId + ' 关 · ' + state.levelName;
+      elCollected.textContent = state.collectedCount + ' / ' + state.targetCount;
+      elRemaining.textContent = String(state.remainingWalkers);
+      elMoves.textContent = String(state.movesCount);
+      elHintText.textContent = state.hint;
+
+      btnUndo.disabled = !state.canUndo;
+      btnPause.textContent = state.status === 'paused' ? '继续' : '暂停';
+
+      if (state.status === 'paused') {
+        overlayPause.classList.remove('hidden');
+      } else {
+        overlayPause.classList.add('hidden');
+      }
+
+      if (state.status === 'won') {
+        persistProgress(state.completedLevels);
+        const isOcd = state.collectedCount >= state.ocdTarget;
+        winBadge.textContent = isOcd ? '★ OCD 大师通关' : '✓ 关卡完成';
+        winStats.textContent =
+          '已收集 ' + state.collectedCount + ' 颗黏黏球（目标 ' + state.targetCount +
+          ' 颗）· 共搭建 ' + state.movesCount + ' 步';
+        btnWinNext.textContent =
+          state.levelId < state.totalLevels ? '下一关 →' : '回到第 1 关';
+        modalWin.classList.remove('hidden');
+      } else {
+        modalWin.classList.add('hidden');
+      }
+
+      renderLevelCards(state);
+    }
+
+    game = new root.GooGame.GooGameEngine({
+      levelId: 1,
+      sound: sound,
+      onStateChange: updateHUD
+    });
+    game.completedLevels = { ...savedProgress };
+    renderer = new root.GooRenderer.CanvasRenderer(canvas, game);
+
+    function handleResize() {
+      renderer.resize();
+      renderer.render(0);
+    }
+
+    window.addEventListener('resize', handleResize);
+    handleResize();
+    updateHUD(game.getHUDState());
+
+    // Pointer & touch interaction
+    function getWorldPos(e) {
+      return renderer.screenToWorld(e.clientX, e.clientY);
+    }
+
+    canvas.addEventListener('pointerdown', function (e) {
+      sound.unlock();
+      if (e.button !== undefined && e.button !== 0) return;
+      canvas.setPointerCapture(e.pointerId);
+      const pos = getWorldPos(e);
+      game.pointerDown(pos.x, pos.y);
+    });
+
+    canvas.addEventListener('pointermove', function (e) {
+      const pos = getWorldPos(e);
+      game.pointerMove(pos.x, pos.y);
+    });
+
+    function endDrag(e) {
+      const pos = getWorldPos(e);
+      game.pointerUp(pos.x, pos.y);
+    }
+
+    canvas.addEventListener('pointerup', endDrag);
+    canvas.addEventListener('pointercancel', endDrag);
+
+    // Toolbar controls
+    btnLevels.addEventListener('click', function () {
+      sound.unlock();
+      renderLevelCards(game.getHUDState());
+      modalLevels.classList.remove('hidden');
+    });
+
+    btnCloseLevels.addEventListener('click', function () {
+      modalLevels.classList.add('hidden');
+    });
+
+    modalLevels.addEventListener('click', function (e) {
+      if (e.target === modalLevels) modalLevels.classList.add('hidden');
+    });
+
+    btnUndo.addEventListener('click', function () {
+      sound.unlock();
+      game.undo();
+    });
+
+    btnRestart.addEventListener('click', function () {
+      sound.unlock();
+      game.restartLevel();
+    });
+
+    btnPause.addEventListener('click', function () {
+      sound.unlock();
+      game.togglePause();
+    });
+
+    btnResume.addEventListener('click', function () {
+      sound.unlock();
+      game.togglePause();
+    });
+
+    btnMute.addEventListener('click', function () {
+      const muted = sound.toggleMute();
+      btnMute.textContent = muted ? '静音' : '音效';
+      btnMute.classList.toggle('muted', muted);
+    });
+
+    btnHint.addEventListener('click', function () {
+      elHintBanner.classList.toggle('hidden');
+    });
+
+    btnCloseHint.addEventListener('click', function () {
+      elHintBanner.classList.add('hidden');
+    });
+
+    btnWinReplay.addEventListener('click', function () {
+      sound.unlock();
+      game.restartLevel();
+    });
+
+    btnWinNext.addEventListener('click', function () {
+      sound.unlock();
+      const nextId = game.currentLevelId < root.GooLevels.LEVELS.length ? game.currentLevelId + 1 : 1;
+      game.loadLevel(nextId);
+      renderer.resize();
+    });
+
+    // Keyboard shortcuts
+    window.addEventListener('keydown', function (e) {
+      if (e.key === 'z' || e.key === 'Z') {
+        game.undo();
+      } else if (e.key === 'r' || e.key === 'R') {
+        game.restartLevel();
+      } else if (e.key === ' ') {
+        e.preventDefault();
+        game.togglePause();
+      } else if (e.key === 'm' || e.key === 'M') {
+        const muted = sound.toggleMute();
+        btnMute.textContent = muted ? '静音' : '音效';
+        btnMute.classList.toggle('muted', muted);
+      } else if (e.key === 'Escape') {
+        modalLevels.classList.add('hidden');
+      }
+    });
+
+    // Main animation loop
+    function loop(timestamp) {
+      if (!lastTime) lastTime = timestamp;
+      const dt = Math.min((timestamp - lastTime) / 1000, 0.05);
+      lastTime = timestamp;
+
+      game.update(dt);
+      renderer.render(dt);
+      rafId = requestAnimationFrame(loop);
+    }
+
+    if (rafId) cancelAnimationFrame(rafId);
+    rafId = requestAnimationFrame(loop);
+  }
+
+  window.onload = initApp;
+})(typeof globalThis !== 'undefined' ? globalThis : window);
+
+  </script>
+</body>
+</html>

@@ -1,0 +1,3442 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>坎巴拉太空计划（网页版）— Kerbal Space Program Web</title>
+  <style>
+    :root {
+      --bg-deep: #070c14;
+      --bg-panel: rgba(15, 23, 42, 0.88);
+      --bg-card: #131f33;
+      --bg-card-hover: #1b2c47;
+      --border: rgba(148, 163, 184, 0.22);
+      --text-main: #f1f5f9;
+      --text-muted: #94a3b8;
+      --accent: #38bdf8;
+      --accent-green: #22c55e;
+      --accent-orange: #f97316;
+      --accent-red: #ef4444;
+      --accent-amber: #f59e0b;
+    }
+
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    html, body {
+      width: 100%;
+      height: 100%;
+      background: var(--bg-deep);
+      color: var(--text-main);
+      font-family: Inter, -apple-system, BlinkMacSystemFont, "PingFang SC", "Microsoft YaHei", sans-serif;
+      overflow: hidden;
+      user-select: none;
+    }
+
+    .app-shell {
+      display: flex;
+      flex-direction: column;
+      width: 100%;
+      height: 100vh;
+    }
+
+    /* Top Navigation Bar */
+    .topbar {
+      height: 50px;
+      flex-shrink: 0;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 0 14px;
+      background: #0b1322;
+      border-bottom: 1px solid var(--border);
+      gap: 10px;
+      z-index: 20;
+    }
+    .brand {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      font-weight: 700;
+      font-size: 15px;
+      letter-spacing: 0.3px;
+      white-space: nowrap;
+    }
+    .brand-badge {
+      background: linear-gradient(135deg, #22c55e, #0ea5e9);
+      color: #04101c;
+      font-size: 11px;
+      font-weight: 800;
+      padding: 2px 6px;
+      border-radius: 5px;
+    }
+    .nav-actions {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+    .nav-btn {
+      background: #162236;
+      color: var(--text-main);
+      border: 1px solid var(--border);
+      padding: 6px 12px;
+      border-radius: 7px;
+      font-size: 13px;
+      font-weight: 600;
+      cursor: pointer;
+      transition: background 0.15s, border-color 0.15s;
+      white-space: nowrap;
+    }
+    .nav-btn:hover { background: #1e314e; border-color: var(--accent); }
+    .nav-btn.active {
+      background: rgba(56, 189, 248, 0.2);
+      border-color: var(--accent);
+      color: #7dd3fc;
+    }
+
+    .hidden { display: none !important; }
+
+    /* VAB Workspace */
+    #vab-view {
+      flex: 1;
+      display: grid;
+      grid-template-columns: 280px 1fr 310px;
+      gap: 12px;
+      padding: 12px;
+      overflow: hidden;
+      min-height: 0;
+    }
+    .panel {
+      background: var(--bg-panel);
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      display: flex;
+      flex-direction: column;
+      overflow: hidden;
+      min-height: 0;
+    }
+    .panel-header {
+      padding: 10px 14px;
+      font-size: 13px;
+      font-weight: 700;
+      border-bottom: 1px solid var(--border);
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      background: rgba(15, 23, 42, 0.65);
+      color: #e2e8f0;
+    }
+    .panel-body {
+      padding: 10px;
+      overflow-y: auto;
+      flex: 1;
+      min-height: 0;
+    }
+
+    .cat-bar {
+      display: grid;
+      grid-template-columns: repeat(2, 1fr);
+      gap: 6px;
+      padding: 8px 10px;
+      border-bottom: 1px solid var(--border);
+    }
+    .cat-btn {
+      background: var(--bg-card);
+      color: var(--text-muted);
+      border: 1px solid var(--border);
+      border-radius: 7px;
+      padding: 6px 8px;
+      font-size: 12px;
+      font-weight: 600;
+      cursor: pointer;
+    }
+    .cat-btn.active {
+      background: rgba(56, 189, 248, 0.18);
+      color: #7dd3fc;
+      border-color: var(--accent);
+    }
+
+    .part-card {
+      background: var(--bg-card);
+      border: 1px solid var(--border);
+      border-radius: 9px;
+      padding: 9px 10px;
+      margin-bottom: 8px;
+      cursor: pointer;
+      transition: transform 0.1s, border-color 0.15s, background 0.15s;
+    }
+    .part-card:hover {
+      background: var(--bg-card-hover);
+      border-color: var(--accent);
+      transform: translateY(-1px);
+    }
+    .part-title { font-size: 13px; font-weight: 700; color: #f8fafc; margin-bottom: 3px; }
+    .part-spec { font-size: 11px; color: #38bdf8; font-weight: 600; margin-bottom: 3px; }
+    .part-desc { font-size: 11px; color: var(--text-muted); line-height: 1.35; }
+
+    /* Center VAB Canvas + Stack */
+    .vab-center {
+      display: grid;
+      grid-template-rows: 1fr 165px;
+      gap: 10px;
+      min-height: 0;
+    }
+    .vab-canvas-wrap {
+      position: relative;
+      background: #0d1520;
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      overflow: hidden;
+    }
+    #vab-canvas { width: 100%; height: 100%; display: block; }
+
+    .stack-row {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 5px 8px;
+      background: var(--bg-card);
+      border-radius: 6px;
+      margin-bottom: 5px;
+      font-size: 12px;
+    }
+    .stack-idx { color: var(--text-muted); font-family: monospace; margin-right: 6px; }
+    .stack-name { flex: 1; font-weight: 600; }
+    .stack-actions { display: flex; gap: 4px; }
+    .mini-btn {
+      background: #1e293b;
+      color: #e2e8f0;
+      border: 1px solid var(--border);
+      border-radius: 4px;
+      padding: 2px 6px;
+      font-size: 11px;
+      cursor: pointer;
+    }
+    .mini-btn:hover { background: #334155; }
+    .mini-btn.danger:hover { background: #b91c1c; border-color: #ef4444; }
+
+    /* Right VAB Panel: Presets + Report */
+    .preset-btn {
+      width: 100%;
+      text-align: left;
+      background: var(--bg-card);
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      padding: 8px 10px;
+      margin-bottom: 6px;
+      cursor: pointer;
+      color: var(--text-main);
+    }
+    .preset-btn:hover { border-color: var(--accent-green); background: #16293d; }
+    .preset-name { font-size: 13px; font-weight: 700; }
+    .preset-sub { font-size: 11px; color: var(--text-muted); margin-top: 2px; }
+
+    .metrics-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 7px;
+      margin: 8px 0;
+    }
+    .metric-box {
+      background: var(--bg-card);
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      padding: 8px;
+    }
+    .m-label { font-size: 11px; color: var(--text-muted); }
+    .m-val { font-size: 15px; font-weight: 700; margin-top: 2px; font-family: monospace; }
+    .m-val.accent { color: #38bdf8; }
+    .m-val.good { color: #4ade80; }
+    .m-val.warn { color: #fbbf24; }
+
+    .stage-row {
+      display: flex;
+      justify-content: space-between;
+      font-size: 11.5px;
+      padding: 5px 8px;
+      background: rgba(30, 41, 59, 0.55);
+      border-radius: 6px;
+      margin-bottom: 4px;
+    }
+    .warn-item {
+      font-size: 11.5px;
+      color: #fde047;
+      background: rgba(234, 179, 8, 0.12);
+      border: 1px solid rgba(234, 179, 8, 0.35);
+      border-radius: 6px;
+      padding: 6px 8px;
+      margin-top: 6px;
+    }
+    .ok-item {
+      font-size: 11.5px;
+      color: #86efac;
+      background: rgba(34, 197, 94, 0.12);
+      border: 1px solid rgba(34, 197, 94, 0.35);
+      border-radius: 6px;
+      padding: 6px 8px;
+      margin-top: 6px;
+    }
+    .launch-btn {
+      width: 100%;
+      padding: 12px;
+      border: none;
+      border-radius: 9px;
+      background: linear-gradient(135deg, #16a34a, #22c55e);
+      color: #03150a;
+      font-size: 15px;
+      font-weight: 800;
+      cursor: pointer;
+      margin-top: 10px;
+      letter-spacing: 0.5px;
+    }
+    .launch-btn:hover:not(:disabled) { filter: brightness(1.08); }
+    .launch-btn:disabled { opacity: 0.45; cursor: not-allowed; }
+
+    /* Flight View */
+    #flight-view {
+      flex: 1;
+      position: relative;
+      overflow: hidden;
+      min-height: 0;
+    }
+    #flight-canvas {
+      width: 100%;
+      height: 100%;
+      display: block;
+    }
+
+    /* HUD Overlays */
+    .hud-top {
+      position: absolute;
+      top: 10px;
+      left: 50%;
+      transform: translateX(-50%);
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      background: rgba(9, 15, 28, 0.82);
+      backdrop-filter: blur(8px);
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      padding: 7px 14px;
+      z-index: 10;
+      flex-wrap: wrap;
+      justify-content: center;
+    }
+    .hud-stat { text-align: center; min-width: 68px; }
+    .hud-stat .lbl { font-size: 10px; color: var(--text-muted); text-transform: uppercase; }
+    .hud-stat .val { font-size: 14px; font-weight: 700; font-family: monospace; color: #f8fafc; }
+
+    .status-badge {
+      padding: 3px 9px;
+      border-radius: 999px;
+      font-size: 11px;
+      font-weight: 700;
+    }
+    .status-prelaunch { background: rgba(56, 189, 248, 0.2); color: #7dd3fc; }
+    .status-flying { background: rgba(249, 115, 22, 0.25); color: #fdba74; }
+    .status-orbit { background: rgba(34, 197, 94, 0.25); color: #86efac; }
+    .status-landed { background: rgba(16, 185, 129, 0.28); color: #6ee7b7; }
+    .status-crashed { background: rgba(239, 68, 68, 0.28); color: #fca5a5; }
+
+    .hud-left {
+      position: absolute;
+      top: 76px;
+      left: 12px;
+      width: 185px;
+      background: rgba(9, 15, 28, 0.8);
+      backdrop-filter: blur(8px);
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      padding: 9px;
+      z-index: 10;
+    }
+    .hud-sec-title {
+      font-size: 11px;
+      font-weight: 700;
+      color: var(--accent);
+      margin-bottom: 6px;
+      text-transform: uppercase;
+      letter-spacing: 0.4px;
+    }
+    .hud-stage {
+      background: rgba(30, 41, 59, 0.6);
+      border: 1px solid transparent;
+      border-radius: 6px;
+      padding: 5px 7px;
+      margin-bottom: 5px;
+      font-size: 11px;
+    }
+    .hud-stage.current { border-color: var(--accent-orange); background: rgba(249, 115, 22, 0.14); }
+    .hud-stage-top { display: flex; justify-content: space-between; margin-bottom: 3px; font-weight: 600; }
+    .fuel-bar { height: 5px; background: #1e293b; border-radius: 3px; overflow: hidden; }
+    .fuel-fill { height: 100%; background: linear-gradient(90deg, #f59e0b, #22c55e); }
+
+    .hud-right {
+      position: absolute;
+      top: 76px;
+      right: 12px;
+      width: 225px;
+      background: rgba(9, 15, 28, 0.8);
+      backdrop-filter: blur(8px);
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      padding: 9px 11px;
+      z-index: 10;
+    }
+    .orbit-row {
+      display: flex;
+      justify-content: space-between;
+      font-size: 11.5px;
+      padding: 2.5px 0;
+      border-bottom: 1px solid rgba(148, 163, 184, 0.1);
+    }
+    .orbit-row span:first-child { color: var(--text-muted); }
+    .orbit-row span:last-child { font-family: monospace; font-weight: 600; }
+    .ms-item { font-size: 11px; padding: 2px 0; color: var(--text-muted); }
+    .ms-item.done { color: #86efac; font-weight: 600; }
+    .log-entry {
+      font-size: 10.5px;
+      color: #cbd5e1;
+      line-height: 1.3;
+      margin-top: 4px;
+    }
+    .log-entry span { color: var(--accent); font-family: monospace; }
+
+    /* Bottom Control Dock */
+    .hud-bottom {
+      position: absolute;
+      bottom: 10px;
+      left: 50%;
+      transform: translateX(-50%);
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      background: rgba(9, 15, 28, 0.86);
+      backdrop-filter: blur(10px);
+      border: 1px solid var(--border);
+      border-radius: 14px;
+      padding: 8px 14px;
+      z-index: 10;
+      max-width: 96vw;
+      flex-wrap: wrap;
+      justify-content: center;
+    }
+    #navball-canvas { width: 116px; height: 116px; display: block; flex-shrink: 0; }
+
+    .ctrl-col { display: flex; flex-direction: column; gap: 6px; }
+    .ctrl-row { display: flex; gap: 5px; align-items: center; flex-wrap: wrap; }
+
+    .ctl-btn {
+      background: #17243b;
+      color: #f1f5f9;
+      border: 1px solid var(--border);
+      border-radius: 7px;
+      padding: 6px 10px;
+      font-size: 12px;
+      font-weight: 600;
+      cursor: pointer;
+    }
+    .ctl-btn:hover { background: #223556; border-color: var(--accent); }
+    .ctl-btn.active { background: rgba(56, 189, 248, 0.25); border-color: var(--accent); color: #7dd3fc; }
+    .ctl-btn.stage-primary {
+      background: linear-gradient(135deg, #ea580c, #f97316);
+      color: #fff;
+      border: none;
+      padding: 8px 14px;
+      font-size: 13px;
+      font-weight: 800;
+    }
+    .ctl-btn.stage-primary:hover { filter: brightness(1.1); }
+
+    .throttle-wrap {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      font-size: 12px;
+    }
+    #throttle-slider { width: 92px; accent-color: #f97316; }
+
+    /* Toast */
+    #toast-banner {
+      position: fixed;
+      top: 60px;
+      left: 50%;
+      transform: translateX(-50%) translateY(-10px);
+      background: rgba(15, 23, 42, 0.95);
+      border: 1px solid var(--accent);
+      color: #f8fafc;
+      padding: 8px 16px;
+      border-radius: 9px;
+      font-size: 13px;
+      font-weight: 600;
+      opacity: 0;
+      pointer-events: none;
+      transition: opacity 0.2s, transform 0.2s;
+      z-index: 50;
+    }
+    #toast-banner.show {
+      opacity: 1;
+      transform: translateX(-50%) translateY(0);
+    }
+
+    @media (max-width: 960px) {
+      #vab-view {
+        grid-template-columns: 1fr;
+        overflow-y: auto;
+      }
+      .vab-center { min-height: 360px; }
+      .hud-left, .hud-right { display: none; }
+    }
+  </style>
+</head>
+<body>
+  <div class="app-shell">
+    <header class="topbar">
+      <div class="brand">
+        <span>🚀 坎巴拉太空计划</span>
+        <span class="brand-badge">WEB 2D 轨道引擎</span>
+      </div>
+      <div class="nav-actions">
+        <button id="btn-mode-vab" class="nav-btn active">🔧 装配车间 (VAB)</button>
+        <button id="btn-mode-flight" class="nav-btn">🛰 发射与飞行</button>
+        <button id="btn-mute" class="nav-btn">🔊 音效</button>
+      </div>
+    </header>
+
+    <!-- VAB View -->
+    <main id="vab-view">
+      <section class="panel">
+        <div class="panel-header"><span>火箭部件库</span><span style="font-size:11px;color:#94a3b8;">点击添加到下方</span></div>
+        <div id="vab-categories" class="cat-bar"></div>
+        <div id="vab-parts-list" class="panel-body"></div>
+      </section>
+
+      <section class="vab-center">
+        <div class="vab-canvas-wrap">
+          <canvas id="vab-canvas"></canvas>
+        </div>
+        <div class="panel">
+          <div class="panel-header">
+            <span>当前火箭结构（由上至下）</span>
+            <button id="btn-clear-rocket" class="mini-btn danger">清空火箭</button>
+          </div>
+          <div id="vab-stack-list" class="panel-body"></div>
+        </div>
+      </section>
+
+      <section class="panel">
+        <div class="panel-header"><span>工程报告 & 预设构型</span></div>
+        <div class="panel-body">
+          <div style="font-size:11.5px;font-weight:700;color:#94a3b8;margin-bottom:6px;">一键加载预设火箭</div>
+          <div id="vab-presets"></div>
+
+          <div style="font-size:11.5px;font-weight:700;color:#94a3b8;margin:10px 0 4px;">气动与推进性能（齐奥尔科夫斯基公式）</div>
+          <div id="vab-metrics" class="metrics-grid"></div>
+          <div id="vab-stages"></div>
+          <div id="vab-warnings"></div>
+
+          <button id="btn-launch" class="launch-btn">🚀 移至发射台并发射 (LAUNCH)</button>
+        </div>
+      </section>
+    </main>
+
+    <!-- Flight View -->
+    <section id="flight-view" class="hidden">
+      <canvas id="flight-canvas"></canvas>
+
+      <div class="hud-top">
+        <span id="hud-status-badge" class="status-badge status-prelaunch">发射台待命</span>
+        <div class="hud-stat"><div class="lbl">海拔高度</div><div id="hud-alt" class="val">0 m</div></div>
+        <div class="hud-stat"><div class="lbl">轨道速度</div><div id="hud-vel" class="val">0.0 m/s</div></div>
+        <div class="hud-stat"><div class="lbl">垂直速度</div><div id="hud-vspeed" class="val">+0.0 m/s</div></div>
+        <div class="hud-stat"><div class="lbl">任务时间</div><div id="hud-met" class="val">00:00:00</div></div>
+        <div class="ctrl-row">
+          <button id="btn-warp-down" class="ctl-btn" title="减速 (,)">«</button>
+          <span id="hud-warp" style="font-family:monospace;font-weight:700;min-width:42px;text-align:center;">1x</span>
+          <button id="btn-warp-up" class="ctl-btn" title="时间加速 (.)">»</button>
+          <button id="btn-pause" class="ctl-btn">⏸ 暂停</button>
+        </div>
+      </div>
+
+      <aside class="hud-left">
+        <div class="hud-sec-title">分级队列 (Staging)</div>
+        <div id="hud-stages-list"></div>
+        <div class="hud-sec-title" style="margin-top:10px;">快捷操作</div>
+        <div style="font-size:10.5px;color:#94a3b8;line-height:1.5;">
+          <b>SPACE</b>：点火 / 分离<br/>
+          <b>A / D</b>：左 / 右偏航<br/>
+          <b>W / S</b> 或 <b>Z / X</b>：油门<br/>
+          <b>M</b>：切换星图视角<br/>
+          <b>T</b>：SAS · <b>P</b>：开伞
+        </div>
+      </aside>
+
+      <aside class="hud-right">
+        <div class="hud-sec-title">开普勒轨道遥测</div>
+        <div class="orbit-row"><span>远地点 (Ap)</span><span id="hud-ap">0.0 km</span></div>
+        <div class="orbit-row"><span>近地点 (Pe)</span><span id="hud-pe">-600.0 km</span></div>
+        <div class="orbit-row"><span>偏心率 (e)</span><span id="hud-ecc">0.000</span></div>
+        <div class="orbit-row"><span>轨道周期</span><span id="hud-period">∞</span></div>
+        <div class="orbit-row"><span>过载 / 动压</span><span><b id="hud-gforce">1.00 G</b> · <b id="hud-dynq">0.0 kPa</b></span></div>
+
+        <div class="hud-sec-title" style="margin-top:10px;">任务里程碑</div>
+        <div id="hud-milestones"></div>
+
+        <div class="hud-sec-title" style="margin-top:10px;">飞行日志</div>
+        <div id="hud-event-log"></div>
+      </aside>
+
+      <div class="hud-bottom">
+        <canvas id="navball-canvas" width="128" height="128"></canvas>
+
+        <div class="ctrl-col">
+          <div class="ctrl-row">
+            <button id="btn-stage" class="ctl-btn stage-primary">🔥 分级 / 点火 (SPACE)</button>
+            <button id="btn-parachute" class="ctl-btn">🪂 开伞 (P)</button>
+            <button id="btn-toggle-map" class="ctl-btn">🗺 星图视角 (M)</button>
+            <button id="btn-auto-turn" class="ctl-btn">🧭 重力转弯辅助</button>
+          </div>
+          <div class="ctrl-row">
+            <div class="throttle-wrap">
+              <span>油门</span>
+              <input id="throttle-slider" type="range" min="0" max="100" value="100" />
+              <span id="throttle-val" style="font-family:monospace;width:36px;">100%</span>
+            </div>
+            <button id="btn-throttle-full" class="ctl-btn">满推(Z)</button>
+            <button id="btn-throttle-cut" class="ctl-btn">关车(X)</button>
+            <button id="btn-steer-left" class="ctl-btn">⟲ 左转(A)</button>
+            <button id="btn-steer-right" class="ctl-btn">⟳ 右转(D)</button>
+          </div>
+          <div class="ctrl-row">
+            <button id="btn-sas-toggle" class="ctl-btn active">SAS: 开 (T)</button>
+            <button id="btn-sas-hold" class="ctl-btn active">稳定</button>
+            <button id="btn-sas-pro" class="ctl-btn">顺行</button>
+            <button id="btn-sas-retro" class="ctl-btn">逆行</button>
+            <button id="btn-zoom-in" class="ctl-btn">＋</button>
+            <button id="btn-zoom-out" class="ctl-btn">－</button>
+            <button id="btn-reset-launch" class="ctl-btn">↺ 重置</button>
+            <button id="btn-back-vab" class="ctl-btn">🔧 返回 VAB</button>
+          </div>
+        </div>
+      </div>
+    </section>
+  </div>
+
+  <div id="toast-banner"></div>
+
+  <script>
+// === Module: src/constants.js ===
+(function (root) {
+  'use strict';
+
+  // Kerbin & Mun physical constants (authentic KSP scale)
+  const PHYSICS = {
+    G: 6.67430e-11,
+    g0: 9.80665, // Standard gravity for Isp calculation (m/s^2)
+    KERBIN: {
+      name: 'Kerbin',
+      radius: 600000,         // 600 km
+      mu: 3.5316000e12,       // GM (m^3/s^2), surface g ≈ 9.81 m/s^2
+      atmosphereHeight: 70000,// 70 km
+      seaLevelDensity: 1.225, // kg/m^3
+      scaleHeight: 5600,      // m
+      rotationPeriod: 21549.425 // s
+    },
+    MUN: {
+      name: 'Mun',
+      radius: 200000,         // 200 km
+      mu: 6.5138398e10,       // GM (m^3/s^2)
+      orbitRadius: 12000000,  // 12,000 km from Kerbin center
+      soiRadius: 2429559,     // ~2,430 km Sphere of Influence
+      initialAngle: 0.95      // radians
+    }
+  };
+
+  // Part Catalog for VAB Rocket Builder
+  // Mass in kg, thrust in N, isp in seconds, height/width in visual px units (1 px ≈ 0.15 m)
+  const PARTS = {
+    mk1_pod: {
+      id: 'mk1_pod',
+      name: 'Mk1 指令舱',
+      category: 'pod',
+      dryMass: 840,
+      fuelMass: 0,
+      thrust: 0,
+      ispVac: 0,
+      ispAtm: 0,
+      dragCoeff: 0.22,
+      area: 1.2,
+      width: 24,
+      height: 26,
+      color: '#cfd8dc',
+      accent: '#37474f',
+      isPod: true,
+      description: '单人载人指令舱，内置基础陀螺仪（SAS）与防热盾。'
+    },
+    parachute_mk16: {
+      id: 'parachute_mk16',
+      name: 'Mk16 降落伞',
+      category: 'aero',
+      dryMass: 100,
+      fuelMass: 0,
+      thrust: 0,
+      ispVac: 0,
+      ispAtm: 0,
+      dragCoeff: 0.15,
+      chuteDragArea: 85,
+      area: 0.6,
+      width: 16,
+      height: 12,
+      color: '#ef5350',
+      accent: '#eceff1',
+      isParachute: true,
+      description: '再入大气层后展开减速，确保指令舱安全着陆。'
+    },
+    nose_cone: {
+      id: 'nose_cone',
+      name: '气动整流罩',
+      category: 'aero',
+      dryMass: 80,
+      fuelMass: 0,
+      thrust: 0,
+      ispVac: 0,
+      ispAtm: 0,
+      dragCoeff: 0.10,
+      area: 0.8,
+      width: 24,
+      height: 20,
+      color: '#eceff1',
+      accent: '#ff7043',
+      isNoseCone: true,
+      description: '流线型头部整流罩，有效降低跨音速气动阻力。'
+    },
+    tank_t200: {
+      id: 'tank_t200',
+      name: 'FL-T200 燃料箱',
+      category: 'fuel',
+      dryMass: 125,
+      fuelMass: 1000,
+      thrust: 0,
+      ispVac: 0,
+      ispAtm: 0,
+      dragCoeff: 0.20,
+      area: 1.2,
+      width: 26,
+      height: 26,
+      color: '#f5f5f5',
+      accent: '#263238',
+      isTank: true,
+      description: '轻型液氧/煤油燃料箱，适合上面级轨道机动。'
+    },
+    tank_t400: {
+      id: 'tank_t400',
+      name: 'FL-T400 燃料箱',
+      category: 'fuel',
+      dryMass: 250,
+      fuelMass: 2000,
+      thrust: 0,
+      ispVac: 0,
+      ispAtm: 0,
+      dragCoeff: 0.20,
+      area: 1.2,
+      width: 26,
+      height: 44,
+      color: '#eceff1',
+      accent: '#37474f',
+      isTank: true,
+      description: '标准中型液体燃料箱，近地轨道主力储箱。'
+    },
+    tank_t800: {
+      id: 'tank_t800',
+      name: 'FL-T800 大型燃料箱',
+      category: 'fuel',
+      dryMass: 500,
+      fuelMass: 4000,
+      thrust: 0,
+      ispVac: 0,
+      ispAtm: 0,
+      dragCoeff: 0.20,
+      area: 1.4,
+      width: 28,
+      height: 68,
+      color: '#e0e7ef',
+      accent: '#ff8f00',
+      isTank: true,
+      description: '大容量液体燃料箱，为芯一级或奔月级提供充沛推进剂。'
+    },
+    engine_terrier: {
+      id: 'engine_terrier',
+      name: 'LV-909 “梗犬”发动机',
+      category: 'engine',
+      dryMass: 500,
+      fuelMass: 0,
+      thrust: 60000,   // 60 kN
+      ispVac: 345,
+      ispAtm: 85,
+      dragCoeff: 0.25,
+      area: 1.0,
+      width: 22,
+      height: 18,
+      color: '#546e7a',
+      accent: '#ff7043',
+      isEngine: true,
+      throttleable: true,
+      description: '高真空比冲上面级发动机，适合轨道圆化与地月转移。'
+    },
+    engine_swivel: {
+      id: 'engine_swivel',
+      name: 'LV-T45 “转环”发动机',
+      category: 'engine',
+      dryMass: 1500,
+      fuelMass: 0,
+      thrust: 215000,  // 215 kN
+      ispVac: 320,
+      ispAtm: 250,
+      dragCoeff: 0.28,
+      area: 1.2,
+      width: 26,
+      height: 24,
+      color: '#455a64',
+      accent: '#ffa726',
+      isEngine: true,
+      throttleable: true,
+      description: '带推力矢量控制的液体主发动机，大气与真空表现均衡。'
+    },
+    engine_reliant: {
+      id: 'engine_reliant',
+      name: 'LV-T30 “信赖”大推力机',
+      category: 'engine',
+      dryMass: 1250,
+      fuelMass: 0,
+      thrust: 240000,  // 240 kN
+      ispVac: 310,
+      ispAtm: 265,
+      dragCoeff: 0.28,
+      area: 1.2,
+      width: 26,
+      height: 24,
+      color: '#37474f',
+      accent: '#ef5350',
+      isEngine: true,
+      throttleable: true,
+      description: '海平面高推重比一级液体发动机，起飞加速迅猛。'
+    },
+    srb_hammer: {
+      id: 'srb_hammer',
+      name: 'RT-10 “重锤”固推器',
+      category: 'engine',
+      dryMass: 750,
+      fuelMass: 2810,
+      thrust: 227000,  // 227 kN
+      ispVac: 195,
+      ispAtm: 170,
+      dragCoeff: 0.30,
+      area: 1.3,
+      width: 26,
+      height: 52,
+      color: '#fafafa',
+      accent: '#d32f2f',
+      isEngine: true,
+      isSolid: true,
+      throttleable: false,
+      description: '固体燃料助推器，点火后无法关机，提供廉价起飞大推力。'
+    },
+    decoupler_td12: {
+      id: 'decoupler_td12',
+      name: 'TD-12 级间分离器',
+      category: 'aero',
+      dryMass: 40,
+      fuelMass: 0,
+      thrust: 0,
+      ispVac: 0,
+      ispAtm: 0,
+      dragCoeff: 0.18,
+      area: 1.2,
+      width: 26,
+      height: 10,
+      color: '#ffb300',
+      accent: '#263238',
+      isDecoupler: true,
+      description: '按下空格分级时抛离下方已耗尽的助推级，大幅减轻干重。'
+    }
+  };
+
+  // Preset Rockets (top-to-bottom stack order)
+  const PRESETS = {
+    hopper: {
+      id: 'hopper',
+      name: '亚轨道探空箭 Mk-I',
+      subtitle: '入门练习 · 突破卡门线 (70km)',
+      parts: [
+        'parachute_mk16',
+        'mk1_pod',
+        'decoupler_td12',
+        'tank_t400',
+        'engine_swivel'
+      ]
+    },
+    orbiter: {
+      id: 'orbiter',
+      name: '坎巴拉轨道器 Mk-II',
+      subtitle: '两级构型 · 轻松进入 Kerbin 稳定轨道',
+      parts: [
+        'parachute_mk16',
+        'mk1_pod',
+        'decoupler_td12',
+        'tank_t400',
+        'engine_terrier',
+        'decoupler_td12',
+        'tank_t800',
+        'tank_t400',
+        'engine_reliant'
+      ]
+    },
+    munar: {
+      id: 'munar',
+      name: '穆恩探月者 Mk-III',
+      subtitle: '三级重型 · 具备高轨与飞掠穆恩能力',
+      parts: [
+        'parachute_mk16',
+        'mk1_pod',
+        'decoupler_td12',
+        'tank_t400',
+        'engine_terrier',
+        'decoupler_td12',
+        'tank_t800',
+        'engine_swivel',
+        'decoupler_td12',
+        'tank_t800',
+        'tank_t800',
+        'engine_reliant'
+      ]
+    }
+  };
+
+  const CATEGORIES = [
+    { id: 'pod', label: '指令舱' },
+    { id: 'fuel', label: '燃料箱' },
+    { id: 'engine', label: '发动机' },
+    { id: 'aero', label: '分离与气动' }
+  ];
+
+  const KSPConstants = { PHYSICS, PARTS, PRESETS, CATEGORIES };
+
+  if (typeof module !== 'undefined' && module.exports) {
+    module.exports = KSPConstants;
+  } else {
+    root.KSP = root.KSP || {};
+    root.KSP.Constants = KSPConstants;
+  }
+})(typeof globalThis !== 'undefined' ? globalThis : window);
+
+
+// === Module: src/physics.js ===
+(function (root) {
+  'use strict';
+
+  const Constants =
+    root.KSP.Constants;
+
+  const { PHYSICS } = Constants;
+  const KERBIN = PHYSICS.KERBIN;
+  const MUN = PHYSICS.MUN;
+
+  /**
+   * Exponential atmospheric density model for Kerbin.
+   * Returns 0 above atmosphereHeight (70 km).
+   */
+  function getAtmosphericDensity(altitude) {
+    if (altitude >= KERBIN.atmosphereHeight) return 0;
+    const h = Math.max(0, altitude);
+    return KERBIN.seaLevelDensity * Math.exp(-h / KERBIN.scaleHeight);
+  }
+
+  /**
+   * Normalized atmospheric pressure (0 in vacuum, 1 at sea level).
+   */
+  function getAtmosphericPressureRatio(altitude) {
+    if (altitude >= KERBIN.atmosphereHeight) return 0;
+    const h = Math.max(0, altitude);
+    return Math.exp(-h / KERBIN.scaleHeight);
+  }
+
+  /**
+   * Effective specific impulse (Isp) interpolated between sea level and vacuum.
+   */
+  function getEffectiveIsp(ispAtm, ispVac, altitude) {
+    const p = getAtmosphericPressureRatio(altitude);
+    return ispVac - (ispVac - ispAtm) * p;
+  }
+
+  /**
+   * Tsiolkovsky rocket equation: deltaV = Isp * g0 * ln(m0 / m1)
+   */
+  function calculateDeltaV(isp, wetMass, dryMass) {
+    if (isp <= 0 || wetMass <= 0 || dryMass <= 0 || wetMass <= dryMass) {
+      return 0;
+    }
+    return isp * PHYSICS.g0 * Math.log(wetMass / dryMass);
+  }
+
+  /**
+   * Gravitational acceleration vector from Kerbin (centered at origin (0,0)).
+   */
+  function getKerbinGravity(x, y) {
+    const r2 = x * x + y * y;
+    const r = Math.sqrt(r2);
+    if (r < 1) return { ax: 0, ay: 0 };
+    const mag = KERBIN.mu / r2;
+    return {
+      ax: -mag * (x / r),
+      ay: -mag * (y / r)
+    };
+  }
+
+  /**
+   * Mun's orbital position around Kerbin at mission elapsed time t (seconds).
+   */
+  function getMunPosition(t) {
+    const omega = Math.sqrt(KERBIN.mu / Math.pow(MUN.orbitRadius, 3));
+    const angle = MUN.initialAngle + omega * t;
+    return {
+      x: MUN.orbitRadius * Math.cos(angle),
+      y: MUN.orbitRadius * Math.sin(angle),
+      angle
+    };
+  }
+
+  /**
+   * Gravitational acceleration from Kerbin + optional Mun perturbation (when inside Mun SOI).
+   */
+  function getTotalGravity(x, y, t, includeMun = true) {
+    const gK = getKerbinGravity(x, y);
+    if (!includeMun) return { ax: gK.ax, ay: gK.ay, inMunSOI: false, munDist: Infinity };
+
+    const mun = getMunPosition(t);
+    const dx = mun.x - x;
+    const dy = mun.y - y;
+    const dist2 = dx * dx + dy * dy;
+    const dist = Math.sqrt(dist2);
+    const inMunSOI = dist <= MUN.soiRadius;
+
+    if (inMunSOI && dist > 1) {
+      const magM = MUN.mu / dist2;
+      return {
+        ax: gK.ax + magM * (dx / dist),
+        ay: gK.ay + magM * (dy / dist),
+        inMunSOI: true,
+        munDist: dist - MUN.radius
+      };
+    }
+
+    return {
+      ax: gK.ax,
+      ay: gK.ay,
+      inMunSOI: false,
+      munDist: dist - MUN.radius
+    };
+  }
+
+  /**
+   * Aerodynamic drag acceleration vector opposing velocity.
+   * F_drag = 0.5 * rho * v^2 * Cd * A
+   */
+  function getDragAcceleration(vx, vy, altitude, mass, dragArea) {
+    if (mass <= 0) return { ax: 0, ay: 0, dynamicPressure: 0 };
+    const rho = getAtmosphericDensity(altitude);
+    if (rho <= 0) return { ax: 0, ay: 0, dynamicPressure: 0 };
+
+    const v2 = vx * vx + vy * vy;
+    const v = Math.sqrt(v2);
+    const q = 0.5 * rho * v2; // Dynamic pressure (Pa)
+    if (v < 1e-6) return { ax: 0, ay: 0, dynamicPressure: q };
+
+    const dragForce = q * dragArea;
+    const aDrag = dragForce / mass;
+    return {
+      ax: -aDrag * (vx / v),
+      ay: -aDrag * (vy / v),
+      dynamicPressure: q
+    };
+  }
+
+  /**
+   * Compute 2D Keplerian orbital elements around Kerbin from state vector (x, y, vx, vy).
+   */
+  function computeOrbitalElements(x, y, vx, vy, mu = KERBIN.mu, bodyRadius = KERBIN.radius) {
+    const r = Math.sqrt(x * x + y * y);
+    const v2 = vx * vx + vy * vy;
+    const v = Math.sqrt(v2);
+
+    if (r < 1) {
+      return {
+        r: 0, v: 0, semiMajorAxis: 0, eccentricity: 0,
+        apoapsis: 0, periapsis: 0, period: 0,
+        argOfPeriapsis: 0, trueAnomaly: 0, specificEnergy: 0,
+        isEscape: false, isStableOrbit: false
+      };
+    }
+
+    // Specific angular momentum (scalar in 2D: r x v)
+    const h = x * vy - y * vx;
+    // Specific orbital energy
+    const energy = v2 / 2 - mu / r;
+
+    // Eccentricity vector e = ((v^2 - mu/r)*r - (r.v)*v) / mu
+    const rDotV = x * vx + y * vy;
+    const ex = ((v2 - mu / r) * x - rDotV * vx) / mu;
+    const ey = ((v2 - mu / r) * y - rDotV * vy) / mu;
+    const e = Math.sqrt(ex * ex + ey * ey);
+
+    const isEscape = energy >= 0 || e >= 1;
+    const semiMajorAxis = Math.abs(energy) > 1e-9 ? -mu / (2 * energy) : Infinity;
+
+    let periapsisRadius, apoapsisRadius;
+    if (isEscape) {
+      periapsisRadius = (h * h) / (mu * (1 + e));
+      apoapsisRadius = Infinity;
+    } else {
+      periapsisRadius = semiMajorAxis * (1 - e);
+      apoapsisRadius = semiMajorAxis * (1 + e);
+    }
+
+    const periapsis = periapsisRadius - bodyRadius;
+    const apoapsis = isEscape ? Infinity : apoapsisRadius - bodyRadius;
+
+    const period =
+      !isEscape && semiMajorAxis > 0
+        ? 2 * Math.PI * Math.sqrt(Math.pow(semiMajorAxis, 3) / mu)
+        : Infinity;
+
+    const argOfPeriapsis = e > 1e-6 ? Math.atan2(ey, ex) : Math.atan2(y, x);
+    const posAngle = Math.atan2(y, x);
+    let trueAnomaly = posAngle - argOfPeriapsis;
+    while (trueAnomaly > Math.PI) trueAnomaly -= 2 * Math.PI;
+    while (trueAnomaly < -Math.PI) trueAnomaly += 2 * Math.PI;
+
+    const isStableOrbit = !isEscape && periapsis >= KERBIN.atmosphereHeight;
+
+    return {
+      r,
+      v,
+      h,
+      semiMajorAxis,
+      eccentricity: e,
+      apoapsis,
+      periapsis,
+      apoapsisRadius,
+      periapsisRadius,
+      period,
+      argOfPeriapsis,
+      trueAnomaly,
+      specificEnergy: energy,
+      isEscape,
+      isStableOrbit
+    };
+  }
+
+  /**
+   * Sample points along the predicted Keplerian orbit for rendering in Map View.
+   */
+  function sampleOrbitPath(elements, segments = 120) {
+    const points = [];
+    if (!elements || elements.r < 1) return points;
+
+    const { eccentricity: e, semiMajorAxis: a, argOfPeriapsis: omega, h, isEscape } = elements;
+    if (Math.abs(h) < 1e3) return points; // Almost radial trajectory
+
+    const p = isEscape
+      ? (h * h) / KERBIN.mu
+      : a * (1 - e * e);
+
+    if (p <= 0 || !isFinite(p)) return points;
+
+    let nuMin = -Math.PI;
+    let nuMax = Math.PI;
+    if (isEscape) {
+      const limit = Math.acos(-1 / Math.max(e, 1.0001)) - 0.12;
+      nuMin = -limit;
+      nuMax = limit;
+    }
+
+    for (let i = 0; i <= segments; i++) {
+      const nu = nuMin + ((nuMax - nuMin) * i) / segments;
+      const denom = 1 + e * Math.cos(nu);
+      if (denom <= 0.05) continue;
+      const rad = p / denom;
+      if (rad > 8e7) continue;
+      const theta = omega + nu;
+      points.push({
+        x: rad * Math.cos(theta),
+        y: rad * Math.sin(theta)
+      });
+    }
+    return points;
+  }
+
+  /**
+   * RK4 single integration step for spacecraft state under gravity, thrust, and drag.
+   * State: { x, y, vx, vy, angle, mass }
+   * Control: { thrustForce, dragArea, t, includeMun }
+   */
+  function stepRK4(state, control, dt) {
+    const { thrustForce, dragArea, t, includeMun = true } = control;
+    const dirX = Math.cos(state.angle);
+    const dirY = Math.sin(state.angle);
+    const mass = Math.max(1, state.mass);
+
+    function deriv(px, py, pvx, pvy, pt) {
+      const r = Math.sqrt(px * px + py * py);
+      const alt = r - KERBIN.radius;
+      const grav = getTotalGravity(px, py, pt, includeMun);
+      const drag = getDragAcceleration(pvx, pvy, alt, mass, dragArea);
+      const thrustAx = (thrustForce / mass) * dirX;
+      const thrustAy = (thrustForce / mass) * dirY;
+      return {
+        dx: pvx,
+        dy: pvy,
+        dvx: grav.ax + drag.ax + thrustAx,
+        dvy: grav.ay + drag.ay + thrustAy,
+        dynamicPressure: drag.dynamicPressure,
+        inMunSOI: grav.inMunSOI,
+        munDist: grav.munDist
+      };
+    }
+
+    const k1 = deriv(state.x, state.y, state.vx, state.vy, t);
+    const k2 = deriv(
+      state.x + 0.5 * dt * k1.dx,
+      state.y + 0.5 * dt * k1.dy,
+      state.vx + 0.5 * dt * k1.dvx,
+      state.vy + 0.5 * dt * k1.dvy,
+      t + 0.5 * dt
+    );
+    const k3 = deriv(
+      state.x + 0.5 * dt * k2.dx,
+      state.y + 0.5 * dt * k2.dy,
+      state.vx + 0.5 * dt * k2.dvx,
+      state.vy + 0.5 * dt * k2.dvy,
+      t + 0.5 * dt
+    );
+    const k4 = deriv(
+      state.x + dt * k3.dx,
+      state.y + dt * k3.dy,
+      state.vx + dt * k3.dvx,
+      state.vy + dt * k3.dvy,
+      t + dt
+    );
+
+    const nx = state.x + (dt / 6) * (k1.dx + 2 * k2.dx + 2 * k3.dx + k4.dx);
+    const ny = state.y + (dt / 6) * (k1.dy + 2 * k2.dy + 2 * k3.dy + k4.dy);
+    const nvx = state.vx + (dt / 6) * (k1.dvx + 2 * k2.dvx + 2 * k3.dvx + k4.dvx);
+    const nvy = state.vy + (dt / 6) * (k1.dvy + 2 * k2.dvy + 2 * k3.dvy + k4.dvy);
+
+    // Total non-gravitational acceleration for G-force readout
+    const gStart = getTotalGravity(state.x, state.y, t, includeMun);
+    const feltAx = k1.dvx - gStart.ax;
+    const feltAy = k1.dvy - gStart.ay;
+    const gForce = Math.sqrt(feltAx * feltAx + feltAy * feltAy) / PHYSICS.g0;
+
+    return {
+      x: nx,
+      y: ny,
+      vx: nvx,
+      vy: nvy,
+      dynamicPressure: k1.dynamicPressure,
+      gForce,
+      inMunSOI: k1.inMunSOI,
+      munDist: k1.munDist
+    };
+  }
+
+  /**
+   * Fuel mass flow rate (kg/s) for a given thrust (N) and effective Isp (s).
+   */
+  function getFuelBurnRate(thrust, isp) {
+    if (thrust <= 0 || isp <= 0) return 0;
+    return thrust / (isp * PHYSICS.g0);
+  }
+
+  const KSPPhysics = {
+    getAtmosphericDensity,
+    getAtmosphericPressureRatio,
+    getEffectiveIsp,
+    calculateDeltaV,
+    getKerbinGravity,
+    getMunPosition,
+    getTotalGravity,
+    getDragAcceleration,
+    computeOrbitalElements,
+    sampleOrbitPath,
+    stepRK4,
+    getFuelBurnRate
+  };
+
+  if (typeof module !== 'undefined' && module.exports) {
+    module.exports = KSPPhysics;
+  } else {
+    root.KSP = root.KSP || {};
+    root.KSP.Physics = KSPPhysics;
+  }
+})(typeof globalThis !== 'undefined' ? globalThis : window);
+
+
+// === Module: src/builder.js ===
+(function (root) {
+  'use strict';
+
+  const Constants =
+    root.KSP.Constants;
+
+  const Physics =
+    root.KSP.Physics;
+
+  const { PARTS, PHYSICS, PRESETS } = Constants;
+
+  /**
+   * Build structured stages from a top-to-bottom array of part IDs.
+   * Decouplers split the stack into distinct stages.
+   * Stage 0 is the TOP stage (payload/pod), Stage N-1 is the BOTTOM stage (first to fire).
+   */
+  function parseRocketStages(partIds) {
+    const validParts = (partIds || [])
+      .map((id, idx) => (PARTS[id] ? { ...PARTS[id], instanceId: idx } : null))
+      .filter(Boolean);
+
+    if (validParts.length === 0) {
+      return {
+        parts: [],
+        stages: [],
+        totalWetMass: 0,
+        totalDryMass: 0,
+        totalDeltaVVac: 0,
+        totalDeltaVAtm: 0,
+        launchTWR: 0,
+        hasPod: false,
+        hasEngine: false,
+        hasParachute: false,
+        warnings: ['火箭为空，请添加指令舱、燃料箱和发动机。']
+      };
+    }
+
+    // Group parts into stages split at decouplers.
+    // A decoupler belongs to the lower stage that gets jettisoned (or acts as boundary).
+    const rawGroups = [[]];
+    for (const part of validParts) {
+      if (part.isDecoupler) {
+        // Start a new lower stage, attaching the decoupler to the top of the jettisoned lower stage
+        rawGroups.push([part]);
+      } else {
+        rawGroups[rawGroups.length - 1].push(part);
+      }
+    }
+
+    // Filter out any empty top group if rocket starts with decoupler
+    const groups = rawGroups.filter((g) => g.length > 0);
+
+    // Compute mass & propulsion metrics per stage (top=0 ... bottom=groups.length-1)
+    let massAbove = 0;
+    const stages = [];
+    let totalWetMass = 0;
+    let totalDryMass = 0;
+    let totalDeltaVVac = 0;
+    let totalDeltaVAtm = 0;
+
+    for (let i = 0; i < groups.length; i++) {
+      const stageParts = groups[i];
+      let stageDry = 0;
+      let stageFuel = 0;
+      let stageThrust = 0;
+      let weightedIspVacDenom = 0;
+      let weightedIspAtmDenom = 0;
+      let isSolid = false;
+      let hasEngine = false;
+      let dragArea = 0;
+
+      for (const p of stageParts) {
+        stageDry += p.dryMass;
+        stageFuel += p.fuelMass;
+        dragArea += p.dragCoeff * p.area;
+        if (p.isEngine) {
+          hasEngine = true;
+          stageThrust += p.thrust;
+          if (p.isSolid) isSolid = true;
+          if (p.ispVac > 0) weightedIspVacDenom += p.thrust / p.ispVac;
+          if (p.ispAtm > 0) weightedIspAtmDenom += p.thrust / p.ispAtm;
+        }
+      }
+
+      const ispVac = weightedIspVacDenom > 0 ? stageThrust / weightedIspVacDenom : 0;
+      const ispAtm = weightedIspAtmDenom > 0 ? stageThrust / weightedIspAtmDenom : 0;
+
+      const stageWet = stageDry + stageFuel;
+      const wetMassWithPayload = massAbove + stageWet;
+      const dryMassWithPayload = massAbove + stageDry;
+
+      const deltaVVac =
+        hasEngine && stageFuel > 0
+          ? Physics.calculateDeltaV(ispVac, wetMassWithPayload, dryMassWithPayload)
+          : 0;
+      const deltaVAtm =
+        hasEngine && stageFuel > 0
+          ? Physics.calculateDeltaV(ispAtm, wetMassWithPayload, dryMassWithPayload)
+          : 0;
+
+      const twrSeaLevel =
+        wetMassWithPayload > 0 ? stageThrust / (wetMassWithPayload * PHYSICS.g0) : 0;
+
+      stages.push({
+        stageIndex: i, // 0 = top payload, last = launch stage
+        displayNumber: groups.length - 1 - i, // KSP numbering: 0 is top, highest fires first (or reverse)
+        parts: stageParts,
+        stageDryMass: stageDry,
+        stageFuelMass: stageFuel,
+        remainingFuel: stageFuel,
+        wetMassWithPayload,
+        dryMassWithPayload,
+        thrust: stageThrust,
+        ispVac,
+        ispAtm,
+        deltaVVac,
+        deltaVAtm,
+        twrSeaLevel,
+        hasEngine,
+        isSolid,
+        ignited: false,
+        dragArea
+      });
+
+      massAbove += stageWet;
+      totalWetMass += stageWet;
+      totalDryMass += stageDry;
+      totalDeltaVVac += deltaVVac;
+      totalDeltaVAtm += deltaVAtm;
+    }
+
+    const bottomStage = stages[stages.length - 1];
+    const launchTWR = bottomStage ? bottomStage.twrSeaLevel : 0;
+    const hasPod = validParts.some((p) => p.isPod);
+    const hasEngine = validParts.some((p) => p.isEngine);
+    const hasParachute = validParts.some((p) => p.isParachute);
+
+    const warnings = [];
+    if (!hasPod) warnings.push('缺少指令舱（Mk1 指令舱），无法控制姿态。');
+    if (!hasEngine) warnings.push('缺少发动机，火箭无法起飞。');
+    if (hasEngine && launchTWR < 1.05) {
+      warnings.push(`起飞推重比过低（TWR = ${launchTWR.toFixed(2)} < 1.05），可能无法离地。`);
+    }
+    if (!hasParachute) {
+      warnings.push('未安装降落伞，返回大气层时可能无法安全着陆。');
+    }
+
+    return {
+      parts: validParts,
+      stages,
+      totalWetMass,
+      totalDryMass,
+      totalDeltaVVac,
+      totalDeltaVAtm,
+      launchTWR,
+      hasPod,
+      hasEngine,
+      hasParachute,
+      warnings
+    };
+  }
+
+  /**
+   * Create a live flight vessel instance from a rocket part ID list.
+   * Starts on Kerbin's surface at the North Pole / +Y launchpad (x = 0, y = R_kerbin).
+   */
+  function createFlightVessel(partIds) {
+    const blueprint = parseRocketStages(partIds);
+    // Deep clone stages for mutable fuel & staging state
+    const activeStages = blueprint.stages.map((s) => ({
+      ...s,
+      remainingFuel: s.stageFuelMass,
+      ignited: false
+    }));
+
+    return {
+      partIds: [...partIds],
+      stages: activeStages,
+      x: 0,
+      y: PHYSICS.KERBIN.radius + 1, // Launchpad at +Y (1m clearance)
+      vx: 0,
+      vy: 0,
+      angle: Math.PI / 2, // Pointing straight up (+Y)
+      angularVelocity: 0,
+      throttle: 1.0,
+      sasEnabled: true,
+      sasMode: 'hold', // 'hold' | 'prograde' | 'retrograde'
+      parachuteDeployed: false,
+      status: 'prelaunch', // 'prelaunch' | 'flying' | 'orbit' | 'landed' | 'crashed'
+      met: 0,
+      maxAltitude: 0,
+      maxSpeed: 0,
+      gForce: 1.0,
+      dynamicPressure: 0,
+      inMunSOI: false,
+      munDist: Infinity,
+      milestones: {
+        liftoff: false,
+        atmosphereCleared: false,
+        stableOrbit: false,
+        munApproach: false,
+        safeLanding: false
+      },
+      eventLog: [
+        { met: 0, text: '火箭已就位于坎巴拉发射中心（KSC）发射台。按 SPACE 点火起飞！' }
+      ]
+    };
+  }
+
+  /**
+   * Compute live total mass, drag area, and active stage properties of a flying vessel.
+   */
+  function getVesselLiveMetrics(vessel) {
+    let totalMass = 0;
+    let totalDragArea = 0;
+    let hasParachute = false;
+
+    for (const s of vessel.stages) {
+      totalMass += s.stageDryMass + s.remainingFuel;
+      totalDragArea += s.dragArea;
+      if (s.parts.some((p) => p.isParachute)) {
+        hasParachute = true;
+      }
+    }
+
+    // Clamp base aerodynamic drag area to realistic cross-section
+    const effectiveDragArea = Math.min(totalDragArea, 1.8) + (vessel.parachuteDeployed && hasParachute ? 85 : 0);
+    const activeStage = vessel.stages.length > 0 ? vessel.stages[vessel.stages.length - 1] : null;
+
+    return {
+      totalMass: Math.max(100, totalMass),
+      dragArea: effectiveDragArea,
+      hasParachute,
+      activeStage
+    };
+  }
+
+  /**
+   * Trigger staging:
+   * - If bottom stage hasn't been ignited yet and has an engine, ignite it.
+   * - Otherwise, jettison the bottom stage (if >1 stages remain) and ignite the new bottom stage if it has an engine.
+   */
+  function triggerStage(vessel) {
+    if (vessel.status === 'crashed' || vessel.status === 'landed') {
+      return { action: 'none', message: '任务已结束。' };
+    }
+    if (vessel.stages.length === 0) {
+      return { action: 'none', message: '无可用分级。' };
+    }
+
+    const bottom = vessel.stages[vessel.stages.length - 1];
+    if (!bottom.ignited && bottom.hasEngine) {
+      bottom.ignited = true;
+      if (vessel.status === 'prelaunch') {
+        vessel.status = 'flying';
+        vessel.milestones.liftoff = true;
+      }
+      const msg = `第 ${vessel.stages.length} 级主发动机点火！`;
+      vessel.eventLog.unshift({ met: vessel.met, text: msg });
+      return { action: 'ignite', message: msg };
+    }
+
+    if (vessel.stages.length > 1) {
+      const jettisoned = vessel.stages.pop();
+      const nextBottom = vessel.stages[vessel.stages.length - 1];
+      let msg = `级间分离完成，抛离第 ${vessel.stages.length + 1} 级。`;
+      if (nextBottom && nextBottom.hasEngine && !nextBottom.ignited) {
+        nextBottom.ignited = true;
+        msg += ' 下一级发动机点火！';
+      }
+      vessel.eventLog.unshift({ met: vessel.met, text: msg });
+      return { action: 'separate', jettisoned, message: msg };
+    }
+
+    return { action: 'none', message: '已处于最终指令舱级。' };
+  }
+
+  /**
+   * Step the entire vessel simulation forward by dt seconds.
+   * Handles fuel burn, SAS steering, RK4 integration, collision/landing, and milestone checks.
+   */
+  function stepVesselSimulation(vessel, dt, controls = {}) {
+    if (vessel.status === 'crashed' || vessel.status === 'landed') {
+      return Physics.computeOrbitalElements(vessel.x, vessel.y, vessel.vx, vessel.vy);
+    }
+
+    const { steer = 0, includeMun = true } = controls;
+    const metrics = getVesselLiveMetrics(vessel);
+    const activeStage = metrics.activeStage;
+
+    const rNow = Math.sqrt(vessel.x * vessel.x + vessel.y * vessel.y);
+    const altNow = rNow - PHYSICS.KERBIN.radius;
+
+    // Prelaunch sits on pad until ignited
+    if (vessel.status === 'prelaunch') {
+      vessel.gForce = 1.0;
+      vessel.dynamicPressure = 0;
+      return Physics.computeOrbitalElements(vessel.x, vessel.y, vessel.vx, vessel.vy);
+    }
+
+    vessel.met += dt;
+
+    // Steering & SAS
+    const turnRate = 1.65; // rad/s
+    if (Math.abs(steer) > 0.01) {
+      vessel.angle += steer * turnRate * dt;
+    } else if (vessel.sasEnabled) {
+      const speed = Math.sqrt(vessel.vx * vessel.vx + vessel.vy * vessel.vy);
+      if (vessel.sasMode === 'prograde' && speed > 5) {
+        const target = Math.atan2(vessel.vy, vessel.vx);
+        vessel.angle = lerpAngle(vessel.angle, target, Math.min(1, 5 * dt));
+      } else if (vessel.sasMode === 'retrograde' && speed > 5) {
+        const target = Math.atan2(-vessel.vy, -vessel.vx);
+        vessel.angle = lerpAngle(vessel.angle, target, Math.min(1, 5 * dt));
+      }
+    }
+
+    // Thrust & Fuel Consumption
+    let thrustForce = 0;
+    if (activeStage && activeStage.ignited && activeStage.hasEngine && activeStage.remainingFuel > 0) {
+      const effThrottle = activeStage.isSolid ? 1.0 : Math.max(0, Math.min(1, vessel.throttle));
+      if (effThrottle > 0) {
+        thrustForce = activeStage.thrust * effThrottle;
+        const effIsp = Physics.getEffectiveIsp(activeStage.ispAtm, activeStage.ispVac, altNow);
+        const burnRate = Physics.getFuelBurnRate(thrustForce, effIsp);
+        const fuelBurned = burnRate * dt;
+        if (fuelBurned >= activeStage.remainingFuel) {
+          const ratio = activeStage.remainingFuel / fuelBurned;
+          thrustForce *= ratio;
+          activeStage.remainingFuel = 0;
+          vessel.eventLog.unshift({
+            met: vessel.met,
+            text: `第 ${vessel.stages.length} 级燃料耗尽（MECO）。按 SPACE 分离！`
+          });
+        } else {
+          activeStage.remainingFuel -= fuelBurned;
+        }
+      }
+    }
+
+    // RK4 step
+    const next = Physics.stepRK4(
+      {
+        x: vessel.x,
+        y: vessel.y,
+        vx: vessel.vx,
+        vy: vessel.vy,
+        angle: vessel.angle,
+        mass: metrics.totalMass
+      },
+      {
+        thrustForce,
+        dragArea: metrics.dragArea,
+        t: vessel.met,
+        includeMun
+      },
+      dt
+    );
+
+    vessel.x = next.x;
+    vessel.y = next.y;
+    vessel.vx = next.vx;
+    vessel.vy = next.vy;
+    vessel.gForce = next.gForce;
+    vessel.dynamicPressure = next.dynamicPressure;
+    vessel.inMunSOI = next.inMunSOI;
+    vessel.munDist = next.munDist;
+
+    const newR = Math.sqrt(vessel.x * vessel.x + vessel.y * vessel.y);
+    const newAlt = newR - PHYSICS.KERBIN.radius;
+    const newSpeed = Math.sqrt(vessel.vx * vessel.vx + vessel.vy * vessel.vy);
+
+    if (newAlt > vessel.maxAltitude) vessel.maxAltitude = newAlt;
+    if (newSpeed > vessel.maxSpeed) vessel.maxSpeed = newSpeed;
+
+    // Surface collision / landing check
+    if (newAlt <= 0) {
+      // Clamp to surface
+      const scale = PHYSICS.KERBIN.radius / newR;
+      vessel.x *= scale;
+      vessel.y *= scale;
+
+      if (vessel.met > 3 && newSpeed > 14) {
+        vessel.status = 'crashed';
+        vessel.vx = 0;
+        vessel.vy = 0;
+        vessel.eventLog.unshift({
+          met: vessel.met,
+          text: `坠毁！触地速度 ${newSpeed.toFixed(1)} m/s 超过安全上限（14 m/s）。`
+        });
+      } else if (vessel.met > 3 && vessel.maxAltitude > 50) {
+        vessel.status = 'landed';
+        vessel.vx = 0;
+        vessel.vy = 0;
+        vessel.milestones.safeLanding = true;
+        vessel.eventLog.unshift({
+          met: vessel.met,
+          text: `安全着陆！触地速度 ${newSpeed.toFixed(1)} m/s，坎巴拉宇航员完好无损！`
+        });
+      } else {
+        // Still on pad (low thrust)
+        vessel.vx = 0;
+        vessel.vy = 0;
+      }
+    }
+
+    const orbit = Physics.computeOrbitalElements(vessel.x, vessel.y, vessel.vx, vessel.vy);
+
+    // Milestones check
+    if (!vessel.milestones.atmosphereCleared && newAlt >= PHYSICS.KERBIN.atmosphereHeight) {
+      vessel.milestones.atmosphereCleared = true;
+      vessel.eventLog.unshift({
+        met: vessel.met,
+        text: '突破 70 km 卡门线，正式进入太空！'
+      });
+    }
+    if (!vessel.milestones.stableOrbit && orbit.isStableOrbit) {
+      vessel.milestones.stableOrbit = true;
+      vessel.status = 'orbit';
+      vessel.eventLog.unshift({
+        met: vessel.met,
+        text: `成功进入 Kerbin 稳定轨道！Ap ${(orbit.apoapsis / 1000).toFixed(1)} km / Pe ${(orbit.periapsis / 1000).toFixed(1)} km`
+      });
+    }
+    if (!vessel.milestones.munApproach && (vessel.inMunSOI || orbit.apoapsis > 10000000)) {
+      vessel.milestones.munApproach = true;
+      vessel.eventLog.unshift({
+        met: vessel.met,
+        text: '已进入穆恩（Mun）转移高轨 / 引力影响范围！'
+      });
+    }
+
+    return orbit;
+  }
+
+  function lerpAngle(a, b, t) {
+    let diff = b - a;
+    while (diff > Math.PI) diff -= 2 * Math.PI;
+    while (diff < -Math.PI) diff += 2 * Math.PI;
+    return a + diff * t;
+  }
+
+  const KSPBuilder = {
+    parseRocketStages,
+    createFlightVessel,
+    getVesselLiveMetrics,
+    triggerStage,
+    stepVesselSimulation,
+    PRESETS
+  };
+
+  if (typeof module !== 'undefined' && module.exports) {
+    module.exports = KSPBuilder;
+  } else {
+    root.KSP = root.KSP || {};
+    root.KSP.Builder = KSPBuilder;
+  }
+})(typeof globalThis !== 'undefined' ? globalThis : window);
+
+
+// === Module: src/audio.js ===
+(function (root) {
+  'use strict';
+
+  class SoundEngine {
+    constructor() {
+      this.ctx = null;
+      this.muted = false;
+      this.engineGain = null;
+      this.engineFilter = null;
+      this.initialized = false;
+    }
+
+    init() {
+      if (this.initialized) {
+        if (this.ctx && this.ctx.state === 'suspended') {
+          this.ctx.resume().catch(() => {});
+        }
+        return;
+      }
+      try {
+        const AudioCtx = window.AudioContext || window.webkitAudioContext;
+        if (!AudioCtx) return;
+        this.ctx = new AudioCtx();
+
+        // Continuous white noise buffer for rocket engine roar
+        const bufferSize = this.ctx.sampleRate * 2;
+        const noiseBuffer = this.ctx.createBuffer(1, bufferSize, this.ctx.sampleRate);
+        const data = noiseBuffer.getChannelData(0);
+        for (let i = 0; i < bufferSize; i++) {
+          data[i] = Math.random() * 2 - 1;
+        }
+
+        const noise = this.ctx.createBufferSource();
+        noise.buffer = noiseBuffer;
+        noise.loop = true;
+
+        this.engineFilter = this.ctx.createBiquadFilter();
+        this.engineFilter.type = 'lowpass';
+        this.engineFilter.frequency.value = 180;
+        this.engineFilter.Q.value = 1.2;
+
+        this.engineGain = this.ctx.createGain();
+        this.engineGain.gain.value = 0;
+
+        noise.connect(this.engineFilter);
+        this.engineFilter.connect(this.engineGain);
+        this.engineGain.connect(this.ctx.destination);
+        noise.start();
+
+        this.initialized = true;
+      } catch (e) {
+        // Audio not supported or blocked
+      }
+    }
+
+    setMuted(muted) {
+      this.muted = !!muted;
+      if (this.muted && this.engineGain && this.ctx) {
+        this.engineGain.gain.setTargetAtTime(0, this.ctx.currentTime, 0.05);
+      }
+    }
+
+    updateEngine(thrustRatio, atmPressure) {
+      if (!this.initialized || !this.engineGain || !this.ctx) return;
+      if (this.muted || thrustRatio <= 0.01) {
+        this.engineGain.gain.setTargetAtTime(0, this.ctx.currentTime, 0.06);
+        return;
+      }
+      // Subtle vacuum dampening while keeping cockpit vibration audible
+      const atmFactor = 0.35 + 0.65 * Math.max(0, Math.min(1, atmPressure));
+      const targetGain = Math.min(0.28, thrustRatio * 0.24 * atmFactor);
+      const targetFreq = 120 + thrustRatio * 420 * atmFactor;
+      this.engineGain.gain.setTargetAtTime(targetGain, this.ctx.currentTime, 0.06);
+      this.engineFilter.frequency.setTargetAtTime(targetFreq, this.ctx.currentTime, 0.08);
+    }
+
+    playStage() {
+      if (this.muted) return;
+      this.init();
+      if (!this.ctx) return;
+      try {
+        const now = this.ctx.currentTime;
+        const osc = this.ctx.createOscillator();
+        const gain = this.ctx.createGain();
+        osc.type = 'triangle';
+        osc.frequency.setValueAtTime(160, now);
+        osc.frequency.exponentialRampToValueAtTime(42, now + 0.18);
+        gain.gain.setValueAtTime(0.32, now);
+        gain.gain.exponentialRampToValueAtTime(0.001, now + 0.22);
+        osc.connect(gain);
+        gain.connect(this.ctx.destination);
+        osc.start(now);
+        osc.stop(now + 0.24);
+      } catch (e) {}
+    }
+
+    playParachute() {
+      if (this.muted) return;
+      this.init();
+      if (!this.ctx) return;
+      try {
+        const now = this.ctx.currentTime;
+        const osc = this.ctx.createOscillator();
+        const gain = this.ctx.createGain();
+        osc.type = 'sine';
+        osc.frequency.setValueAtTime(280, now);
+        osc.frequency.exponentialRampToValueAtTime(120, now + 0.3);
+        gain.gain.setValueAtTime(0.18, now);
+        gain.gain.exponentialRampToValueAtTime(0.001, now + 0.32);
+        osc.connect(gain);
+        gain.connect(this.ctx.destination);
+        osc.start(now);
+        osc.stop(now + 0.34);
+      } catch (e) {}
+    }
+
+    playExplosion() {
+      if (this.muted) return;
+      this.init();
+      if (!this.ctx) return;
+      try {
+        const now = this.ctx.currentTime;
+        const osc = this.ctx.createOscillator();
+        const gain = this.ctx.createGain();
+        osc.type = 'sawtooth';
+        osc.frequency.setValueAtTime(95, now);
+        osc.frequency.exponentialRampToValueAtTime(20, now + 0.7);
+        gain.gain.setValueAtTime(0.4, now);
+        gain.gain.exponentialRampToValueAtTime(0.001, now + 0.75);
+        osc.connect(gain);
+        gain.connect(this.ctx.destination);
+        osc.start(now);
+        osc.stop(now + 0.8);
+      } catch (e) {}
+    }
+
+    playMilestone() {
+      if (this.muted) return;
+      this.init();
+      if (!this.ctx) return;
+      try {
+        const now = this.ctx.currentTime;
+        [523.25, 659.25, 783.99].forEach((freq, idx) => {
+          const osc = this.ctx.createOscillator();
+          const gain = this.ctx.createGain();
+          osc.type = 'sine';
+          osc.frequency.setValueAtTime(freq, now + idx * 0.08);
+          gain.gain.setValueAtTime(0.12, now + idx * 0.08);
+          gain.gain.exponentialRampToValueAtTime(0.001, now + idx * 0.08 + 0.25);
+          osc.connect(gain);
+          gain.connect(this.ctx.destination);
+          osc.start(now + idx * 0.08);
+          osc.stop(now + idx * 0.08 + 0.26);
+        });
+      } catch (e) {}
+    }
+  }
+
+  const KSPAudio = { SoundEngine };
+
+  if (typeof module !== 'undefined' && module.exports) {
+    module.exports = KSPAudio;
+  } else {
+    root.KSP = root.KSP || {};
+    root.KSP.Audio = KSPAudio;
+  }
+})(typeof globalThis !== 'undefined' ? globalThis : window);
+
+
+// === Module: src/renderer.js ===
+(function (root) {
+  'use strict';
+
+  const Constants =
+    root.KSP.Constants;
+  const Physics =
+    root.KSP.Physics;
+
+  const { PHYSICS } = Constants;
+  const KERBIN = PHYSICS.KERBIN;
+  const MUN = PHYSICS.MUN;
+
+  // Deterministic starfield for crisp deep-space background
+  const STARS = [];
+  for (let i = 0; i < 220; i++) {
+    const s1 = Math.sin(i * 12.9898) * 43758.5453;
+    const s2 = Math.sin(i * 78.233) * 19341.123;
+    const s3 = Math.sin(i * 45.164) * 91823.77;
+    STARS.push({
+      u: s1 - Math.floor(s1),
+      v: s2 - Math.floor(s2),
+      size: 0.7 + (s3 - Math.floor(s3)) * 1.7,
+      alpha: 0.35 + (s3 - Math.floor(s3)) * 0.65
+    });
+  }
+
+  /**
+   * Draw an individual rocket part centered at (0, yTop) downward.
+   */
+  function drawPart(ctx, part, yTop, isFiring, throttle) {
+    const w = part.width;
+    const h = part.height;
+    const hw = w / 2;
+
+    ctx.save();
+    if (part.isPod) {
+      // Conical Mk1 command pod
+      ctx.beginPath();
+      ctx.moveTo(-hw * 0.45, yTop);
+      ctx.lineTo(hw * 0.45, yTop);
+      ctx.lineTo(hw, yTop + h);
+      ctx.lineTo(-hw, yTop + h);
+      ctx.closePath();
+      ctx.fillStyle = '#607d8b';
+      ctx.fill();
+      ctx.strokeStyle = '#263238';
+      ctx.lineWidth = 1.2;
+      ctx.stroke();
+
+      // Heatshield rim
+      ctx.fillStyle = '#37474f';
+      ctx.fillRect(-hw, yTop + h - 3.5, w, 3.5);
+
+      // Cabin window
+      ctx.beginPath();
+      ctx.arc(0, yTop + h * 0.52, 4.2, 0, Math.PI * 2);
+      ctx.fillStyle = '#4fc3f7';
+      ctx.fill();
+      ctx.strokeStyle = '#eceff1';
+      ctx.lineWidth = 1.2;
+      ctx.stroke();
+    } else if (part.isParachute) {
+      ctx.beginPath();
+      ctx.moveTo(-hw * 0.65, yTop);
+      ctx.lineTo(hw * 0.65, yTop);
+      ctx.lineTo(hw, yTop + h);
+      ctx.lineTo(-hw, yTop + h);
+      ctx.closePath();
+      ctx.fillStyle = part.color;
+      ctx.fill();
+      ctx.strokeStyle = '#b71c1c';
+      ctx.lineWidth = 1;
+      ctx.stroke();
+    } else if (part.isNoseCone) {
+      ctx.beginPath();
+      ctx.moveTo(0, yTop);
+      ctx.quadraticCurveTo(hw, yTop + h * 0.5, hw, yTop + h);
+      ctx.lineTo(-hw, yTop + h);
+      ctx.quadraticCurveTo(-hw, yTop + h * 0.5, 0, yTop);
+      ctx.closePath();
+      ctx.fillStyle = part.color;
+      ctx.fill();
+      ctx.strokeStyle = '#90a4ae';
+      ctx.lineWidth = 1;
+      ctx.stroke();
+    } else if (part.isDecoupler) {
+      ctx.fillStyle = part.color;
+      ctx.fillRect(-hw, yTop, w, h);
+      ctx.fillStyle = '#263238';
+      for (let sx = -hw + 2; sx < hw - 2; sx += 7) {
+        ctx.fillRect(sx, yTop + 2, 3.5, h - 4);
+      }
+      ctx.strokeStyle = '#37474f';
+      ctx.lineWidth = 1;
+      ctx.strokeRect(-hw, yTop, w, h);
+    } else if (part.isTank) {
+      const grad = ctx.createLinearGradient(-hw, 0, hw, 0);
+      grad.addColorStop(0, '#cfd8dc');
+      grad.addColorStop(0.45, '#ffffff');
+      grad.addColorStop(1, '#90a4ae');
+      ctx.fillStyle = grad;
+      ctx.fillRect(-hw, yTop, w, h);
+      ctx.strokeStyle = '#37474f';
+      ctx.lineWidth = 1;
+      ctx.strokeRect(-hw, yTop, w, h);
+
+      // Decorative aerospace stripe
+      ctx.fillStyle = part.accent;
+      ctx.fillRect(-hw + 1, yTop + 4, w - 2, 4);
+      ctx.fillRect(-hw + 1, yTop + h - 8, w - 2, 3);
+    } else if (part.isEngine) {
+      if (part.isSolid) {
+        // Solid Rocket Booster body + nozzle
+        const bodyH = h - 10;
+        const grad = ctx.createLinearGradient(-hw, 0, hw, 0);
+        grad.addColorStop(0, '#e0e0e0');
+        grad.addColorStop(0.5, '#ffffff');
+        grad.addColorStop(1, '#b0bec5');
+        ctx.fillStyle = grad;
+        ctx.fillRect(-hw, yTop, w, bodyH);
+        ctx.fillStyle = '#d32f2f';
+        ctx.fillRect(-hw, yTop + 5, w, 6);
+        ctx.fillRect(-hw, yTop + bodyH - 9, w, 4);
+        ctx.strokeStyle = '#455a64';
+        ctx.strokeRect(-hw, yTop, w, bodyH);
+
+        // Nozzle
+        ctx.beginPath();
+        ctx.moveTo(-hw * 0.55, yTop + bodyH);
+        ctx.lineTo(hw * 0.55, yTop + bodyH);
+        ctx.lineTo(hw * 0.85, yTop + h);
+        ctx.lineTo(-hw * 0.85, yTop + h);
+        ctx.closePath();
+        ctx.fillStyle = '#37474f';
+        ctx.fill();
+      } else {
+        // Liquid engine mount + bell nozzle
+        ctx.fillStyle = '#546e7a';
+        ctx.fillRect(-hw * 0.85, yTop, w * 0.85, h * 0.35);
+        ctx.beginPath();
+        ctx.moveTo(-hw * 0.45, yTop + h * 0.35);
+        ctx.lineTo(hw * 0.45, yTop + h * 0.35);
+        ctx.lineTo(hw * 0.82, yTop + h);
+        ctx.lineTo(-hw * 0.82, yTop + h);
+        ctx.closePath();
+        ctx.fillStyle = '#263238';
+        ctx.fill();
+        ctx.strokeStyle = part.accent;
+        ctx.lineWidth = 1.2;
+        ctx.stroke();
+      }
+
+      // Dynamic exhaust plume when firing
+      if (isFiring && throttle > 0.02) {
+        const flicker = 0.88 + Math.random() * 0.28;
+        const plumeLen = (26 + throttle * 58) * flicker;
+        const plumeW = hw * (0.68 + throttle * 0.35);
+
+        // Outer orange flame
+        const flameGrad = ctx.createLinearGradient(0, yTop + h, 0, yTop + h + plumeLen);
+        flameGrad.addColorStop(0, 'rgba(255, 245, 200, 0.98)');
+        flameGrad.addColorStop(0.28, 'rgba(255, 167, 38, 0.92)');
+        flameGrad.addColorStop(0.7, 'rgba(255, 87, 34, 0.55)');
+        flameGrad.addColorStop(1, 'rgba(255, 87, 34, 0)');
+        ctx.beginPath();
+        ctx.moveTo(-plumeW, yTop + h);
+        ctx.quadraticCurveTo(0, yTop + h + plumeLen * 1.15, plumeW, yTop + h);
+        ctx.closePath();
+        ctx.fillStyle = flameGrad;
+        ctx.fill();
+
+        // Bright white-blue inner core
+        ctx.beginPath();
+        ctx.moveTo(-plumeW * 0.45, yTop + h);
+        ctx.quadraticCurveTo(0, yTop + h + plumeLen * 0.55, plumeW * 0.45, yTop + h);
+        ctx.closePath();
+        ctx.fillStyle = 'rgba(255, 255, 255, 0.92)';
+        ctx.fill();
+      }
+    }
+    ctx.restore();
+  }
+
+  /**
+   * Render the entire rocket stack for VAB preview canvas.
+   */
+  function renderVABCanvas(canvas, blueprint) {
+    if (!canvas) return;
+    const dpr = window.devicePixelRatio || 1;
+    const rect = canvas.getBoundingClientRect();
+    const w = Math.max(240, rect.width);
+    const h = Math.max(300, rect.height);
+    if (canvas.width !== Math.round(w * dpr) || canvas.height !== Math.round(h * dpr)) {
+      canvas.width = Math.round(w * dpr);
+      canvas.height = Math.round(h * dpr);
+    }
+
+    const ctx = canvas.getContext('2d');
+    ctx.save();
+    ctx.scale(dpr, dpr);
+
+    // Blueprint dark grid background
+    ctx.fillStyle = '#0d1520';
+    ctx.fillRect(0, 0, w, h);
+
+    ctx.strokeStyle = 'rgba(56, 189, 248, 0.08)';
+    ctx.lineWidth = 1;
+    const gridStep = 24;
+    for (let gx = 0; gx < w; gx += gridStep) {
+      ctx.beginPath();
+      ctx.moveTo(gx, 0);
+      ctx.lineTo(gx, h);
+      ctx.stroke();
+    }
+    for (let gy = 0; gy < h; gy += gridStep) {
+      ctx.beginPath();
+      ctx.moveTo(0, gy);
+      ctx.lineTo(w, gy);
+      ctx.stroke();
+    }
+
+    // Launch floor line
+    ctx.strokeStyle = 'rgba(148, 163, 184, 0.35)';
+    ctx.lineWidth = 2;
+    ctx.beginPath();
+    ctx.moveTo(24, h - 28);
+    ctx.lineTo(w - 24, h - 28);
+    ctx.stroke();
+
+    if (!blueprint || blueprint.parts.length === 0) {
+      ctx.fillStyle = '#64748b';
+      ctx.font = '14px Inter, sans-serif';
+      ctx.textAlign = 'center';
+      ctx.fillText('从左侧部件库点击添加零件，或选择右侧预设火箭', w / 2, h / 2);
+      ctx.restore();
+      return;
+    }
+
+    const totalH = blueprint.parts.reduce((acc, p) => acc + p.height, 0);
+    const availH = h - 80;
+    const scale = Math.min(1.55, availH / Math.max(totalH, 1));
+
+    ctx.save();
+    ctx.translate(w / 2, h - 32 - totalH * scale);
+    ctx.scale(scale, scale);
+
+    let y = 0;
+    blueprint.stages.forEach((stage, sIdx) => {
+      const stageStartY = y;
+      for (const p of stage.parts) {
+        drawPart(ctx, p, y, false, 0);
+        y += p.height;
+      }
+      // Stage bracket annotation on right
+      const stageMidY = (stageStartY + y) / 2;
+      ctx.strokeStyle = 'rgba(56, 189, 248, 0.45)';
+      ctx.lineWidth = 1 / scale;
+      ctx.beginPath();
+      ctx.moveTo(22, stageStartY + 2);
+      ctx.lineTo(30, stageStartY + 2);
+      ctx.lineTo(30, y - 2);
+      ctx.lineTo(22, y - 2);
+      ctx.stroke();
+
+      ctx.fillStyle = '#7dd3fc';
+      ctx.font = `bold ${Math.max(8, 11 / scale)}px Inter, monospace`;
+      ctx.textAlign = 'left';
+      ctx.fillText(`S${sIdx + 1}`, 34, stageMidY + 3 / scale);
+    });
+
+    ctx.restore();
+    ctx.restore();
+  }
+
+  /**
+   * Render Flight View OR Map/Orbit View on the main full-bleed canvas.
+   */
+  function renderFlightCanvas(canvas, state) {
+    if (!canvas || !state.vessel) return;
+    const dpr = window.devicePixelRatio || 1;
+    const rect = canvas.getBoundingClientRect();
+    const w = Math.max(300, rect.width);
+    const h = Math.max(300, rect.height);
+    if (canvas.width !== Math.round(w * dpr) || canvas.height !== Math.round(h * dpr)) {
+      canvas.width = Math.round(w * dpr);
+      canvas.height = Math.round(h * dpr);
+    }
+
+    const ctx = canvas.getContext('2d');
+    ctx.save();
+    ctx.scale(dpr, dpr);
+
+    if (state.viewMode === 'map') {
+      renderMapView(ctx, w, h, state);
+    } else {
+      renderRocketView(ctx, w, h, state);
+    }
+
+    ctx.restore();
+  }
+
+  function renderRocketView(ctx, w, h, state) {
+    const { vessel, particles, zoom } = state;
+    const r = Math.sqrt(vessel.x * vessel.x + vessel.y * vessel.y);
+    const alt = Math.max(0, r - KERBIN.radius);
+    const atmRatio = Math.max(0, Math.min(1, 1 - alt / 65000));
+
+    // Sky gradient transitioning smoothly from Kerbin daylight blue to deep space black
+    const skyTopR = Math.round(6 + 24 * Math.pow(atmRatio, 1.4));
+    const skyTopG = Math.round(11 + 88 * Math.pow(atmRatio, 1.4));
+    const skyTopB = Math.round(22 + 168 * Math.pow(atmRatio, 1.3));
+    const skyBotR = Math.round(10 + 96 * atmRatio);
+    const skyBotG = Math.round(18 + 165 * atmRatio);
+    const skyBotB = Math.round(35 + 215 * atmRatio);
+
+    const skyGrad = ctx.createLinearGradient(0, 0, 0, h);
+    skyGrad.addColorStop(0, `rgb(${skyTopR},${skyTopG},${skyTopB})`);
+    skyGrad.addColorStop(1, `rgb(${skyBotR},${skyBotG},${skyBotB})`);
+    ctx.fillStyle = skyGrad;
+    ctx.fillRect(0, 0, w, h);
+
+    // Stars fade in as altitude increases
+    const starVis = Math.max(0, 1 - atmRatio * 1.35);
+    if (starVis > 0.02) {
+      for (const s of STARS) {
+        ctx.fillStyle = `rgba(255, 255, 255, ${s.alpha * starVis})`;
+        ctx.beginPath();
+        ctx.arc(s.u * w, s.v * h, s.size, 0, Math.PI * 2);
+        ctx.fill();
+      }
+    }
+
+    // Local vertical frame: up is radial outward from Kerbin center
+    const upAngle = Math.atan2(vessel.y, vessel.x);
+    const pxPerMeter = 1.65 * zoom;
+
+    ctx.save();
+    // Place craft at screen center
+    ctx.translate(w / 2, h / 2);
+
+    // Rotate world so local "up" is always pointing to top of screen (-Y in canvas)
+    const worldRot = -(upAngle - Math.PI / 2);
+
+    // Draw Kerbin curved surface below craft when within visual range
+    const planetRadiusPx = KERBIN.radius * pxPerMeter;
+    const altPx = alt * pxPerMeter;
+    const surfaceCenterY = altPx + planetRadiusPx;
+
+    if (altPx < h * 2.5) {
+      ctx.save();
+      // Atmosphere glow rim
+      ctx.beginPath();
+      ctx.arc(0, surfaceCenterY, planetRadiusPx + 70000 * pxPerMeter * 0.15, 0, Math.PI * 2);
+      ctx.fillStyle = 'rgba(56, 189, 248, 0.08)';
+      ctx.fill();
+
+      // Kerbin lush surface
+      ctx.beginPath();
+      ctx.arc(0, surfaceCenterY, planetRadiusPx, 0, Math.PI * 2);
+      ctx.fillStyle = '#2e7d32';
+      ctx.fill();
+      ctx.lineWidth = 3;
+      ctx.strokeStyle = '#66bb6a';
+      ctx.stroke();
+
+      // Launchpad & KSC VAB tower near initial launch site (when close)
+      const launchAngle = Math.PI / 2;
+      const dTheta = upAngle - launchAngle;
+      if (Math.abs(dTheta) < 0.05 && alt < 3500) {
+        const padOffsetX = -dTheta * planetRadiusPx;
+        const padY = altPx;
+        // Concrete launchpad
+        ctx.fillStyle = '#546e7a';
+        ctx.fillRect(padOffsetX - 55 * zoom, padY - 2, 110 * zoom, 12 * zoom);
+        // Launch clamp tower
+        ctx.fillStyle = '#b71c1c';
+        ctx.fillRect(padOffsetX - 38 * zoom, padY - 54 * zoom, 8 * zoom, 54 * zoom);
+        ctx.fillStyle = '#cfd8dc';
+        ctx.fillRect(padOffsetX - 38 * zoom, padY - 46 * zoom, 22 * zoom, 4 * zoom);
+        // Distant VAB building
+        ctx.fillStyle = '#37474f';
+        ctx.fillRect(padOffsetX + 95 * zoom, padY - 46 * zoom, 52 * zoom, 46 * zoom);
+        ctx.fillStyle = '#4fc3f7';
+        ctx.fillRect(padOffsetX + 105 * zoom, padY - 34 * zoom, 32 * zoom, 8 * zoom);
+      }
+      ctx.restore();
+    }
+
+    // Draw smoke/exhaust/explosion particles in local camera frame
+    if (particles && particles.length > 0) {
+      for (const pt of particles) {
+        const dx = pt.x - vessel.x;
+        const dy = pt.y - vessel.y;
+        // Rotate (dx, dy) into local up frame
+        const cosR = Math.cos(worldRot);
+        const sinR = Math.sin(worldRot);
+        const lx = (dx * cosR - dy * sinR) * pxPerMeter;
+        const ly = -(dx * sinR + dy * cosR) * pxPerMeter;
+        ctx.fillStyle = pt.color.replace('ALPHA', pt.life.toFixed(2));
+        ctx.beginPath();
+        ctx.arc(lx, ly, Math.max(1.5, pt.size * zoom * (1.3 - pt.life * 0.4)), 0, Math.PI * 2);
+        ctx.fill();
+      }
+    }
+
+    // Draw Rocket Craft
+    const rocketVisualAngle = -(vessel.angle - upAngle);
+    ctx.save();
+    ctx.rotate(rocketVisualAngle);
+
+    // Parachute canopy if deployed in atmosphere
+    const hasChute = vessel.stages.some((s) => s.parts.some((p) => p.isParachute));
+    if (vessel.parachuteDeployed && hasChute && alt < 25000 && vessel.status !== 'crashed') {
+      ctx.save();
+      const canopyY = -75 * zoom;
+      ctx.strokeStyle = 'rgba(226, 232, 240, 0.8)';
+      ctx.lineWidth = 1.2;
+      ctx.beginPath();
+      ctx.moveTo(0, -18 * zoom);
+      ctx.lineTo(-34 * zoom, canopyY + 8 * zoom);
+      ctx.moveTo(0, -18 * zoom);
+      ctx.lineTo(34 * zoom, canopyY + 8 * zoom);
+      ctx.moveTo(0, -18 * zoom);
+      ctx.lineTo(0, canopyY + 5 * zoom);
+      ctx.stroke();
+
+      ctx.beginPath();
+      ctx.arc(0, canopyY + 12 * zoom, 36 * zoom, Math.PI, 0);
+      ctx.closePath();
+      ctx.fillStyle = '#ef5350';
+      ctx.fill();
+      ctx.strokeStyle = '#ffffff';
+      ctx.lineWidth = 2;
+      ctx.stroke();
+      ctx.restore();
+    }
+
+    // Reentry aerodynamic plasma glow at high dynamic pressure & speed
+    const speed = Math.sqrt(vessel.vx * vessel.vx + vessel.vy * vessel.vy);
+    if (vessel.dynamicPressure > 14000 && speed > 750) {
+      const heatAlpha = Math.min(0.85, (vessel.dynamicPressure - 14000) / 45000);
+      ctx.save();
+      ctx.beginPath();
+      ctx.arc(0, -16 * zoom, 28 * zoom, Math.PI * 1.1, Math.PI * 1.9);
+      ctx.strokeStyle = `rgba(255, 112, 67, ${heatAlpha})`;
+      ctx.lineWidth = 6 * zoom;
+      ctx.stroke();
+      ctx.restore();
+    }
+
+    if (vessel.status !== 'crashed') {
+      const allParts = [];
+      for (const st of vessel.stages) {
+        for (const p of st.parts) allParts.push({ part: p, stage: st });
+      }
+      const totalH = allParts.reduce((sum, item) => sum + item.part.height, 0);
+      const drawScale = 0.85 * zoom;
+
+      ctx.save();
+      ctx.scale(drawScale, drawScale);
+      let yCur = -totalH / 2;
+      const activeStage = vessel.stages[vessel.stages.length - 1];
+      const isFiring =
+        activeStage &&
+        activeStage.ignited &&
+        activeStage.hasEngine &&
+        activeStage.remainingFuel > 0 &&
+        (activeStage.isSolid || vessel.throttle > 0.01);
+      const effThrottle = activeStage && activeStage.isSolid ? 1.0 : vessel.throttle;
+
+      for (const item of allParts) {
+        const partFiring = isFiring && item.stage === activeStage && item.part.isEngine;
+        drawPart(ctx, item.part, yCur, partFiring, effThrottle);
+        yCur += item.part.height;
+      }
+      ctx.restore();
+    }
+
+    ctx.restore();
+    ctx.restore();
+  }
+
+  function renderMapView(ctx, w, h, state) {
+    const { vessel, orbit, mapZoom } = state;
+
+    // Deep space background
+    ctx.fillStyle = '#050911';
+    ctx.fillRect(0, 0, w, h);
+
+    for (const s of STARS) {
+      ctx.fillStyle = `rgba(255, 255, 255, ${s.alpha * 0.7})`;
+      ctx.beginPath();
+      ctx.arc(s.u * w, s.v * h, s.size * 0.85, 0, Math.PI * 2);
+      ctx.fill();
+    }
+
+    const baseScale = Math.min(w, h) / (KERBIN.radius * 4.5);
+    const scale = baseScale * mapZoom;
+    const cx = w / 2;
+    const cy = h / 2;
+
+    const toScreen = (wx, wy) => ({
+      sx: cx + wx * scale,
+      sy: cy - wy * scale
+    });
+
+    // Mun orbit ring
+    ctx.beginPath();
+    ctx.arc(cx, cy, MUN.orbitRadius * scale, 0, Math.PI * 2);
+    ctx.strokeStyle = 'rgba(148, 163, 184, 0.25)';
+    ctx.setLineDash([6, 6]);
+    ctx.lineWidth = 1.2;
+    ctx.stroke();
+    ctx.setLineDash([]);
+
+    // Mun position & SOI
+    const mun = Physics.getMunPosition(vessel.met);
+    const munPos = toScreen(mun.x, mun.y);
+    ctx.beginPath();
+    ctx.arc(munPos.sx, munPos.sy, MUN.soiRadius * scale, 0, Math.PI * 2);
+    ctx.strokeStyle = 'rgba(167, 139, 250, 0.28)';
+    ctx.lineWidth = 1;
+    ctx.stroke();
+
+    ctx.beginPath();
+    ctx.arc(munPos.sx, munPos.sy, Math.max(4, MUN.radius * scale), 0, Math.PI * 2);
+    ctx.fillStyle = '#94a3b8';
+    ctx.fill();
+    ctx.fillStyle = '#cbd5e1';
+    ctx.font = 'bold 11px Inter, sans-serif';
+    ctx.fillText('Mun (穆恩)', munPos.sx + Math.max(8, MUN.radius * scale + 5), munPos.sy + 4);
+
+    // Kerbin atmosphere ring (70 km)
+    ctx.beginPath();
+    ctx.arc(cx, cy, (KERBIN.radius + KERBIN.atmosphereHeight) * scale, 0, Math.PI * 2);
+    ctx.fillStyle = 'rgba(56, 189, 248, 0.14)';
+    ctx.fill();
+    ctx.strokeStyle = 'rgba(56, 189, 248, 0.5)';
+    ctx.lineWidth = 1;
+    ctx.stroke();
+
+    // Kerbin body
+    const kerbinGrad = ctx.createRadialGradient(
+      cx - KERBIN.radius * scale * 0.3,
+      cy - KERBIN.radius * scale * 0.3,
+      KERBIN.radius * scale * 0.1,
+      cx,
+      cy,
+      Math.max(6, KERBIN.radius * scale)
+    );
+    kerbinGrad.addColorStop(0, '#38bdf8');
+    kerbinGrad.addColorStop(0.65, '#1d4ed8');
+    kerbinGrad.addColorStop(1, '#0f294a');
+    ctx.beginPath();
+    ctx.arc(cx, cy, Math.max(6, KERBIN.radius * scale), 0, Math.PI * 2);
+    ctx.fillStyle = kerbinGrad;
+    ctx.fill();
+
+    // Green continents silhouette
+    if (KERBIN.radius * scale > 20) {
+      ctx.save();
+      ctx.beginPath();
+      ctx.arc(cx, cy, KERBIN.radius * scale, 0, Math.PI * 2);
+      ctx.clip();
+      ctx.fillStyle = 'rgba(52, 211, 153, 0.45)';
+      ctx.beginPath();
+      ctx.arc(cx - KERBIN.radius * scale * 0.35, cy - KERBIN.radius * scale * 0.2, KERBIN.radius * scale * 0.45, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.beginPath();
+      ctx.arc(cx + KERBIN.radius * scale * 0.4, cy + KERBIN.radius * scale * 0.35, KERBIN.radius * scale * 0.38, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.restore();
+    }
+
+    // Predicted Keplerian orbit path
+    if (orbit && vessel.status !== 'prelaunch') {
+      const pts = Physics.sampleOrbitPath(orbit, 140);
+      if (pts.length > 2) {
+        ctx.beginPath();
+        pts.forEach((pt, idx) => {
+          const sp = toScreen(pt.x, pt.y);
+          if (idx === 0) ctx.moveTo(sp.sx, sp.sy);
+          else ctx.lineTo(sp.sx, sp.sy);
+        });
+        ctx.strokeStyle = orbit.isStableOrbit ? '#34d399' : '#38bdf8';
+        ctx.lineWidth = 2;
+        ctx.stroke();
+      }
+
+      // Apoapsis marker
+      if (!orbit.isEscape && isFinite(orbit.apoapsisRadius) && orbit.apoapsis > 1000) {
+        const apAngle = orbit.argOfPeriapsis + Math.PI;
+        const apP = toScreen(
+          orbit.apoapsisRadius * Math.cos(apAngle),
+          orbit.apoapsisRadius * Math.sin(apAngle)
+        );
+        drawOrbitMarker(ctx, apP.sx, apP.sy, 'Ap', `${(orbit.apoapsis / 1000).toFixed(1)} km`, '#38bdf8');
+      }
+
+      // Periapsis marker
+      if (isFinite(orbit.periapsisRadius) && orbit.periapsisRadius > KERBIN.radius * 0.2) {
+        const peAngle = orbit.argOfPeriapsis;
+        const peP = toScreen(
+          orbit.periapsisRadius * Math.cos(peAngle),
+          orbit.periapsisRadius * Math.sin(peAngle)
+        );
+        const peColor = orbit.periapsis >= KERBIN.atmosphereHeight ? '#34d399' : '#fbbf24';
+        drawOrbitMarker(ctx, peP.sx, peP.sy, 'Pe', `${(orbit.periapsis / 1000).toFixed(1)} km`, peColor);
+      }
+    }
+
+    // Spacecraft icon in Map View
+    const craftP = toScreen(vessel.x, vessel.y);
+    ctx.save();
+    ctx.translate(craftP.sx, craftP.sy);
+    ctx.rotate(-vessel.angle + Math.PI / 2);
+    ctx.beginPath();
+    ctx.moveTo(0, -8);
+    ctx.lineTo(5.5, 6);
+    ctx.lineTo(0, 3);
+    ctx.lineTo(-5.5, 6);
+    ctx.closePath();
+    ctx.fillStyle = '#f8fafc';
+    ctx.fill();
+    ctx.strokeStyle = '#f97316';
+    ctx.lineWidth = 1.5;
+    ctx.stroke();
+    ctx.restore();
+  }
+
+  function drawOrbitMarker(ctx, sx, sy, tag, label, color) {
+    ctx.save();
+    ctx.fillStyle = color;
+    ctx.beginPath();
+    ctx.arc(sx, sy, 4.5, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.fillStyle = '#0f172a';
+    ctx.fillRect(sx + 8, sy - 11, 78, 18);
+    ctx.strokeStyle = color;
+    ctx.lineWidth = 1;
+    ctx.strokeRect(sx + 8, sy - 11, 78, 18);
+    ctx.fillStyle = color;
+    ctx.font = 'bold 10px Inter, monospace';
+    ctx.fillText(`${tag} ${label}`, sx + 12, sy + 1);
+    ctx.restore();
+  }
+
+  /**
+   * Render KSP-style Navball HUD (attitudes relative to local horizon).
+   */
+  function renderNavball(canvas, vessel) {
+    if (!canvas || !vessel) return;
+    const dpr = window.devicePixelRatio || 1;
+    const size = 128;
+    if (canvas.width !== size * dpr) {
+      canvas.width = size * dpr;
+      canvas.height = size * dpr;
+    }
+
+    const ctx = canvas.getContext('2d');
+    ctx.save();
+    ctx.scale(dpr, dpr);
+    ctx.clearRect(0, 0, size, size);
+
+    const cx = size / 2;
+    const cy = size / 2;
+    const radius = 56;
+
+    const upAngle = Math.atan2(vessel.y, vessel.x);
+    // Relative pitch angle (0 = straight up, +PI/2 = right/east horizon, -PI/2 = left/west)
+    let relAngle = vessel.angle - upAngle;
+    while (relAngle > Math.PI) relAngle -= 2 * Math.PI;
+    while (relAngle < -Math.PI) relAngle += 2 * Math.PI;
+
+    ctx.save();
+    ctx.beginPath();
+    ctx.arc(cx, cy, radius, 0, Math.PI * 2);
+    ctx.clip();
+
+    // Rotate navball background opposite to craft attitude
+    ctx.translate(cx, cy);
+    ctx.rotate(relAngle);
+
+    // Sky hemisphere (top)
+    ctx.fillStyle = '#1d6fa5';
+    ctx.fillRect(-radius, -radius, radius * 2, radius);
+    // Ground hemisphere (bottom)
+    ctx.fillStyle = '#7c4a21';
+    ctx.fillRect(-radius, 0, radius * 2, radius);
+
+    // Horizon line
+    ctx.strokeStyle = '#ffffff';
+    ctx.lineWidth = 2;
+    ctx.beginPath();
+    ctx.moveTo(-radius, 0);
+    ctx.lineTo(radius, 0);
+    ctx.stroke();
+
+    // Pitch degree rings
+    ctx.strokeStyle = 'rgba(255,255,255,0.35)';
+    ctx.lineWidth = 1;
+    [-36, -18, 18, 36].forEach((offset) => {
+      ctx.beginPath();
+      ctx.moveTo(-16, offset);
+      ctx.lineTo(16, offset);
+      ctx.stroke();
+    });
+
+    // Prograde & Retrograde markers on rim
+    const speed = Math.sqrt(vessel.vx * vessel.vx + vessel.vy * vessel.vy);
+    if (speed > 4) {
+      const velAngle = Math.atan2(vessel.vy, vessel.vx);
+      const proRel = velAngle - upAngle;
+      const px = -Math.sin(proRel) * (radius * 0.68);
+      const py = -Math.cos(proRel) * (radius * 0.68);
+
+      // Prograde green marker
+      ctx.strokeStyle = '#4ade80';
+      ctx.lineWidth = 2;
+      ctx.beginPath();
+      ctx.arc(px, py, 5, 0, Math.PI * 2);
+      ctx.stroke();
+
+      // Retrograde yellow marker
+      ctx.strokeStyle = '#facc15';
+      ctx.beginPath();
+      ctx.arc(-px, -py, 5, 0, Math.PI * 2);
+      ctx.stroke();
+      ctx.beginPath();
+      ctx.moveTo(-px - 4, -py - 4);
+      ctx.lineTo(-px + 4, -py + 4);
+      ctx.moveTo(-px + 4, -py - 4);
+      ctx.lineTo(-px - 4, -py + 4);
+      ctx.stroke();
+    }
+
+    ctx.restore();
+
+    // Fixed orange craft nose reticle at center
+    ctx.strokeStyle = '#fb923c';
+    ctx.lineWidth = 2.5;
+    ctx.beginPath();
+    ctx.moveTo(cx - 16, cy);
+    ctx.lineTo(cx - 5, cy);
+    ctx.lineTo(cx, cy + 5);
+    ctx.lineTo(cx + 5, cy);
+    ctx.lineTo(cx + 16, cy);
+    ctx.stroke();
+
+    // Outer bezel
+    ctx.beginPath();
+    ctx.arc(cx, cy, radius, 0, Math.PI * 2);
+    ctx.strokeStyle = '#475569';
+    ctx.lineWidth = 3;
+    ctx.stroke();
+
+    ctx.restore();
+  }
+
+  const KSPRenderer = {
+    renderVABCanvas,
+    renderFlightCanvas,
+    renderNavball
+  };
+
+  if (typeof module !== 'undefined' && module.exports) {
+    module.exports = KSPRenderer;
+  } else {
+    root.KSP = root.KSP || {};
+    root.KSP.Renderer = KSPRenderer;
+  }
+})(typeof globalThis !== 'undefined' ? globalThis : window);
+
+
+// === Module: src/app.js ===
+(function (root) {
+  'use strict';
+
+  const Constants = root.KSP.Constants;
+  const Physics = root.KSP.Physics;
+  const Builder = root.KSP.Builder;
+  const Audio = root.KSP.Audio;
+  const Renderer = root.KSP.Renderer;
+
+  const { PARTS, PRESETS, CATEGORIES, PHYSICS } = Constants;
+
+  const WARP_LEVELS = [1, 5, 20, 100, 1000];
+
+  class KSPApp {
+    constructor() {
+      this.mode = 'vab'; // 'vab' | 'flight'
+      this.selectedCategory = 'pod';
+      this.currentPartIds = [...PRESETS.orbiter.parts];
+      this.vessel = null;
+      this.orbit = null;
+      this.viewMode = 'flight'; // 'flight' | 'map'
+      this.zoom = 1.0;
+      this.mapZoom = 1.0;
+      this.warpIndex = 0;
+      this.paused = false;
+      this.autoGravityTurn = false;
+      this.keys = {};
+      this.touchSteer = 0;
+      this.particles = [];
+      this.sound = new Audio.SoundEngine();
+      this.rafId = null;
+      this.lastFrameTime = 0;
+      this.prevMilestones = {};
+
+      this.cacheDOM();
+      this.bindEvents();
+      this.renderVAB();
+      this.startLoop();
+    }
+
+    cacheDOM() {
+      this.el = {
+        btnModeVab: document.getElementById('btn-mode-vab'),
+        btnModeFlight: document.getElementById('btn-mode-flight'),
+        btnMute: document.getElementById('btn-mute'),
+        vabView: document.getElementById('vab-view'),
+        flightView: document.getElementById('flight-view'),
+        vabCategories: document.getElementById('vab-categories'),
+        vabPartsList: document.getElementById('vab-parts-list'),
+        vabCanvas: document.getElementById('vab-canvas'),
+        vabStackList: document.getElementById('vab-stack-list'),
+        vabPresets: document.getElementById('vab-presets'),
+        vabMetrics: document.getElementById('vab-metrics'),
+        vabStages: document.getElementById('vab-stages'),
+        vabWarnings: document.getElementById('vab-warnings'),
+        btnClearRocket: document.getElementById('btn-clear-rocket'),
+        btnLaunch: document.getElementById('btn-launch'),
+        flightCanvas: document.getElementById('flight-canvas'),
+        navballCanvas: document.getElementById('navball-canvas'),
+        hudAlt: document.getElementById('hud-alt'),
+        hudVel: document.getElementById('hud-vel'),
+        hudVspeed: document.getElementById('hud-vspeed'),
+        hudMet: document.getElementById('hud-met'),
+        hudWarp: document.getElementById('hud-warp'),
+        hudAp: document.getElementById('hud-ap'),
+        hudPe: document.getElementById('hud-pe'),
+        hudEcc: document.getElementById('hud-ecc'),
+        hudPeriod: document.getElementById('hud-period'),
+        hudGforce: document.getElementById('hud-gforce'),
+        hudDynQ: document.getElementById('hud-dynq'),
+        hudStatusBadge: document.getElementById('hud-status-badge'),
+        hudStagesList: document.getElementById('hud-stages-list'),
+        hudMilestones: document.getElementById('hud-milestones'),
+        hudEventLog: document.getElementById('hud-event-log'),
+        throttleSlider: document.getElementById('throttle-slider'),
+        throttleVal: document.getElementById('throttle-val'),
+        btnStage: document.getElementById('btn-stage'),
+        btnParachute: document.getElementById('btn-parachute'),
+        btnSasToggle: document.getElementById('btn-sas-toggle'),
+        btnSasHold: document.getElementById('btn-sas-hold'),
+        btnSasPro: document.getElementById('btn-sas-pro'),
+        btnSasRetro: document.getElementById('btn-sas-retro'),
+        btnAutoTurn: document.getElementById('btn-auto-turn'),
+        btnToggleMap: document.getElementById('btn-toggle-map'),
+        btnWarpDown: document.getElementById('btn-warp-down'),
+        btnWarpUp: document.getElementById('btn-warp-up'),
+        btnPause: document.getElementById('btn-pause'),
+        btnResetLaunch: document.getElementById('btn-reset-launch'),
+        btnBackVab: document.getElementById('btn-back-vab'),
+        btnZoomIn: document.getElementById('btn-zoom-in'),
+        btnZoomOut: document.getElementById('btn-zoom-out'),
+        btnSteerLeft: document.getElementById('btn-steer-left'),
+        btnSteerRight: document.getElementById('btn-steer-right'),
+        btnThrottleFull: document.getElementById('btn-throttle-full'),
+        btnThrottleCut: document.getElementById('btn-throttle-cut'),
+        toastBanner: document.getElementById('toast-banner')
+      };
+    }
+
+    showToast(msg) {
+      if (!this.el.toastBanner) return;
+      this.el.toastBanner.textContent = msg;
+      this.el.toastBanner.classList.add('show');
+      clearTimeout(this._toastTimer);
+      this._toastTimer = setTimeout(() => {
+        this.el.toastBanner.classList.remove('show');
+      }, 2600);
+    }
+
+    bindEvents() {
+      this.el.btnModeVab.addEventListener('click', () => this.switchMode('vab'));
+      this.el.btnModeFlight.addEventListener('click', () => {
+        if (!this.vessel) this.launchRocket();
+        else this.switchMode('flight');
+      });
+
+      this.el.btnMute.addEventListener('click', () => {
+        this.sound.init();
+        const nextMuted = !this.sound.muted;
+        this.sound.setMuted(nextMuted);
+        this.el.btnMute.textContent = nextMuted ? '🔇 静音' : '🔊 音效';
+      });
+
+      this.el.btnClearRocket.addEventListener('click', () => {
+        this.currentPartIds = [];
+        this.renderVAB();
+      });
+
+      this.el.btnLaunch.addEventListener('click', () => {
+        this.sound.init();
+        this.launchRocket();
+      });
+
+      // Flight Controls
+      this.el.throttleSlider.addEventListener('input', (e) => {
+        if (!this.vessel) return;
+        this.vessel.throttle = parseFloat(e.target.value) / 100;
+        this.updateThrottleUI();
+      });
+
+      this.el.btnThrottleFull.addEventListener('click', () => {
+        if (!this.vessel) return;
+        this.vessel.throttle = 1.0;
+        this.updateThrottleUI();
+      });
+
+      this.el.btnThrottleCut.addEventListener('click', () => {
+        if (!this.vessel) return;
+        this.vessel.throttle = 0.0;
+        this.updateThrottleUI();
+      });
+
+      this.el.btnStage.addEventListener('click', () => this.doStage());
+      this.el.btnParachute.addEventListener('click', () => this.doParachute());
+
+      this.el.btnSasToggle.addEventListener('click', () => {
+        if (!this.vessel) return;
+        this.vessel.sasEnabled = !this.vessel.sasEnabled;
+        this.updateSasUI();
+      });
+      this.el.btnSasHold.addEventListener('click', () => this.setSasMode('hold'));
+      this.el.btnSasPro.addEventListener('click', () => this.setSasMode('prograde'));
+      this.el.btnSasRetro.addEventListener('click', () => this.setSasMode('retrograde'));
+
+      this.el.btnAutoTurn.addEventListener('click', () => {
+        this.autoGravityTurn = !this.autoGravityTurn;
+        this.el.btnAutoTurn.classList.toggle('active', this.autoGravityTurn);
+        this.showToast(this.autoGravityTurn ? '已开启重力转弯入轨辅助' : '已关闭自动重力转弯');
+      });
+
+      this.el.btnToggleMap.addEventListener('click', () => this.toggleMapView());
+      this.el.btnWarpDown.addEventListener('click', () => this.changeWarp(-1));
+      this.el.btnWarpUp.addEventListener('click', () => this.changeWarp(1));
+
+      this.el.btnPause.addEventListener('click', () => {
+        this.paused = !this.paused;
+        this.el.btnPause.textContent = this.paused ? '▶ 继续' : '⏸ 暂停';
+        if (this.paused) this.sound.updateEngine(0, 0);
+      });
+
+      this.el.btnResetLaunch.addEventListener('click', () => this.launchRocket());
+      this.el.btnBackVab.addEventListener('click', () => this.switchMode('vab'));
+
+      this.el.btnZoomIn.addEventListener('click', () => this.adjustZoom(1.25));
+      this.el.btnZoomOut.addEventListener('click', () => this.adjustZoom(0.8));
+
+      // Touch / hold steering buttons
+      const bindHold = (btn, dir) => {
+        const start = (e) => {
+          e.preventDefault();
+          this.touchSteer = dir;
+        };
+        const end = () => {
+          if (this.touchSteer === dir) this.touchSteer = 0;
+        };
+        btn.addEventListener('mousedown', start);
+        btn.addEventListener('touchstart', start, { passive: false });
+        window.addEventListener('mouseup', end);
+        window.addEventListener('touchend', end);
+      };
+      bindHold(this.el.btnSteerLeft, 1);
+      bindHold(this.el.btnSteerRight, -1);
+
+      // Mouse wheel zoom on flight canvas
+      this.el.flightCanvas.addEventListener(
+        'wheel',
+        (e) => {
+          e.preventDefault();
+          this.adjustZoom(e.deltaY < 0 ? 1.15 : 0.87);
+        },
+        { passive: false }
+      );
+
+      // Keyboard controls
+      window.addEventListener('keydown', (e) => {
+        if (this.mode !== 'flight') return;
+        const code = e.code;
+        this.keys[code] = true;
+
+        if (code === 'Space') {
+          e.preventDefault();
+          this.doStage();
+        } else if (code === 'KeyM') {
+          this.toggleMapView();
+        } else if (code === 'KeyT') {
+          if (this.vessel) {
+            this.vessel.sasEnabled = !this.vessel.sasEnabled;
+            this.updateSasUI();
+          }
+        } else if (code === 'KeyP') {
+          this.doParachute();
+        } else if (code === 'KeyZ') {
+          if (this.vessel) {
+            this.vessel.throttle = 1.0;
+            this.updateThrottleUI();
+          }
+        } else if (code === 'KeyX') {
+          if (this.vessel) {
+            this.vessel.throttle = 0.0;
+            this.updateThrottleUI();
+          }
+        } else if (code === 'Period') {
+          this.changeWarp(1);
+        } else if (code === 'Comma') {
+          this.changeWarp(-1);
+        }
+      });
+
+      window.addEventListener('keyup', (e) => {
+        this.keys[e.code] = false;
+      });
+
+      window.addEventListener('resize', () => {
+        if (this.mode === 'vab') {
+          Renderer.renderVABCanvas(this.el.vabCanvas, Builder.parseRocketStages(this.currentPartIds));
+        }
+      });
+    }
+
+    switchMode(nextMode) {
+      this.mode = nextMode;
+      this.el.vabView.classList.toggle('hidden', nextMode !== 'vab');
+      this.el.flightView.classList.toggle('hidden', nextMode !== 'flight');
+      this.el.btnModeVab.classList.toggle('active', nextMode === 'vab');
+      this.el.btnModeFlight.classList.toggle('active', nextMode === 'flight');
+      if (nextMode === 'vab') {
+        this.sound.updateEngine(0, 0);
+        this.renderVAB();
+      }
+    }
+
+    renderVAB() {
+      // Categories tabs
+      this.el.vabCategories.innerHTML = '';
+      CATEGORIES.forEach((cat) => {
+        const btn = document.createElement('button');
+        btn.className = `cat-btn ${cat.id === this.selectedCategory ? 'active' : ''}`;
+        btn.textContent = cat.label;
+        btn.addEventListener('click', () => {
+          this.selectedCategory = cat.id;
+          this.renderVAB();
+        });
+        this.el.vabCategories.appendChild(btn);
+      });
+
+      // Parts palette
+      this.el.vabPartsList.innerHTML = '';
+      Object.values(PARTS)
+        .filter((p) => p.category === this.selectedCategory)
+        .forEach((part) => {
+          const card = document.createElement('div');
+          card.className = 'part-card';
+          const specLine = part.isEngine
+            ? `推力 ${(part.thrust / 1000).toFixed(0)} kN · Isp ${part.ispAtm}/${part.ispVac}s`
+            : part.fuelMass > 0
+            ? `干重 ${part.dryMass} kg · 燃料 ${part.fuelMass} kg`
+            : `干重 ${part.dryMass} kg`;
+
+          card.innerHTML = `
+            <div class="part-title">${part.name}</div>
+            <div class="part-spec">${specLine}</div>
+            <div class="part-desc">${part.description}</div>
+          `;
+          card.addEventListener('click', () => {
+            this.currentPartIds.push(part.id);
+            this.renderVAB();
+          });
+          this.el.vabPartsList.appendChild(card);
+        });
+
+      // Presets
+      this.el.vabPresets.innerHTML = '';
+      Object.values(PRESETS).forEach((preset) => {
+        const btn = document.createElement('button');
+        btn.className = 'preset-btn';
+        btn.innerHTML = `<div class="preset-name">${preset.name}</div><div class="preset-sub">${preset.subtitle}</div>`;
+        btn.addEventListener('click', () => {
+          this.currentPartIds = [...preset.parts];
+          this.renderVAB();
+          this.showToast(`已加载预设火箭：${preset.name}`);
+        });
+        this.el.vabPresets.appendChild(btn);
+      });
+
+      // Blueprint analysis
+      const bp = Builder.parseRocketStages(this.currentPartIds);
+
+      // Current stack list (top to bottom) with remove & move controls
+      this.el.vabStackList.innerHTML = '';
+      bp.parts.forEach((p, idx) => {
+        const row = document.createElement('div');
+        row.className = 'stack-row';
+        row.innerHTML = `
+          <span class="stack-idx">#${idx + 1}</span>
+          <span class="stack-name">${p.name}</span>
+          <span class="stack-actions">
+            <button class="mini-btn" data-act="up" title="上移">↑</button>
+            <button class="mini-btn" data-act="down" title="下移">↓</button>
+            <button class="mini-btn danger" data-act="del" title="移除">✕</button>
+          </span>
+        `;
+        row.querySelector('[data-act="up"]').addEventListener('click', () => {
+          if (idx > 0) {
+            const tmp = this.currentPartIds[idx - 1];
+            this.currentPartIds[idx - 1] = this.currentPartIds[idx];
+            this.currentPartIds[idx] = tmp;
+            this.renderVAB();
+          }
+        });
+        row.querySelector('[data-act="down"]').addEventListener('click', () => {
+          if (idx < this.currentPartIds.length - 1) {
+            const tmp = this.currentPartIds[idx + 1];
+            this.currentPartIds[idx + 1] = this.currentPartIds[idx];
+            this.currentPartIds[idx] = tmp;
+            this.renderVAB();
+          }
+        });
+        row.querySelector('[data-act="del"]').addEventListener('click', () => {
+          this.currentPartIds.splice(idx, 1);
+          this.renderVAB();
+        });
+        this.el.vabStackList.appendChild(row);
+      });
+
+      // Engineer report metrics
+      this.el.vabMetrics.innerHTML = `
+        <div class="metric-box"><div class="m-label">起飞总重</div><div class="m-val">${(bp.totalWetMass / 1000).toFixed(2)} t</div></div>
+        <div class="metric-box"><div class="m-label">总真空 Δv</div><div class="m-val accent">${Math.round(bp.totalDeltaVVac)} m/s</div></div>
+        <div class="metric-box"><div class="m-label">起飞推重比</div><div class="m-val ${bp.launchTWR >= 1.2 ? 'good' : 'warn'}">${bp.launchTWR.toFixed(2)}</div></div>
+        <div class="metric-box"><div class="m-label">分级数量</div><div class="m-val">${bp.stages.length} 级</div></div>
+      `;
+
+      // Stage breakdown
+      this.el.vabStages.innerHTML = bp.stages
+        .map(
+          (st, idx) => `
+          <div class="stage-row">
+            <span><strong>第 ${idx + 1} 级</strong> (${st.parts.length} 件)</span>
+            <span>Δv ${Math.round(st.deltaVVac)} m/s · TWR ${st.twrSeaLevel.toFixed(2)}</span>
+          </div>
+        `
+        )
+        .join('');
+
+      // Warnings
+      this.el.vabWarnings.innerHTML = bp.warnings.length
+        ? bp.warnings.map((w) => `<div class="warn-item">⚠ ${w}</div>`).join('')
+        : '<div class="ok-item">✓ 火箭结构完整，满足入轨/发射基础条件</div>';
+
+      this.el.btnLaunch.disabled = bp.parts.length === 0 || !bp.hasEngine;
+
+      // Render visual preview
+      Renderer.renderVABCanvas(this.el.vabCanvas, bp);
+    }
+
+    launchRocket() {
+      const bp = Builder.parseRocketStages(this.currentPartIds);
+      if (bp.parts.length === 0 || !bp.hasEngine) {
+        this.showToast('请至少安装指令舱、燃料箱和发动机后再发射！');
+        return;
+      }
+      this.vessel = Builder.createFlightVessel(this.currentPartIds);
+      this.orbit = Physics.computeOrbitalElements(this.vessel.x, this.vessel.y, this.vessel.vx, this.vessel.vy);
+      this.particles = [];
+      this.warpIndex = 0;
+      this.paused = false;
+      this.viewMode = 'flight';
+      this.zoom = 1.0;
+      this.mapZoom = 1.0;
+      this.prevMilestones = { ...this.vessel.milestones };
+      this.el.btnPause.textContent = '⏸ 暂停';
+      this.el.btnToggleMap.textContent = '🗺 星图视角 (M)';
+      this.switchMode('flight');
+      this.updateThrottleUI();
+      this.updateSasUI();
+      this.updateHUD();
+      this.showToast('火箭已移至发射台，按 SPACE 点火起飞！');
+    }
+
+    doStage() {
+      if (!this.vessel || this.paused) return;
+      this.sound.init();
+      const res = Builder.triggerStage(this.vessel);
+      if (res.action === 'ignite' || res.action === 'separate') {
+        this.sound.playStage();
+        this.showToast(res.message);
+        this.updateHUD();
+      }
+    }
+
+    doParachute() {
+      if (!this.vessel || this.paused) return;
+      const metrics = Builder.getVesselLiveMetrics(this.vessel);
+      if (!metrics.hasParachute) {
+        this.showToast('当前火箭未配备降落伞。');
+        return;
+      }
+      const r = Math.sqrt(this.vessel.x * this.vessel.x + this.vessel.y * this.vessel.y);
+      const alt = r - PHYSICS.KERBIN.radius;
+      if (alt > 25000) {
+        this.showToast('高度过高（>25 km），请进入低层大气后再开伞。');
+        return;
+      }
+      if (!this.vessel.parachuteDeployed) {
+        this.vessel.parachuteDeployed = true;
+        this.sound.playParachute();
+        this.vessel.eventLog.unshift({ met: this.vessel.met, text: 'Mk16 降落伞已展开！' });
+        this.showToast('降落伞已展开！');
+      }
+    }
+
+    setSasMode(mode) {
+      if (!this.vessel) return;
+      this.vessel.sasEnabled = true;
+      this.vessel.sasMode = mode;
+      this.updateSasUI();
+    }
+
+    toggleMapView() {
+      this.viewMode = this.viewMode === 'flight' ? 'map' : 'flight';
+      this.el.btnToggleMap.textContent =
+        this.viewMode === 'map' ? '🚀 飞行视角 (M)' : '🗺 星图视角 (M)';
+    }
+
+    changeWarp(delta) {
+      if (!this.vessel) return;
+      const r = Math.sqrt(this.vessel.x * this.vessel.x + this.vessel.y * this.vessel.y);
+      const alt = r - PHYSICS.KERBIN.radius;
+      const maxAllowed = alt < PHYSICS.KERBIN.atmosphereHeight ? 1 : WARP_LEVELS.length - 1;
+      const next = Math.max(0, Math.min(maxAllowed, this.warpIndex + delta));
+      if (delta > 0 && next === this.warpIndex && alt < PHYSICS.KERBIN.atmosphereHeight) {
+        this.showToast('大气层内（<70 km）仅支持最高 5x 物理加速');
+      }
+      this.warpIndex = next;
+      this.el.hudWarp.textContent = `${WARP_LEVELS[this.warpIndex]}x`;
+    }
+
+    adjustZoom(factor) {
+      if (this.viewMode === 'map') {
+        this.mapZoom = Math.max(0.08, Math.min(8, this.mapZoom * factor));
+      } else {
+        this.zoom = Math.max(0.25, Math.min(2.5, this.zoom * factor));
+      }
+    }
+
+    updateThrottleUI() {
+      if (!this.vessel) return;
+      const pct = Math.round(this.vessel.throttle * 100);
+      this.el.throttleSlider.value = pct;
+      this.el.throttleVal.textContent = `${pct}%`;
+    }
+
+    updateSasUI() {
+      if (!this.vessel) return;
+      this.el.btnSasToggle.classList.toggle('active', this.vessel.sasEnabled);
+      this.el.btnSasToggle.textContent = this.vessel.sasEnabled ? 'SAS: 开 (T)' : 'SAS: 关 (T)';
+      this.el.btnSasHold.classList.toggle('active', this.vessel.sasEnabled && this.vessel.sasMode === 'hold');
+      this.el.btnSasPro.classList.toggle('active', this.vessel.sasEnabled && this.vessel.sasMode === 'prograde');
+      this.el.btnSasRetro.classList.toggle('active', this.vessel.sasEnabled && this.vessel.sasMode === 'retrograde');
+    }
+
+    spawnParticles(dt) {
+      if (!this.vessel) return;
+      const activeStage = this.vessel.stages[this.vessel.stages.length - 1];
+      const isFiring =
+        this.vessel.status !== 'prelaunch' &&
+        this.vessel.status !== 'crashed' &&
+        this.vessel.status !== 'landed' &&
+        activeStage &&
+        activeStage.ignited &&
+        activeStage.hasEngine &&
+        activeStage.remainingFuel > 0 &&
+        (activeStage.isSolid || this.vessel.throttle > 0.02);
+
+      if (isFiring && this.particles.length < 120) {
+        const backX = -Math.cos(this.vessel.angle);
+        const backY = -Math.sin(this.vessel.angle);
+        const speed = 35 + Math.random() * 45;
+        const spread = (Math.random() - 0.5) * 16;
+        this.particles.push({
+          x: this.vessel.x + backX * 14,
+          y: this.vessel.y + backY * 14,
+          vx: this.vessel.vx + backX * speed - backY * spread,
+          vy: this.vessel.vy + backY * speed + backX * spread,
+          life: 1.0,
+          size: 4 + Math.random() * 6,
+          color: Math.random() > 0.45 ? 'rgba(226, 232, 240, ALPHA)' : 'rgba(255, 167, 38, ALPHA)'
+        });
+      }
+
+      for (let i = this.particles.length - 1; i >= 0; i--) {
+        const p = this.particles[i];
+        p.x += p.vx * dt;
+        p.y += p.vy * dt;
+        p.life -= dt * 1.4;
+        if (p.life <= 0) this.particles.splice(i, 1);
+      }
+    }
+
+    updateHUD() {
+      if (!this.vessel || !this.orbit) return;
+      const v = this.vessel;
+      const r = Math.sqrt(v.x * v.x + v.y * v.y);
+      const alt = Math.max(0, r - PHYSICS.KERBIN.radius);
+      const speed = Math.sqrt(v.vx * v.vx + v.vy * v.vy);
+      const vSpeed = r > 1 ? (v.x * v.vx + v.y * v.vy) / r : 0;
+
+      this.el.hudAlt.textContent = alt >= 10000 ? `${(alt / 1000).toFixed(1)} km` : `${Math.round(alt)} m`;
+      this.el.hudVel.textContent = `${speed.toFixed(1)} m/s`;
+      this.el.hudVspeed.textContent = `${vSpeed >= 0 ? '+' : ''}${vSpeed.toFixed(1)} m/s`;
+      this.el.hudMet.textContent = formatMET(v.met);
+      this.el.hudWarp.textContent = `${WARP_LEVELS[this.warpIndex]}x`;
+
+      this.el.hudAp.textContent = this.orbit.isEscape
+        ? '逃逸轨道'
+        : `${(Math.max(0, this.orbit.apoapsis) / 1000).toFixed(1)} km`;
+      this.el.hudPe.textContent = `${(this.orbit.periapsis / 1000).toFixed(1)} km`;
+      this.el.hudEcc.textContent = this.orbit.eccentricity.toFixed(3);
+      this.el.hudPeriod.textContent = isFinite(this.orbit.period)
+        ? `${(this.orbit.period / 60).toFixed(1)} min`
+        : '∞';
+      this.el.hudGforce.textContent = `${v.gForce.toFixed(2)} G`;
+      this.el.hudDynQ.textContent = `${(v.dynamicPressure / 1000).toFixed(1)} kPa`;
+
+      const statusLabels = {
+        prelaunch: '发射台待命',
+        flying: alt >= PHYSICS.KERBIN.atmosphereHeight ? '太空飞行' : '大气层内飞行',
+        orbit: '稳定轨道运行',
+        landed: '安全着陆',
+        crashed: '任务失事'
+      };
+      this.el.hudStatusBadge.textContent = statusLabels[v.status] || v.status;
+      this.el.hudStatusBadge.className = `status-badge status-${v.status}`;
+
+      // Stages list
+      this.el.hudStagesList.innerHTML = v.stages
+        .map((st, idx) => {
+          const isCurrent = idx === v.stages.length - 1;
+          const fuelPct = st.stageFuelMass > 0 ? Math.round((st.remainingFuel / st.stageFuelMass) * 100) : 0;
+          return `
+            <div class="hud-stage ${isCurrent ? 'current' : ''}">
+              <div class="hud-stage-top">
+                <span>S${idx + 1} ${st.hasEngine ? (st.ignited ? '🔥' : '⏸') : '🛰'}</span>
+                <span>${st.stageFuelMass > 0 ? fuelPct + '%' : '无燃料'}</span>
+              </div>
+              <div class="fuel-bar"><div class="fuel-fill" style="width:${fuelPct}%"></div></div>
+            </div>
+          `;
+        })
+        .reverse()
+        .join('');
+
+      // Milestones
+      const ms = v.milestones;
+      const items = [
+        ['liftoff', '离地升空'],
+        ['atmosphereCleared', '突破 70 km 卡门线'],
+        ['stableOrbit', '进入 Kerbin 稳定轨道'],
+        ['munApproach', '抵达高轨 / 穆恩转移'],
+        ['safeLanding', '开伞安全着陆']
+      ];
+      this.el.hudMilestones.innerHTML = items
+        .map(
+          ([key, label]) =>
+            `<div class="ms-item ${ms[key] ? 'done' : ''}">${ms[key] ? '✅' : '⬜'} ${label}</div>`
+        )
+        .join('');
+
+      // Event log (latest 5)
+      this.el.hudEventLog.innerHTML = v.eventLog
+        .slice(0, 5)
+        .map((e) => `<div class="log-entry"><span>T+${formatMET(e.met)}</span> ${e.text}</div>`)
+        .join('');
+    }
+
+    startLoop() {
+      if (this.rafId) cancelAnimationFrame(this.rafId);
+      this.lastFrameTime = performance.now();
+
+      const tick = (now) => {
+        const realDt = Math.min(0.05, Math.max(0.001, (now - this.lastFrameTime) / 1000));
+        this.lastFrameTime = now;
+
+        if (this.mode === 'flight' && this.vessel && !this.paused) {
+          // Continuous keyboard throttle & steering
+          if (this.keys['ShiftLeft'] || this.keys['ShiftRight'] || this.keys['KeyW']) {
+            this.vessel.throttle = Math.min(1, this.vessel.throttle + 0.65 * realDt);
+            this.updateThrottleUI();
+          }
+          if (this.keys['ControlLeft'] || this.keys['ControlRight'] || this.keys['KeyS']) {
+            this.vessel.throttle = Math.max(0, this.vessel.throttle - 0.65 * realDt);
+            this.updateThrottleUI();
+          }
+
+          let steer = this.touchSteer;
+          if (this.keys['KeyA'] || this.keys['ArrowLeft']) steer = 1;
+          if (this.keys['KeyD'] || this.keys['ArrowRight']) steer = -1;
+
+          // Optional Auto Gravity Turn Assist
+          if (this.autoGravityTurn && steer === 0 && this.vessel.status === 'flying') {
+            const r = Math.sqrt(this.vessel.x * this.vessel.x + this.vessel.y * this.vessel.y);
+            const alt = r - PHYSICS.KERBIN.radius;
+            const upAngle = Math.atan2(this.vessel.y, this.vessel.x);
+            // Smooth pitch program: vertical until 2 km, gradually pitch east (-PI/2) by 55 km
+            const turnFrac = Math.max(0, Math.min(1, (alt - 2000) / 53000));
+            const targetAngle = upAngle - (Math.PI / 2) * Math.pow(turnFrac, 0.78);
+            let diff = targetAngle - this.vessel.angle;
+            while (diff > Math.PI) diff -= 2 * Math.PI;
+            while (diff < -Math.PI) diff += 2 * Math.PI;
+            steer = Math.max(-1, Math.min(1, diff * 2.5));
+          }
+
+          // Restrict warp automatically when entering atmosphere
+          const rCur = Math.sqrt(this.vessel.x * this.vessel.x + this.vessel.y * this.vessel.y);
+          const altCur = rCur - PHYSICS.KERBIN.radius;
+          if (altCur < PHYSICS.KERBIN.atmosphereHeight && this.warpIndex > 1) {
+            this.warpIndex = 0;
+          }
+
+          const warp = WARP_LEVELS[this.warpIndex];
+          const subSteps = warp >= 100 ? 16 : warp >= 20 ? 8 : warp >= 5 ? 4 : 2;
+          const simDt = (realDt * warp) / subSteps;
+
+          const prevStatus = this.vessel.status;
+          for (let s = 0; s < subSteps; s++) {
+            this.orbit = Builder.stepVesselSimulation(this.vessel, simDt, {
+              steer: s === 0 ? steer : 0,
+              includeMun: true
+            });
+          }
+
+          if (prevStatus !== 'crashed' && this.vessel.status === 'crashed') {
+            this.sound.playExplosion();
+            this.sound.updateEngine(0, 0);
+            this.showToast('💥 火箭坠毁！点击“重置发射台”重新尝试');
+            for (let k = 0; k < 45; k++) {
+              const ang = Math.random() * Math.PI * 2;
+              const spd = 20 + Math.random() * 140;
+              this.particles.push({
+                x: this.vessel.x,
+                y: this.vessel.y,
+                vx: Math.cos(ang) * spd,
+                vy: Math.sin(ang) * spd,
+                life: 1.0,
+                size: 8 + Math.random() * 12,
+                color: 'rgba(255, 87, 34, ALPHA)'
+              });
+            }
+          }
+
+          // Check newly unlocked milestones for chime
+          for (const k of Object.keys(this.vessel.milestones)) {
+            if (this.vessel.milestones[k] && !this.prevMilestones[k]) {
+              this.prevMilestones[k] = true;
+              this.sound.playMilestone();
+            }
+          }
+
+          // Engine audio feedback
+          const activeStage = this.vessel.stages[this.vessel.stages.length - 1];
+          const firingRatio =
+            this.vessel.status !== 'prelaunch' &&
+            this.vessel.status !== 'crashed' &&
+            this.vessel.status !== 'landed' &&
+            activeStage &&
+            activeStage.ignited &&
+            activeStage.hasEngine &&
+            activeStage.remainingFuel > 0
+              ? activeStage.isSolid
+                ? 1
+                : this.vessel.throttle
+              : 0;
+          this.sound.updateEngine(firingRatio, Physics.getAtmosphericPressureRatio(altCur));
+
+          this.spawnParticles(realDt);
+          this.updateHUD();
+          Renderer.renderFlightCanvas(this.el.flightCanvas, {
+            vessel: this.vessel,
+            orbit: this.orbit,
+            particles: this.particles,
+            viewMode: this.viewMode,
+            zoom: this.zoom,
+            mapZoom: this.mapZoom
+          });
+          Renderer.renderNavball(this.el.navballCanvas, this.vessel);
+        }
+
+        this.rafId = requestAnimationFrame(tick);
+      };
+
+      this.rafId = requestAnimationFrame(tick);
+    }
+  }
+
+  function formatMET(seconds) {
+    const s = Math.max(0, Math.floor(seconds));
+    const h = Math.floor(s / 3600);
+    const m = Math.floor((s % 3600) / 60);
+    const sec = s % 60;
+    return `${String(h).padStart(2, '0')}:${String(m).padStart(2, '0')}:${String(sec).padStart(2, '0')}`;
+  }
+
+  if (typeof window !== 'undefined') {
+    window.addEventListener('load', () => {
+      root.KSP = root.KSP || {};
+      root.KSP.appInstance = new KSPApp();
+    });
+  }
+})(typeof globalThis !== 'undefined' ? globalThis : window);
+
+</script>
+</body>
+</html>

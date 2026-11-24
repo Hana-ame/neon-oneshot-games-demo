@@ -1,0 +1,3056 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
+  <title>古墓丽影：太阳圣殿 · Tomb Raider Web</title>
+  <style>
+:root {
+  --bg-obsidian: #0b0d12;
+  --panel-bg: rgba(18, 20, 27, 0.9);
+  --panel-border: rgba(245, 184, 46, 0.28);
+  --gold: #f5b82e;
+  --gold-soft: #fde68a;
+  --text-main: #f3efe6;
+  --text-muted: #a8a29e;
+  --danger: #ef4444;
+  --teal: #22a699;
+}
+
+* {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+}
+
+html, body {
+  width: 100%;
+  height: 100%;
+  background: var(--bg-obsidian);
+  color: var(--text-main);
+  font-family: "Inter", "PingFang SC", "Microsoft YaHei", system-ui, sans-serif;
+  overflow: hidden;
+  user-select: none;
+}
+
+.app-shell {
+  display: flex;
+  flex-direction: column;
+  width: 100%;
+  height: 100dvh;
+  max-width: 1280px;
+  margin: 0 auto;
+  padding: 8px 10px;
+  gap: 8px;
+}
+
+.hud-bar {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  padding: 8px 12px;
+  background: var(--panel-bg);
+  border: 1px solid var(--panel-border);
+  border-radius: 10px;
+}
+
+.hud-group {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+
+.brand-title {
+  font-weight: 800;
+  font-size: 15px;
+  color: var(--gold);
+  letter-spacing: 0.04em;
+}
+
+.hp-box {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.hp-track {
+  width: 112px;
+  height: 12px;
+  background: #27272a;
+  border-radius: 999px;
+  overflow: hidden;
+  border: 1px solid rgba(255, 255, 255, 0.14);
+}
+
+.hp-fill {
+  height: 100%;
+  width: 100%;
+  background: linear-gradient(90deg, #dc2626, #f97316, #22c55e);
+  transition: width 0.15s ease-out;
+}
+
+.stat-pill {
+  font-size: 13px;
+  color: var(--text-main);
+  background: rgba(255, 255, 255, 0.06);
+  padding: 4px 9px;
+  border-radius: 6px;
+  border: 1px solid rgba(255, 255, 255, 0.08);
+}
+
+.stat-pill strong {
+  color: var(--gold-soft);
+}
+
+.toolbar-btns {
+  display: flex;
+  gap: 6px;
+}
+
+.hud-btn {
+  background: rgba(245, 184, 46, 0.14);
+  color: var(--gold-soft);
+  border: 1px solid rgba(245, 184, 46, 0.35);
+  border-radius: 7px;
+  padding: 5px 10px;
+  font-size: 12px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background 0.15s, transform 0.1s;
+}
+
+.hud-btn:hover {
+  background: rgba(245, 184, 46, 0.28);
+}
+
+.hud-btn:active {
+  transform: scale(0.96);
+}
+
+.stage-wrap {
+  position: relative;
+  flex: 1;
+  min-height: 280px;
+  border-radius: 12px;
+  overflow: hidden;
+  border: 1px solid var(--panel-border);
+  background: #090b10;
+  box-shadow: 0 12px 32px rgba(0, 0, 0, 0.65);
+}
+
+#gameCanvas {
+  display: block;
+  width: 100%;
+  height: 100%;
+}
+
+.boss-hud {
+  position: absolute;
+  top: 12px;
+  left: 50%;
+  transform: translateX(-50%);
+  width: min(360px, 85%);
+  background: rgba(12, 14, 22, 0.85);
+  border: 1px solid rgba(99, 102, 241, 0.55);
+  border-radius: 8px;
+  padding: 6px 10px;
+  pointer-events: none;
+}
+
+.boss-hud.hidden {
+  display: none;
+}
+
+.boss-name {
+  font-size: 12px;
+  font-weight: 700;
+  color: #a5b4fc;
+  margin-bottom: 4px;
+  text-align: center;
+}
+
+.boss-track {
+  width: 100%;
+  height: 9px;
+  background: #1e1b4b;
+  border-radius: 999px;
+  overflow: hidden;
+}
+
+.boss-fill {
+  height: 100%;
+  width: 100%;
+  background: linear-gradient(90deg, #6366f1, #38bdf8);
+  transition: width 0.12s linear;
+}
+
+.toast {
+  position: absolute;
+  top: 14px;
+  right: 14px;
+  background: rgba(20, 22, 30, 0.92);
+  color: var(--gold-soft);
+  border: 1px solid var(--gold);
+  border-radius: 8px;
+  padding: 7px 14px;
+  font-size: 13px;
+  font-weight: 600;
+  opacity: 0;
+  transform: translateY(-8px);
+  transition: opacity 0.25s, transform 0.25s;
+  pointer-events: none;
+}
+
+.toast.visible {
+  opacity: 1;
+  transform: translateY(0);
+}
+
+.overlay {
+  position: absolute;
+  inset: 0;
+  background: rgba(8, 10, 15, 0.8);
+  backdrop-filter: blur(4px);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 16px;
+  z-index: 20;
+}
+
+.overlay.hidden {
+  display: none;
+}
+
+.overlay-card {
+  width: min(490px, 100%);
+  background: linear-gradient(160deg, #171512, #11131a);
+  border: 1px solid rgba(245, 184, 46, 0.45);
+  border-radius: 14px;
+  padding: 24px 22px;
+  text-align: center;
+  box-shadow: 0 20px 48px rgba(0, 0, 0, 0.7);
+}
+
+.overlay-card h1 {
+  font-size: 24px;
+  color: var(--gold);
+  margin-bottom: 10px;
+}
+
+.overlay-card p {
+  font-size: 14px;
+  line-height: 1.6;
+  color: var(--text-main);
+  margin-bottom: 12px;
+}
+
+.overlay-stats {
+  font-size: 13px;
+  color: var(--gold-soft);
+  background: rgba(245, 184, 46, 0.1);
+  border-radius: 8px;
+  padding: 8px 10px;
+  margin-bottom: 16px;
+}
+
+.overlay-actions {
+  display: flex;
+  justify-content: center;
+  gap: 10px;
+  flex-wrap: wrap;
+  margin-bottom: 12px;
+}
+
+.btn-primary {
+  background: linear-gradient(135deg, #d97706, #f5b82e);
+  color: #14110b;
+  border: none;
+  border-radius: 8px;
+  padding: 10px 22px;
+  font-size: 14px;
+  font-weight: 800;
+  cursor: pointer;
+}
+
+.btn-secondary {
+  background: rgba(255, 255, 255, 0.1);
+  color: var(--text-main);
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  border-radius: 8px;
+  padding: 10px 18px;
+  font-size: 14px;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.btn-secondary.hidden,
+.level-select-row.hidden {
+  display: none;
+}
+
+.level-select-row {
+  display: flex;
+  justify-content: center;
+  gap: 8px;
+  flex-wrap: wrap;
+  margin-top: 8px;
+}
+
+.controls-legend {
+  margin-top: 12px;
+  font-size: 12px;
+  color: var(--text-muted);
+  line-height: 1.5;
+}
+
+.hint-bar {
+  font-size: 12px;
+  color: var(--text-muted);
+  background: var(--panel-bg);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: 8px;
+  padding: 6px 12px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.touch-controls {
+  display: none;
+  justify-content: space-between;
+  align-items: center;
+  gap: 10px;
+  padding: 6px 4px 2px;
+}
+
+.touch-controls.force-show {
+  display: flex;
+}
+
+.dpad, .action-pad {
+  display: flex;
+  gap: 6px;
+  flex-wrap: wrap;
+}
+
+.tc-btn {
+  min-width: 46px;
+  height: 44px;
+  padding: 0 10px;
+  border-radius: 10px;
+  border: 1px solid rgba(245, 184, 46, 0.4);
+  background: rgba(30, 32, 42, 0.9);
+  color: var(--gold-soft);
+  font-size: 13px;
+  font-weight: 700;
+  touch-action: none;
+  cursor: pointer;
+}
+
+.tc-btn:active {
+  background: rgba(245, 184, 46, 0.35);
+}
+
+@media (max-width: 760px) {
+  .touch-controls {
+    display: flex;
+  }
+  .brand-title {
+    font-size: 14px;
+  }
+  .hp-track {
+    width: 84px;
+  }
+}
+
+  </style>
+</head>
+<body>
+  <div class="app-shell">
+    <header class="hud-bar">
+      <div class="hud-group">
+        <span class="brand-title">古墓丽影 · TOMB RAIDER</span>
+        <div class="hp-box">
+          <div class="hp-track"><div id="hpFill" class="hp-fill"></div></div>
+          <span id="hpText" class="stat-pill">100 / 100</span>
+        </div>
+        <span class="stat-pill">关卡 <strong id="levelLabel">第一关：丛林外殿</strong></span>
+        <span class="stat-pill">圣物 <strong id="relicCount">0/3</strong></span>
+        <span class="stat-pill">得分 <strong id="scoreVal">0</strong></span>
+        <span class="stat-pill">计时 <strong id="timerVal">00:00</strong></span>
+      </div>
+      <div class="toolbar-btns">
+        <button id="btnMute" class="hud-btn" type="button">音效</button>
+        <button id="btnPause" class="hud-btn" type="button">暂停</button>
+        <button id="btnRestart" class="hud-btn" type="button">重玩</button>
+        <button id="btnTouchToggle" class="hud-btn" type="button">手柄</button>
+      </div>
+    </header>
+
+    <main id="stageWrap" class="stage-wrap">
+      <canvas id="gameCanvas" aria-label="古墓丽影游戏画布"></canvas>
+
+      <div id="bossHud" class="boss-hud hidden">
+        <div id="bossName" class="boss-name">黑曜石守卫</div>
+        <div class="boss-track"><div id="bossHpFill" class="boss-fill"></div></div>
+      </div>
+
+      <div id="toast" class="toast" role="status" aria-live="polite"></div>
+
+      <div id="overlay" class="overlay">
+        <div class="overlay-card">
+          <h1 id="overlayTitle">古墓丽影：太阳圣殿</h1>
+          <p id="overlayDesc"></p>
+          <div id="overlayStats" class="overlay-stats"></div>
+          <div class="overlay-actions">
+            <button id="primaryActionBtn" class="btn-primary" type="button">开始探险</button>
+            <button id="secondaryActionBtn" class="btn-secondary hidden" type="button">重头开始</button>
+          </div>
+          <div id="levelSelectRow" class="level-select-row">
+            <button class="hud-btn" type="button" data-level="0">第一关：丛林外殿</button>
+            <button class="hud-btn" type="button" data-level="1">第二关：机关地宫</button>
+            <button class="hud-btn" type="button" data-level="2">第三关：太阳圣殿</button>
+          </div>
+          <div class="controls-legend">
+            操作：A/D 或 ←/→ 移动 · W/S 攀爬藤蔓 · 空格 跳跃/抓崖上翻 · Shift 翻滚闪避 · J / 鼠标左键 双枪射击 · E 触发拉杆 · P 暂停
+          </div>
+        </div>
+      </div>
+    </main>
+
+    <div id="hintBar" class="hint-bar"></div>
+
+    <div id="touchControls" class="touch-controls">
+      <div class="dpad">
+        <button id="tcLeft" class="tc-btn" type="button">←</button>
+        <button id="tcRight" class="tc-btn" type="button">→</button>
+        <button id="tcUp" class="tc-btn" type="button">↑</button>
+        <button id="tcDown" class="tc-btn" type="button">↓</button>
+      </div>
+      <div class="action-pad">
+        <button id="tcJump" class="tc-btn" type="button">跳跃</button>
+        <button id="tcShoot" class="tc-btn" type="button">射击</button>
+        <button id="tcRoll" class="tc-btn" type="button">翻滚</button>
+        <button id="tcInteract" class="tc-btn" type="button">机关</button>
+      </div>
+    </div>
+  </div>
+
+  <script>
+(function () {
+  'use strict';
+/* ===== src/constants.js ===== */
+/**
+ * 核心常量与配置模块
+ * 定义物理参数、瓦片类型、实体尺寸及游戏状态枚举
+ */
+const TILE_SIZE = 40;
+const PHYSICS = Object.freeze({
+  GRAVITY: 1480,
+  MAX_FALL_SPEED: 760,
+  MOVE_SPEED: 255,
+  CLIMB_SPEED: 165,
+  JUMP_VELOCITY: -565,
+  ROLL_SPEED: 380,
+  ROLL_DURATION: 0.34,
+  ROLL_COOLDOWN: 0.55,
+  COYOTE_TIME: 0.11,
+  JUMP_BUFFER: 0.12,
+  LEDGE_GRAB_TOLERANCE: 14,
+  PUSH_SPEED: 110,
+  BULLET_SPEED: 680,
+  FIRE_COOLDOWN: 0.19,
+  FIXED_DT: 1 / 60,
+  MAX_DT: 0.05
+});
+const PLAYER_CONFIG = Object.freeze({
+  WIDTH: 24,
+  HEIGHT: 36,
+  CROUCH_HEIGHT: 24,
+  MAX_HP: 100,
+  INVULN_TIME: 0.9,
+  BULLET_DAMAGE: 18
+});
+const TILE = Object.freeze({
+  EMPTY: 0,
+  SOLID: 1,        // 古庙石砖
+  MOSS_SOLID: 2,   // 苔藓巨石
+  VINE: 3,         // 可攀爬藤蔓/石梯
+  SPIKES: 4,       // 地刺陷阱
+  CRUMBLE: 5,      // 碎裂石桥
+  WATER: 6,        // 地下毒水/深潭
+  TORCH: 7,        // 壁挂火把（光源装饰）
+  PLATFORM: 8      // 单向石台
+});
+const GAME_STATE = Object.freeze({
+  TITLE: 'TITLE',
+  PLAYING: 'PLAYING',
+  PAUSED: 'PAUSED',
+  LEVEL_CLEAR: 'LEVEL_CLEAR',
+  GAME_OVER: 'GAME_OVER',
+  VICTORY: 'VICTORY'
+});
+const PALETTE = Object.freeze({
+  bgTop: '#0d1117',
+  bgBottom: '#1c1814',
+  stoneDark: '#2b2520',
+  stoneMid: '#433930',
+  stoneLight: '#5e5043',
+  moss: '#3d6b47',
+  mossLight: '#588c5e',
+  gold: '#f5b82e',
+  goldGlow: 'rgba(245, 184, 46, 0.45)',
+  torchCore: '#fff3c4',
+  torchGlow: 'rgba(255, 148, 42, 0.38)',
+  laraShirt: '#22a699',
+  laraShorts: '#5c4033',
+  laraSkin: '#f1c29b',
+  laraHair: '#3b2314',
+  danger: '#e5484d',
+  runeBlue: '#38bdf8'
+});
+
+
+/* ===== src/levels.js ===== */
+/**
+ * 关卡定义与解析模块
+ * 包含 3 个手工设计的古墓关卡：
+ *   1. 丛林外殿（基础探索、攀爬、推箱压板解谜）
+ *   2. 机关地宫（碎裂石桥、毒箭机关、拉杆吊桥、滚石追逐）
+ *   3. 太阳圣殿（双机关密室、垂直攀爬、黑曜石守卫 Boss 战）
+ */
+
+const CHAR_TO_TILE = {
+  '.': TILE.EMPTY,
+  '#': TILE.SOLID,
+  'M': TILE.MOSS_SOLID,
+  'V': TILE.VINE,
+  '^': TILE.SPIKES,
+  'C': TILE.CRUMBLE,
+  '~': TILE.WATER,
+  'T': TILE.TORCH,
+  '-': TILE.PLATFORM
+};
+const RAW_LEVELS = [
+  {
+    id: 1,
+    name: '第一关：丛林外殿',
+    subtitle: 'Temple Entrance · 攀爬、推箱与压板机关',
+    ambientDarkness: 0.32,
+    hint: 'AD/方向键移动，空格跳跃（靠近高台边缘可自动抓崖攀爬），W/S攀爬藤蔓，将石箱推上金色压板开启石门！',
+    map: [
+      'MMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMM',
+      'M......................................M',
+      'M..T........T........T.........T.......M',
+      'M......................................M',
+      'M............................----......M',
+      'M......................................M',
+      'M...................MMM.......T........M',
+      'M............V.........................M',
+      'M......--....V..MMM......MMMMM.........M',
+      'M............V...........M.............M',
+      'M..T.........V......T....M.....T.......M',
+      'M............V...........M.............M',
+      'MMMMM....MMMMM..^^^..MMMMMMMM....MMMMMMM',
+      'M......................................M',
+      'MMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMM'
+    ],
+    spawn: { col: 2, row: 11 },
+    exit: { col: 37, row: 10 },
+    relics: [
+      { id: 'r1_1', col: 7, row: 7, name: '翡翠神像' },
+      { id: 'r1_2', col: 20, row: 5, name: '黄金圣甲虫' },
+      { id: 'r1_3', col: 30, row: 3, name: '太阳徽章' }
+    ],
+    medipacks: [
+      { id: 'm1_1', col: 17, row: 7 }
+    ],
+    checkpoints: [
+      { id: 'cp1_1', col: 22, row: 11 }
+    ],
+    crates: [
+      { id: 'crate1', col: 26, row: 7 }
+    ],
+    plates: [
+      { id: 'plate1', col: 28, row: 11.75, targetDoorId: 'door1' }
+    ],
+    levers: [],
+    doors: [
+      { id: 'door1', col: 34, row: 9, heightTiles: 3, requiredIds: ['plate1'] }
+    ],
+    dartTraps: [],
+    boulders: [],
+    enemies: [
+      { id: 'e1_1', type: 'bat', col: 15, row: 5, patrolRange: 120 },
+      { id: 'e1_2', type: 'guardian', col: 25, row: 11, patrolMinCol: 22, patrolMaxCol: 32 }
+    ],
+    boss: null
+  },
+  {
+    id: 2,
+    name: '第二关：机关地宫',
+    subtitle: 'Hall of Traps · 碎裂石桥、毒箭机关与滚石追逐',
+    ambientDarkness: 0.44,
+    hint: '按 E 启动古墓拉杆开启石门，按 Shift 翻滚躲避毒箭与滚石，碎裂石桥踩踏后会迅速崩塌！',
+    map: [
+      '########################################',
+      '#......................................#',
+      '#..T......T........T........T......T...#',
+      '#......................................#',
+      '#.................................V....#',
+      '#................######...........V....#',
+      '#........T........................V....#',
+      '#....#####...CCCC.....####...CCCC.V....#',
+      '#.................................V....#',
+      '#..T............T.................V....#',
+      '#.................................V....#',
+      '#......................................#',
+      '#####..^^^..#####..~~~~..###############',
+      '#......................................#',
+      '########################################'
+    ],
+    spawn: { col: 2, row: 11 },
+    exit: { col: 37, row: 10 },
+    relics: [
+      { id: 'r2_1', col: 6, row: 6, name: '青铜权杖' },
+      { id: 'r2_2', col: 18, row: 4, name: '星象罗盘' },
+      { id: 'r2_3', col: 34, row: 3, name: '血玉匕首' }
+    ],
+    medipacks: [
+      { id: 'm2_1', col: 23, row: 6 },
+      { id: 'm2_2', col: 30, row: 11 }
+    ],
+    checkpoints: [
+      { id: 'cp2_1', col: 22, row: 6 }
+    ],
+    crates: [],
+    plates: [],
+    levers: [
+      { id: 'lever2_1', col: 19, row: 4, targetDoorId: 'door2' }
+    ],
+    doors: [
+      { id: 'door2', col: 35, row: 9, heightTiles: 3, requiredIds: ['lever2_1'] }
+    ],
+    dartTraps: [
+      { id: 'dart2_1', col: 38, row: 11, dir: -1, interval: 2.3 },
+      { id: 'dart2_2', col: 1, row: 6, dir: 1, interval: 2.8 }
+    ],
+    boulders: [
+      { id: 'boulder2_1', col: 27, row: 10.6, triggerCol: 29, dir: 1, speed: 205 }
+    ],
+    enemies: [
+      { id: 'e2_1', type: 'bat', col: 13, row: 4, patrolRange: 130 },
+      { id: 'e2_2', type: 'guardian', col: 13, row: 11, patrolMinCol: 12, patrolMaxCol: 16 },
+      { id: 'e2_3', type: 'bat', col: 29, row: 5, patrolRange: 110 }
+    ],
+    boss: null
+  },
+  {
+    id: 3,
+    name: '第三关：太阳圣殿',
+    subtitle: 'Sanctum of the Sun · 双重封印与黑曜石守卫',
+    ambientDarkness: 0.48,
+    hint: '启动左右两座圣殿拉杆解除宝库封印，击败黑曜石守卫即可夺取「太阳圣器」通关！',
+    map: [
+      '########################################',
+      '#......................................#',
+      '#..T.........T..........T..........T...#',
+      '#......................................#',
+      '#....----...................----.......#',
+      '#......................................#',
+      '#..V.............................V.....#',
+      '#..V......----.........----......V.....#',
+      '#..V.............................V.....#',
+      '#..V..T........T.....T........T..V.....#',
+      '#..V.............................V.....#',
+      '#..V.............................V.....#',
+      '########################################',
+      '#......................................#',
+      '########################################'
+    ],
+    spawn: { col: 5, row: 11 },
+    exit: { col: 36, row: 10 },
+    relics: [
+      { id: 'r3_1', col: 6, row: 3, name: '日蚀圣杯' },
+      { id: 'r3_2', col: 19, row: 5, name: '黄金面具' },
+      { id: 'r3_3', col: 30, row: 3, name: '太阳圣器碎片' }
+    ],
+    medipacks: [
+      { id: 'm3_1', col: 12, row: 6 },
+      { id: 'm3_2', col: 25, row: 6 }
+    ],
+    checkpoints: [
+      { id: 'cp3_1', col: 19, row: 11 }
+    ],
+    crates: [],
+    plates: [],
+    levers: [
+      { id: 'lever3_1', col: 5, row: 3, targetDoorId: 'door3' },
+      { id: 'lever3_2', col: 29, row: 3, targetDoorId: 'door3' }
+    ],
+    doors: [
+      { id: 'door3', col: 34, row: 9, heightTiles: 3, requiredIds: ['lever3_1', 'lever3_2', 'boss3'] }
+    ],
+    dartTraps: [
+      { id: 'dart3_1', col: 1, row: 11, dir: 1, interval: 3.1 }
+    ],
+    boulders: [],
+    enemies: [
+      { id: 'e3_1', type: 'bat', col: 15, row: 4, patrolRange: 140 },
+      { id: 'e3_2', type: 'bat', col: 24, row: 4, patrolRange: 140 }
+    ],
+    boss: {
+      id: 'boss3',
+      name: '黑曜石守卫 · Obsidian Golem',
+      col: 24,
+      row: 10.2,
+      minCol: 10,
+      maxCol: 31,
+      maxHp: 260
+    }
+  }
+];
+
+/**
+ * 将字符地图解析为二维数字网格及派生元数据
+ */
+function parseLevel(levelIndex) {
+  const raw = RAW_LEVELS[levelIndex];
+  if (!raw) {
+    throw new Error(`Invalid level index: ${levelIndex}`);
+  }
+
+  const rows = raw.map.length;
+  const cols = raw.map[0].length;
+  const grid = [];
+  const torches = [];
+  const crumbleBlocks = [];
+
+  for (let r = 0; r < rows; r++) {
+    const line = raw.map[r];
+    if (line.length !== cols) {
+      throw new Error(`Level ${raw.id} row ${r} length mismatch: expected ${cols}, got ${line.length}`);
+    }
+    const rowArr = [];
+    for (let c = 0; c < cols; c++) {
+      const ch = line[c];
+      const tileType = CHAR_TO_TILE[ch] ?? TILE.EMPTY;
+      rowArr.push(tileType);
+
+      if (tileType === TILE.TORCH) {
+        torches.push({
+          x: (c + 0.5) * TILE_SIZE,
+          y: (r + 0.5) * TILE_SIZE,
+          phase: (c * 1.7 + r * 0.9) % (Math.PI * 2)
+        });
+      }
+      if (tileType === TILE.CRUMBLE) {
+        crumbleBlocks.push({
+          col: c,
+          row: r,
+          x: c * TILE_SIZE,
+          y: r * TILE_SIZE,
+          state: 'solid', // solid | shaking | gone
+          timer: 0
+        });
+      }
+    }
+    grid.push(rowArr);
+  }
+
+  return {
+    id: raw.id,
+    name: raw.name,
+    subtitle: raw.subtitle,
+    hint: raw.hint,
+    ambientDarkness: raw.ambientDarkness,
+    rows,
+    cols,
+    width: cols * TILE_SIZE,
+    height: rows * TILE_SIZE,
+    grid,
+    torches,
+    crumbleBlocks,
+    spawn: { x: raw.spawn.col * TILE_SIZE + 8, y: raw.spawn.row * TILE_SIZE },
+    exit: {
+      x: raw.exit.col * TILE_SIZE,
+      y: raw.exit.row * TILE_SIZE,
+      w: TILE_SIZE * 1.3,
+      h: TILE_SIZE * 2
+    },
+    relics: raw.relics.map((item) => ({
+      ...item,
+      x: item.col * TILE_SIZE + TILE_SIZE * 0.5,
+      y: item.row * TILE_SIZE + TILE_SIZE * 0.5,
+      collected: false
+    })),
+    medipacks: raw.medipacks.map((item) => ({
+      ...item,
+      x: item.col * TILE_SIZE + TILE_SIZE * 0.5,
+      y: item.row * TILE_SIZE + TILE_SIZE * 0.5,
+      collected: false
+    })),
+    checkpoints: raw.checkpoints.map((cp) => ({
+      ...cp,
+      x: cp.col * TILE_SIZE + TILE_SIZE * 0.5,
+      y: cp.row * TILE_SIZE + TILE_SIZE,
+      activated: false
+    })),
+    crates: raw.crates.map((cr) => ({
+      id: cr.id,
+      x: cr.col * TILE_SIZE + 3,
+      y: cr.row * TILE_SIZE + 4,
+      w: TILE_SIZE - 6,
+      h: TILE_SIZE - 4,
+      vx: 0,
+      vy: 0,
+      onGround: false
+    })),
+    plates: raw.plates.map((pl) => ({
+      id: pl.id,
+      x: pl.col * TILE_SIZE,
+      y: pl.row * TILE_SIZE,
+      w: TILE_SIZE,
+      h: 10,
+      targetDoorId: pl.targetDoorId,
+      pressed: false
+    })),
+    levers: raw.levers.map((lv) => ({
+      id: lv.id,
+      x: lv.col * TILE_SIZE + 6,
+      y: lv.row * TILE_SIZE + 6,
+      w: 28,
+      h: 34,
+      targetDoorId: lv.targetDoorId,
+      activated: false
+    })),
+    doors: raw.doors.map((dr) => ({
+      id: dr.id,
+      x: dr.col * TILE_SIZE + 4,
+      y: dr.row * TILE_SIZE,
+      w: TILE_SIZE - 8,
+      h: dr.heightTiles * TILE_SIZE,
+      requiredIds: [...dr.requiredIds],
+      openProgress: 0,
+      isOpen: false
+    })),
+    dartTraps: raw.dartTraps.map((dt) => ({
+      ...dt,
+      x: dt.col * TILE_SIZE + (dt.dir > 0 ? TILE_SIZE : 0),
+      y: dt.row * TILE_SIZE + TILE_SIZE * 0.5,
+      timer: dt.interval * 0.5
+    })),
+    boulders: raw.boulders.map((b) => ({
+      id: b.id,
+      x: b.col * TILE_SIZE,
+      y: b.row * TILE_SIZE,
+      radius: 24,
+      triggerX: b.triggerCol * TILE_SIZE,
+      dir: b.dir,
+      speed: b.speed,
+      active: false,
+      angle: 0,
+      destroyed: false
+    })),
+    enemies: raw.enemies.map((e) => ({
+      ...e,
+      x: e.col * TILE_SIZE,
+      y: e.row * TILE_SIZE,
+      startX: e.col * TILE_SIZE,
+      startY: e.row * TILE_SIZE,
+      w: e.type === 'bat' ? 28 : 28,
+      h: e.type === 'bat' ? 20 : 38,
+      vx: e.type === 'guardian' ? 75 : 95,
+      vy: 0,
+      hp: e.type === 'bat' ? 36 : 72,
+      maxHp: e.type === 'bat' ? 36 : 72,
+      patrolMinX: e.patrolMinCol ? e.patrolMinCol * TILE_SIZE : e.col * TILE_SIZE - (e.patrolRange || 100),
+      patrolMaxX: e.patrolMaxCol ? e.patrolMaxCol * TILE_SIZE : e.col * TILE_SIZE + (e.patrolRange || 100),
+      phase: 0,
+      hitFlash: 0,
+      alive: true
+    })),
+    boss: raw.boss
+      ? {
+          id: raw.boss.id,
+          name: raw.boss.name,
+          x: raw.boss.col * TILE_SIZE,
+          y: raw.boss.row * TILE_SIZE,
+          w: 58,
+          h: 72,
+          minX: raw.boss.minCol * TILE_SIZE,
+          maxX: raw.boss.maxCol * TILE_SIZE,
+          vx: -95,
+          vy: 0,
+          hp: raw.boss.maxHp,
+          maxHp: raw.boss.maxHp,
+          attackTimer: 2.2,
+          hitFlash: 0,
+          alive: true
+        }
+      : null
+  };
+}
+
+
+/* ===== src/physics.js ===== */
+/**
+ * 物理与碰撞检测模块
+ * 负责 AABB 碰撞、瓦片网格查询、单向平台、闭合石门碰撞及边缘抓崖判定
+ */
+function rectsOverlap(a, b) {
+  return (
+    a.x < b.x + b.w &&
+    a.x + a.w > b.x &&
+    a.y < b.y + b.h &&
+    a.y + a.h > b.y
+  );
+}
+function circleRectOverlap(cx, cy, r, rect) {
+  const closestX = Math.max(rect.x, Math.min(cx, rect.x + rect.w));
+  const closestY = Math.max(rect.y, Math.min(cy, rect.y + rect.h));
+  const dx = cx - closestX;
+  const dy = cy - closestY;
+  return dx * dx + dy * dy <= r * r;
+}
+function getTileAt(level, col, row) {
+  if (row < 0 || row >= level.rows || col < 0 || col >= level.cols) {
+    return TILE.SOLID;
+  }
+  const t = level.grid[row][col];
+  if (t === TILE.CRUMBLE) {
+    const block = level.crumbleBlocks.find((b) => b.col === col && b.row === row);
+    if (block && block.state === 'gone') {
+      return TILE.EMPTY;
+    }
+  }
+  return t;
+}
+function isSolidTile(tileType) {
+  return (
+    tileType === TILE.SOLID ||
+    tileType === TILE.MOSS_SOLID ||
+    tileType === TILE.CRUMBLE
+  );
+}
+
+/**
+ * 获取当前世界中所有实心障碍矩形（瓦片 + 未完全开启的石门 + 可选箱子）
+ */
+function getSolidRectsNear(level, box, includeCrates = true, excludeCrateId = null) {
+  const solids = [];
+  const minCol = Math.floor(box.x / TILE_SIZE) - 1;
+  const maxCol = Math.floor((box.x + box.w) / TILE_SIZE) + 1;
+  const minRow = Math.floor(box.y / TILE_SIZE) - 1;
+  const maxRow = Math.floor((box.y + box.h) / TILE_SIZE) + 1;
+
+  for (let r = minRow; r <= maxRow; r++) {
+    for (let c = minCol; c <= maxCol; c++) {
+      const t = getTileAt(level, c, r);
+      if (isSolidTile(t)) {
+        solids.push({
+          x: c * TILE_SIZE,
+          y: r * TILE_SIZE,
+          w: TILE_SIZE,
+          h: TILE_SIZE,
+          tileType: t,
+          col: c,
+          row: r
+        });
+      }
+    }
+  }
+
+  for (const door of level.doors) {
+    if (!door.isOpen && door.openProgress < 0.85) {
+      const currentH = door.h * (1 - door.openProgress);
+      solids.push({
+        x: door.x,
+        y: door.y,
+        w: door.w,
+        h: currentH,
+        isDoor: true
+      });
+    }
+  }
+
+  if (includeCrates) {
+    for (const crate of level.crates) {
+      if (crate.id !== excludeCrateId) {
+        solids.push({
+          x: crate.x,
+          y: crate.y,
+          w: crate.w,
+          h: crate.h,
+          isCrate: true,
+          crateRef: crate
+        });
+      }
+    }
+  }
+
+  return solids;
+}
+
+/**
+ * 分离轴移动并解决 X/Y 碰撞，返回碰撞状态与踩到的碎裂块列表
+ */
+function moveAndCollide(entity, level, dt, options = {}) {
+  const {
+    includeCrates = true,
+    excludeCrateId = null,
+    allowOneWayPlatforms = true,
+    dropThrough = false
+  } = options;
+
+  const result = {
+    hitLeft: false,
+    hitRight: false,
+    hitCeiling: false,
+    onGround: false,
+    pushedCrate: null,
+    steppedCrumbles: []
+  };
+
+  const prevBottom = entity.y + entity.h;
+
+  // 1. 水平位移与碰撞（保留原始速度方向，确保高速跨格时也能正确推出所有重叠实心块）
+  const moveVx = entity.vx;
+  entity.x += moveVx * dt;
+  let solids = getSolidRectsNear(level, entity, includeCrates, excludeCrateId);
+  for (const s of solids) {
+    if (rectsOverlap(entity, s)) {
+      if (moveVx > 0) {
+        entity.x = Math.min(entity.x, s.x - entity.w);
+        result.hitRight = true;
+        if (s.isCrate) result.pushedCrate = { crate: s.crateRef, dir: 1 };
+        entity.vx = 0;
+      } else if (moveVx < 0) {
+        entity.x = Math.max(entity.x, s.x + s.w);
+        result.hitLeft = true;
+        if (s.isCrate) result.pushedCrate = { crate: s.crateRef, dir: -1 };
+        entity.vx = 0;
+      }
+    }
+  }
+
+  // 2. 垂直位移与碰撞
+  const moveVy = entity.vy;
+  entity.y += moveVy * dt;
+  solids = getSolidRectsNear(level, entity, includeCrates, excludeCrateId);
+  for (const s of solids) {
+    if (rectsOverlap(entity, s)) {
+      if (moveVy > 0) {
+        entity.y = Math.min(entity.y, s.y - entity.h);
+        entity.vy = 0;
+        result.onGround = true;
+        if (s.tileType === TILE.CRUMBLE) {
+          result.steppedCrumbles.push({ col: s.col, row: s.row });
+        }
+      } else if (moveVy < 0) {
+        entity.y = Math.max(entity.y, s.y + s.h);
+        entity.vy = 0;
+        result.hitCeiling = true;
+      }
+    }
+  }
+
+  // 3. 单向石台检测
+  if (allowOneWayPlatforms && !dropThrough && entity.vy >= 0) {
+    const minCol = Math.floor(entity.x / TILE_SIZE);
+    const maxCol = Math.floor((entity.x + entity.w - 1) / TILE_SIZE);
+    const footRow = Math.floor((entity.y + entity.h) / TILE_SIZE);
+    for (let c = minCol; c <= maxCol; c++) {
+      if (getTileAt(level, c, footRow) === TILE.PLATFORM) {
+        const platTop = footRow * TILE_SIZE;
+        if (prevBottom <= platTop + 6 && entity.y + entity.h >= platTop) {
+          entity.y = platTop - entity.h;
+          entity.vy = 0;
+          result.onGround = true;
+        }
+      }
+    }
+  }
+
+  return result;
+}
+
+/**
+ * 判断实体是否位于藤蔓上
+ */
+function isOnVine(entity, level) {
+  const cx = Math.floor((entity.x + entity.w * 0.5) / TILE_SIZE);
+  const topRow = Math.floor((entity.y + 4) / TILE_SIZE);
+  const midRow = Math.floor((entity.y + entity.h * 0.65) / TILE_SIZE);
+  return (
+    getTileAt(level, cx, topRow) === TILE.VINE ||
+    getTileAt(level, cx, midRow) === TILE.VINE
+  );
+}
+
+/**
+ * 经典古墓丽影边缘抓崖判定（Ledge Grab）：
+ * 当劳拉在空中下落或上升末期，面向前方实心瓦片顶部边缘且上方留空时，触发抓崖
+ */
+function detectLedgeGrab(player, level) {
+  if (player.onGround || player.onVine || player.vy < -40) return null;
+
+  const dir = player.facing;
+  const probeX = dir > 0 ? player.x + player.w + 3 : player.x - 3;
+  const col = Math.floor(probeX / TILE_SIZE);
+  const handRow = Math.floor((player.y + 6) / TILE_SIZE);
+
+  const wallTile = getTileAt(level, col, handRow);
+  const aboveTile = getTileAt(level, col, handRow - 1);
+
+  if (isSolidTile(wallTile) && !isSolidTile(aboveTile)) {
+    const ledgeY = handRow * TILE_SIZE;
+    const diff = player.y - ledgeY;
+    if (diff >= -8 && diff <= PHYSICS.LEDGE_GRAB_TOLERANCE) {
+      return {
+        x: dir > 0 ? col * TILE_SIZE - player.w - 1 : (col + 1) * TILE_SIZE + 1,
+        y: ledgeY + 2,
+        pullUpX: dir > 0 ? col * TILE_SIZE + 4 : col * TILE_SIZE + TILE_SIZE - player.w - 4,
+        pullUpY: ledgeY - player.h
+      };
+    }
+  }
+  return null;
+}
+
+
+/* ===== src/engine.js ===== */
+/**
+ * 无头核心游戏引擎（Headless Simulation Engine）
+ * 与 DOM/Canvas 完全解耦，支持在浏览器 60FPS 运行，也支持在 Node.js 中直接执行确定性单元测试
+ */
+function createPlayer(spawn) {
+  return {
+    x: spawn.x,
+    y: spawn.y,
+    w: PLAYER_CONFIG.WIDTH,
+    h: PLAYER_CONFIG.HEIGHT,
+    vx: 0,
+    vy: 0,
+    facing: 1,
+    hp: PLAYER_CONFIG.MAX_HP,
+    maxHp: PLAYER_CONFIG.MAX_HP,
+    onGround: false,
+    onVine: false,
+    ledgeGrab: null,
+    coyoteTimer: 0,
+    jumpBuffer: 0,
+    rollTimer: 0,
+    rollCooldown: 0,
+    fireCooldown: 0,
+    invulnTimer: 0,
+    muzzleFlash: 0,
+    animTime: 0,
+    braidPoints: [
+      { x: spawn.x, y: spawn.y },
+      { x: spawn.x - 6, y: spawn.y + 4 },
+      { x: spawn.x - 12, y: spawn.y + 10 }
+    ],
+    respawnX: spawn.x,
+    respawnY: spawn.y
+  };
+}
+class TombRaiderEngine {
+  constructor(options = {}) {
+    this.onSfx = options.onSfx || (() => {});
+    this.onToast = options.onToast || (() => {});
+    this.state = GAME_STATE.TITLE;
+    this.levelIndex = 0;
+    this.level = null;
+    this.player = null;
+    this.bullets = [];
+    this.enemyProjectiles = [];
+    this.particles = [];
+    this.floatingTexts = [];
+    this.score = 0;
+    this.totalRelicsCollected = 0;
+    this.elapsedTime = 0;
+    this.shakeTimer = 0;
+    this.shakeIntensity = 0;
+    this.camera = { x: 0, y: 0 };
+    this.time = 0;
+    this.loadLevel(0, false);
+  }
+
+  getTotalLevels() {
+    return RAW_LEVELS.length;
+  }
+
+  loadLevel(index, setPlaying = true) {
+    this.levelIndex = Math.max(0, Math.min(index, RAW_LEVELS.length - 1));
+    this.level = parseLevel(this.levelIndex);
+    this.player = createPlayer(this.level.spawn);
+    this.bullets = [];
+    this.enemyProjectiles = [];
+    this.particles = [];
+    this.floatingTexts = [];
+    this.shakeTimer = 0;
+    this.shakeIntensity = 0;
+    if (setPlaying) {
+      this.state = GAME_STATE.PLAYING;
+    }
+    this.onToast(this.level.name);
+  }
+
+  startNewGame(levelIndex = 0) {
+    this.score = 0;
+    this.totalRelicsCollected = 0;
+    this.elapsedTime = 0;
+    this.loadLevel(levelIndex, true);
+  }
+
+  togglePause() {
+    if (this.state === GAME_STATE.PLAYING) {
+      this.state = GAME_STATE.PAUSED;
+    } else if (this.state === GAME_STATE.PAUSED) {
+      this.state = GAME_STATE.PLAYING;
+    }
+  }
+
+  nextLevel() {
+    if (this.levelIndex + 1 < RAW_LEVELS.length) {
+      this.loadLevel(this.levelIndex + 1, true);
+    } else {
+      this.state = GAME_STATE.VICTORY;
+      this.onSfx('victory');
+    }
+  }
+
+  spawnParticles(x, y, color, count = 8, speed = 120) {
+    for (let i = 0; i < count; i++) {
+      const angle = (Math.PI * 2 * i) / count + (Math.random() - 0.5) * 0.6;
+      const spd = speed * (0.4 + Math.random() * 0.7);
+      this.particles.push({
+        x,
+        y,
+        vx: Math.cos(angle) * spd,
+        vy: Math.sin(angle) * spd - 40,
+        life: 0.35 + Math.random() * 0.35,
+        maxLife: 0.7,
+        size: 2.5 + Math.random() * 3,
+        color
+      });
+    }
+  }
+
+  addFloatingText(x, y, text, color = '#f5b82e') {
+    this.floatingTexts.push({
+      x,
+      y,
+      text,
+      color,
+      life: 1.1
+    });
+  }
+
+  triggerShake(intensity = 6, duration = 0.2) {
+    this.shakeIntensity = Math.max(this.shakeIntensity, intensity);
+    this.shakeTimer = Math.max(this.shakeTimer, duration);
+  }
+
+  damagePlayer(amount, knockDir = 0) {
+    const p = this.player;
+    if (p.invulnTimer > 0 || p.rollTimer > 0 || this.state !== GAME_STATE.PLAYING) {
+      return false;
+    }
+    p.hp = Math.max(0, p.hp - amount);
+    p.invulnTimer = PLAYER_CONFIG.INVULN_TIME;
+    p.ledgeGrab = null;
+    if (knockDir !== 0) {
+      p.vx = knockDir * 220;
+      p.vy = -240;
+    }
+    this.triggerShake(7, 0.22);
+    this.spawnParticles(p.x + p.w / 2, p.y + p.h / 2, '#e5484d', 10, 150);
+    this.addFloatingText(p.x + p.w / 2, p.y - 8, `-${amount}`, '#ff6b6b');
+    this.onSfx('hurt');
+
+    if (p.hp <= 0) {
+      this.state = GAME_STATE.GAME_OVER;
+      this.onSfx('gameover');
+    }
+    return true;
+  }
+
+  respawnAtCheckpoint(penalty = 20) {
+    const p = this.player;
+    const alive = p.hp - penalty > 0;
+    p.hp = Math.max(0, p.hp - penalty);
+    p.invulnTimer = PLAYER_CONFIG.INVULN_TIME;
+    p.ledgeGrab = null;
+    p.onVine = false;
+    p.vx = 0;
+    p.vy = 0;
+    this.triggerShake(8, 0.25);
+    this.onSfx('hurt');
+    if (!alive) {
+      this.state = GAME_STATE.GAME_OVER;
+      this.onSfx('gameover');
+    } else {
+      p.x = p.respawnX;
+      p.y = p.respawnY;
+      this.addFloatingText(p.x + p.w / 2, p.y - 12, '返回存档点', '#fbbf24');
+    }
+  }
+
+  /**
+   * 固定步长更新一帧
+   * @param {number} dt 时间增量（秒）
+   * @param {object} input 归一化输入状态 { left, right, up, down, jump, jumpPressed, shoot, rollPressed, interactPressed }
+   */
+  step(dt, input = {}) {
+    this.time += dt;
+    if (this.state !== GAME_STATE.PLAYING) return;
+
+    this.elapsedTime += dt;
+    if (this.shakeTimer > 0) {
+      this.shakeTimer = Math.max(0, this.shakeTimer - dt);
+      if (this.shakeTimer === 0) this.shakeIntensity = 0;
+    }
+
+    this.updatePlayer(dt, input);
+    this.updateCrates(dt);
+    this.updateCrumbleBlocks(dt);
+    this.updatePlatesLeversDoors(dt, input);
+    this.updateDartTraps(dt);
+    this.updateBoulders(dt);
+    this.updateBullets(dt);
+    this.updateEnemyProjectiles(dt);
+    this.updateEnemies(dt);
+    this.updateBoss(dt);
+    this.updateCollectiblesAndExit();
+    this.updateParticlesAndTexts(dt);
+    this.updateBraid(dt);
+  }
+
+  updatePlayer(dt, input) {
+    const p = this.player;
+    const lvl = this.level;
+
+    p.animTime += dt;
+    if (p.invulnTimer > 0) p.invulnTimer = Math.max(0, p.invulnTimer - dt);
+    if (p.fireCooldown > 0) p.fireCooldown = Math.max(0, p.fireCooldown - dt);
+    if (p.rollCooldown > 0) p.rollCooldown = Math.max(0, p.rollCooldown - dt);
+    if (p.muzzleFlash > 0) p.muzzleFlash = Math.max(0, p.muzzleFlash - dt);
+
+    if (input.jumpPressed) {
+      p.jumpBuffer = PHYSICS.JUMP_BUFFER;
+    } else if (p.jumpBuffer > 0) {
+      p.jumpBuffer = Math.max(0, p.jumpBuffer - dt);
+    }
+
+    // 抓崖状态处理
+    if (p.ledgeGrab) {
+      p.vx = 0;
+      p.vy = 0;
+      if (input.up || input.jumpPressed) {
+        p.x = p.ledgeGrab.pullUpX;
+        p.y = p.ledgeGrab.pullUpY;
+        p.ledgeGrab = null;
+        p.onGround = true;
+        p.jumpBuffer = 0;
+        this.onSfx('ledge');
+      } else if (input.down) {
+        p.ledgeGrab = null;
+        p.vy = 60;
+      }
+      return;
+    }
+
+    // 翻滚状态处理（无敌帧+高速闪避）
+    if (p.rollTimer > 0) {
+      p.rollTimer = Math.max(0, p.rollTimer - dt);
+      p.vx = p.facing * PHYSICS.ROLL_SPEED;
+      p.vy = Math.min(PHYSICS.MAX_FALL_SPEED, p.vy + PHYSICS.GRAVITY * dt);
+      const res = moveAndCollide(p, lvl, dt);
+      p.onGround = res.onGround;
+      if (p.rollTimer === 0) {
+        p.y -= PLAYER_CONFIG.HEIGHT - PLAYER_CONFIG.CROUCH_HEIGHT;
+        p.h = PLAYER_CONFIG.HEIGHT;
+      }
+      return;
+    }
+
+    // 触发翻滚
+    if (input.rollPressed && p.onGround && p.rollCooldown <= 0 && !p.onVine) {
+      p.rollTimer = PHYSICS.ROLL_DURATION;
+      p.rollCooldown = PHYSICS.ROLL_COOLDOWN;
+      p.y += PLAYER_CONFIG.HEIGHT - PLAYER_CONFIG.CROUCH_HEIGHT;
+      p.h = PLAYER_CONFIG.CROUCH_HEIGHT;
+      p.vx = p.facing * PHYSICS.ROLL_SPEED;
+      this.spawnParticles(p.x + p.w / 2, p.y + p.h, '#9c8c7c', 5, 80);
+      this.onSfx('roll');
+      return;
+    }
+
+    // 攀爬藤蔓判定
+    const touchingVine = isOnVine(p, lvl);
+    if (touchingVine && (input.up || input.down)) {
+      p.onVine = true;
+      p.vy = 0;
+    }
+    if (!touchingVine) {
+      p.onVine = false;
+    }
+
+    // 水平移动
+    let moveDir = 0;
+    if (input.left) moveDir -= 1;
+    if (input.right) moveDir += 1;
+    if (moveDir !== 0) p.facing = moveDir;
+
+    if (p.onVine) {
+      p.vx = moveDir * PHYSICS.CLIMB_SPEED * 0.75;
+      p.vy = 0;
+      if (input.up) p.vy = -PHYSICS.CLIMB_SPEED;
+      if (input.down) p.vy = PHYSICS.CLIMB_SPEED;
+      if (input.jumpPressed) {
+        p.onVine = false;
+        p.vy = PHYSICS.JUMP_VELOCITY * 0.9;
+        p.jumpBuffer = 0;
+        this.onSfx('jump');
+      }
+    } else {
+      p.vx = moveDir * PHYSICS.MOVE_SPEED;
+      p.vy = Math.min(PHYSICS.MAX_FALL_SPEED, p.vy + PHYSICS.GRAVITY * dt);
+
+      if (p.onGround) {
+        p.coyoteTimer = PHYSICS.COYOTE_TIME;
+      } else if (p.coyoteTimer > 0) {
+        p.coyoteTimer = Math.max(0, p.coyoteTimer - dt);
+      }
+
+      if (p.jumpBuffer > 0 && p.coyoteTimer > 0) {
+        p.vy = PHYSICS.JUMP_VELOCITY;
+        p.onGround = false;
+        p.coyoteTimer = 0;
+        p.jumpBuffer = 0;
+        this.spawnParticles(p.x + p.w / 2, p.y + p.h, '#b8a99a', 5, 70);
+        this.onSfx('jump');
+      }
+    }
+
+    // 执行物理位移与碰撞
+    const colRes = moveAndCollide(p, lvl, dt, {
+      dropThrough: Boolean(input.down && input.jumpPressed)
+    });
+    p.onGround = colRes.onGround;
+
+    // 推石箱交互
+    if (colRes.pushedCrate && p.onGround && moveDir !== 0) {
+      const { crate, dir } = colRes.pushedCrate;
+      crate.vx = dir * PHYSICS.PUSH_SPEED;
+    }
+
+    // 碎裂石桥触发
+    for (const sc of colRes.steppedCrumbles) {
+      const cb = lvl.crumbleBlocks.find((b) => b.col === sc.col && b.row === sc.row);
+      if (cb && cb.state === 'solid') {
+        cb.state = 'shaking';
+        cb.timer = 0.55;
+        this.onSfx('crumble');
+      }
+    }
+
+    // 自动边缘抓崖检测
+    if (!p.onGround && !p.onVine && !input.down) {
+      const grab = detectLedgeGrab(p, lvl);
+      if (grab) {
+        p.ledgeGrab = grab;
+        p.x = grab.x;
+        p.y = grab.y;
+        p.vx = 0;
+        p.vy = 0;
+        this.onSfx('ledge');
+      }
+    }
+
+    // 双枪射击
+    if (input.shoot && p.fireCooldown <= 0 && !p.onVine) {
+      p.fireCooldown = PHYSICS.FIRE_COOLDOWN;
+      p.muzzleFlash = 0.08;
+      const bx = p.facing > 0 ? p.x + p.w + 2 : p.x - 6;
+      const by = p.y + 13;
+      this.bullets.push({
+        x: bx,
+        y: by,
+        w: 8,
+        h: 3,
+        vx: p.facing * PHYSICS.BULLET_SPEED,
+        vy: 0,
+        life: 0.9
+      });
+      this.onSfx('shoot');
+    }
+
+    // 地刺与深潭危险瓦片检测
+    const centerCol = Math.floor((p.x + p.w * 0.5) / TILE_SIZE);
+    const footRow = Math.floor((p.y + p.h - 2) / TILE_SIZE);
+    const footTile = getTileAt(lvl, centerCol, footRow);
+    if (footTile === TILE.SPIKES) {
+      this.damagePlayer(25, -p.facing);
+    } else if (footTile === TILE.WATER) {
+      this.respawnAtCheckpoint(25);
+    }
+  }
+
+  updateCrates(dt) {
+    const lvl = this.level;
+    for (const crate of lvl.crates) {
+      crate.vy = Math.min(PHYSICS.MAX_FALL_SPEED, crate.vy + PHYSICS.GRAVITY * dt);
+      const res = moveAndCollide(crate, lvl, dt, {
+        includeCrates: true,
+        excludeCrateId: crate.id,
+        allowOneWayPlatforms: true
+      });
+      crate.onGround = res.onGround;
+      crate.vx *= 0.45;
+      if (Math.abs(crate.vx) < 2) crate.vx = 0;
+    }
+  }
+
+  updateCrumbleBlocks(dt) {
+    for (const cb of this.level.crumbleBlocks) {
+      if (cb.state === 'shaking') {
+        cb.timer -= dt;
+        if (cb.timer <= 0) {
+          cb.state = 'gone';
+          cb.timer = 3.2;
+          this.spawnParticles(cb.x + TILE_SIZE / 2, cb.y + TILE_SIZE / 2, '#7d6b57', 10, 110);
+        }
+      } else if (cb.state === 'gone') {
+        cb.timer -= dt;
+        if (cb.timer <= 0) {
+          cb.state = 'solid';
+        }
+      }
+    }
+  }
+
+  updatePlatesLeversDoors(dt, input) {
+    const lvl = this.level;
+    const p = this.player;
+
+    // 1. 压板检测（石箱或玩家踩踏均可压下）
+    for (const plate of lvl.plates) {
+      const wasPressed = plate.pressed;
+      const sensor = { x: plate.x + 2, y: plate.y - 6, w: plate.w - 4, h: plate.h + 8 };
+      let active = rectsOverlap(p, sensor);
+      if (!active) {
+        for (const crate of lvl.crates) {
+          if (rectsOverlap(crate, sensor)) {
+            active = true;
+            break;
+          }
+        }
+      }
+      plate.pressed = active;
+      if (active && !wasPressed) {
+        this.onSfx('lever');
+        this.addFloatingText(plate.x + plate.w / 2, plate.y - 16, '压板已触发!', '#f5b82e');
+      }
+    }
+
+    // 2. 拉杆交互（按 E 或近距离交互）
+    if (input.interactPressed) {
+      for (const lever of lvl.levers) {
+        const reach = { x: lever.x - 18, y: lever.y - 12, w: lever.w + 36, h: lever.h + 24 };
+        if (rectsOverlap(p, reach)) {
+          lever.activated = !lever.activated;
+          this.onSfx('lever');
+          this.triggerShake(4, 0.14);
+          this.addFloatingText(
+            lever.x + lever.w / 2,
+            lever.y - 14,
+            lever.activated ? '机关已启动!' : '机关已复位',
+            '#38bdf8'
+          );
+        }
+      }
+    }
+
+    // 3. 石门状态更新
+    for (const door of lvl.doors) {
+      const allSatisfied = door.requiredIds.every((reqId) => {
+        const plate = lvl.plates.find((pl) => pl.id === reqId);
+        if (plate) return plate.pressed;
+        const lever = lvl.levers.find((lv) => lv.id === reqId);
+        if (lever) return lever.activated;
+        if (lvl.boss && lvl.boss.id === reqId) return !lvl.boss.alive;
+        return false;
+      });
+
+      const prevOpen = door.isOpen;
+      if (allSatisfied) {
+        door.openProgress = Math.min(1, door.openProgress + dt * 1.4);
+        if (door.openProgress >= 0.95) door.isOpen = true;
+        if (!prevOpen && door.isOpen) {
+          this.onSfx('door');
+          this.triggerShake(6, 0.25);
+          this.addFloatingText(door.x, door.y - 12, '圣殿石门开启!', '#f5b82e');
+        }
+      } else {
+        door.openProgress = Math.max(0, door.openProgress - dt * 1.2);
+        door.isOpen = false;
+      }
+    }
+  }
+
+  updateDartTraps(dt) {
+    for (const trap of this.level.dartTraps) {
+      trap.timer -= dt;
+      if (trap.timer <= 0) {
+        trap.timer = trap.interval;
+        this.enemyProjectiles.push({
+          x: trap.x,
+          y: trap.y - 3,
+          w: 14,
+          h: 5,
+          vx: trap.dir * 320,
+          vy: 0,
+          damage: 18,
+          type: 'dart',
+          life: 3.5
+        });
+      }
+    }
+  }
+
+  updateBoulders(dt) {
+    const p = this.player;
+    for (const b of this.level.boulders) {
+      if (b.destroyed) continue;
+      if (!b.active && p.x >= b.triggerX) {
+        b.active = true;
+        this.triggerShake(8, 0.35);
+        this.onSfx('door');
+        this.addFloatingText(p.x, p.y - 24, '小心滚石!', '#ff6b6b');
+      }
+      if (b.active) {
+        b.x += b.dir * b.speed * dt;
+        b.angle += b.dir * (b.speed / b.radius) * dt;
+        if (circleRectOverlap(b.x, b.y, b.radius - 2, p)) {
+          this.damagePlayer(35, b.dir);
+        }
+        const aheadCol = Math.floor((b.x + b.dir * b.radius) / TILE_SIZE);
+        const row = Math.floor(b.y / TILE_SIZE);
+        if (isSolidTile(getTileAt(this.level, aheadCol, row))) {
+          b.destroyed = true;
+          this.spawnParticles(b.x, b.y, '#8c7a6b', 18, 180);
+          this.triggerShake(9, 0.3);
+        }
+      }
+    }
+  }
+
+  updateBullets(dt) {
+    const lvl = this.level;
+    for (let i = this.bullets.length - 1; i >= 0; i--) {
+      const b = this.bullets[i];
+      b.x += b.vx * dt;
+      b.y += b.vy * dt;
+      b.life -= dt;
+
+      let remove = b.life <= 0;
+      const col = Math.floor((b.x + b.w * 0.5) / TILE_SIZE);
+      const row = Math.floor((b.y + b.h * 0.5) / TILE_SIZE);
+      if (isSolidTile(getTileAt(lvl, col, row))) {
+        this.spawnParticles(b.x, b.y, '#fcd34d', 4, 90);
+        remove = true;
+      }
+
+      // 射击拉杆也可以远程激活！
+      if (!remove) {
+        for (const lv of lvl.levers) {
+          if (rectsOverlap(b, lv)) {
+            if (!lv.activated) {
+              lv.activated = true;
+              this.onSfx('lever');
+            }
+            this.spawnParticles(lv.x + lv.w / 2, lv.y + lv.h / 2, '#38bdf8', 8, 120);
+            remove = true;
+            break;
+          }
+        }
+      }
+
+      // 命中普通敌人
+      if (!remove) {
+        for (const e of lvl.enemies) {
+          if (!e.alive) continue;
+          if (rectsOverlap(b, e)) {
+            e.hp -= PLAYER_CONFIG.BULLET_DAMAGE;
+            e.hitFlash = 0.12;
+            this.spawnParticles(b.x, b.y, '#f87171', 6, 120);
+            this.onSfx('hit');
+            remove = true;
+            if (e.hp <= 0) {
+              e.alive = false;
+              this.score += e.type === 'guardian' ? 200 : 120;
+              this.spawnParticles(e.x + e.w / 2, e.y + e.h / 2, '#fbbf24', 14, 170);
+              this.addFloatingText(e.x + e.w / 2, e.y - 8, `+${e.type === 'guardian' ? 200 : 120}`, '#fbbf24');
+              this.onSfx('enemy_die');
+            }
+            break;
+          }
+        }
+      }
+
+      // 命中 Boss
+      if (!remove && lvl.boss && lvl.boss.alive && rectsOverlap(b, lvl.boss)) {
+        lvl.boss.hp -= PLAYER_CONFIG.BULLET_DAMAGE;
+        lvl.boss.hitFlash = 0.1;
+        this.spawnParticles(b.x, b.y, '#38bdf8', 7, 130);
+        this.onSfx('hit');
+        remove = true;
+        if (lvl.boss.hp <= 0) {
+          lvl.boss.hp = 0;
+          lvl.boss.alive = false;
+          this.score += 1000;
+          this.triggerShake(12, 0.5);
+          this.spawnParticles(lvl.boss.x + lvl.boss.w / 2, lvl.boss.y + lvl.boss.h / 2, '#f5b82e', 30, 240);
+          this.addFloatingText(lvl.boss.x + lvl.boss.w / 2, lvl.boss.y - 16, '黑曜石守卫已击溃! +1000', '#f5b82e');
+          this.onSfx('boss_die');
+        }
+      }
+
+      if (remove) {
+        this.bullets.splice(i, 1);
+      }
+    }
+  }
+
+  updateEnemyProjectiles(dt) {
+    const p = this.player;
+    const lvl = this.level;
+    for (let i = this.enemyProjectiles.length - 1; i >= 0; i--) {
+      const pr = this.enemyProjectiles[i];
+      pr.x += pr.vx * dt;
+      pr.y += pr.vy * dt;
+      pr.life -= dt;
+
+      let remove = pr.life <= 0;
+      const col = Math.floor((pr.x + pr.w * 0.5) / TILE_SIZE);
+      const row = Math.floor((pr.y + pr.h * 0.5) / TILE_SIZE);
+      if (isSolidTile(getTileAt(lvl, col, row))) {
+        this.spawnParticles(pr.x, pr.y, '#94a3b8', 4, 80);
+        remove = true;
+      } else if (rectsOverlap(pr, p)) {
+        const hit = this.damagePlayer(pr.damage, pr.vx >= 0 ? 1 : -1);
+        if (hit) remove = true;
+      }
+
+      if (remove) this.enemyProjectiles.splice(i, 1);
+    }
+  }
+
+  updateEnemies(dt) {
+    const p = this.player;
+    for (const e of this.level.enemies) {
+      if (!e.alive) continue;
+      if (e.hitFlash > 0) e.hitFlash = Math.max(0, e.hitFlash - dt);
+
+      if (e.type === 'bat') {
+        e.phase += dt * 3.8;
+        e.x += e.vx * dt;
+        e.y = e.startY + Math.sin(e.phase) * 28;
+        if (e.x < e.patrolMinX) {
+          e.x = e.patrolMinX;
+          e.vx = Math.abs(e.vx);
+        } else if (e.x > e.patrolMaxX) {
+          e.x = e.patrolMaxX;
+          e.vx = -Math.abs(e.vx);
+        }
+      } else if (e.type === 'guardian') {
+        const distToPlayer = Math.abs(p.x - e.x);
+        const sameRow = Math.abs(p.y - e.y) < 48;
+        if (sameRow && distToPlayer < 220) {
+          e.vx = p.x < e.x ? -115 : 115;
+        }
+        e.x += e.vx * dt;
+        if (e.x < e.patrolMinX) {
+          e.x = e.patrolMinX;
+          e.vx = Math.abs(e.vx);
+        } else if (e.x > e.patrolMaxX) {
+          e.x = e.patrolMaxX;
+          e.vx = -Math.abs(e.vx);
+        }
+      }
+
+      if (rectsOverlap(e, p)) {
+        this.damagePlayer(18, p.x < e.x ? -1 : 1);
+      }
+    }
+  }
+
+  updateBoss(dt) {
+    const boss = this.level.boss;
+    if (!boss || !boss.alive) return;
+    const p = this.player;
+
+    if (boss.hitFlash > 0) boss.hitFlash = Math.max(0, boss.hitFlash - dt);
+
+    const enraged = boss.hp < boss.maxHp * 0.5;
+    const speed = enraged ? 135 : 90;
+    boss.x += Math.sign(boss.vx) * speed * dt;
+    if (boss.x <= boss.minX) {
+      boss.x = boss.minX;
+      boss.vx = speed;
+    } else if (boss.x >= boss.maxX) {
+      boss.x = boss.maxX;
+      boss.vx = -speed;
+    }
+
+    boss.attackTimer -= dt;
+    if (boss.attackTimer <= 0) {
+      boss.attackTimer = enraged ? 1.55 : 2.3;
+      const dir = p.x < boss.x ? -1 : 1;
+      // 发射地面冲击波
+      this.enemyProjectiles.push({
+        x: boss.x + boss.w / 2,
+        y: boss.y + boss.h - 18,
+        w: 22,
+        h: 16,
+        vx: dir * (enraged ? 280 : 220),
+        vy: 0,
+        damage: 22,
+        type: 'shockwave',
+        life: 3.2
+      });
+      this.triggerShake(5, 0.16);
+      this.onSfx('boss_attack');
+    }
+
+    if (rectsOverlap(boss, p)) {
+      this.damagePlayer(24, p.x < boss.x ? -1 : 1);
+    }
+  }
+
+  updateCollectiblesAndExit() {
+    const p = this.player;
+    const lvl = this.level;
+
+    // 圣物收集
+    for (const relic of lvl.relics) {
+      if (relic.collected) continue;
+      const box = { x: relic.x - 14, y: relic.y - 14, w: 28, h: 28 };
+      if (rectsOverlap(p, box)) {
+        relic.collected = true;
+        this.totalRelicsCollected += 1;
+        this.score += 300;
+        this.spawnParticles(relic.x, relic.y, '#f5b82e', 16, 160);
+        this.addFloatingText(relic.x, relic.y - 14, `获得圣物: ${relic.name} +300`, '#f5b82e');
+        this.onSfx('relic');
+      }
+    }
+
+    // 急救包收集
+    for (const med of lvl.medipacks) {
+      if (med.collected || p.hp >= p.maxHp) continue;
+      const box = { x: med.x - 12, y: med.y - 12, w: 24, h: 24 };
+      if (rectsOverlap(p, box)) {
+        med.collected = true;
+        const heal = Math.min(35, p.maxHp - p.hp);
+        p.hp += heal;
+        this.spawnParticles(med.x, med.y, '#4ade80', 12, 120);
+        this.addFloatingText(med.x, med.y - 12, `+${heal} HP`, '#4ade80');
+        this.onSfx('heal');
+      }
+    }
+
+    // 存档火盆激活
+    for (const cp of lvl.checkpoints) {
+      if (cp.activated) continue;
+      const box = { x: cp.x - 18, y: cp.y - 38, w: 36, h: 38 };
+      if (rectsOverlap(p, box)) {
+        cp.activated = true;
+        p.respawnX = cp.x - p.w / 2;
+        p.respawnY = cp.y - p.h - 2;
+        this.spawnParticles(cp.x, cp.y - 20, '#fb923c', 16, 130);
+        this.addFloatingText(cp.x, cp.y - 42, '篝火存档点已激活!', '#fb923c');
+        this.onSfx('relic');
+      }
+    }
+
+    // 到达关卡终点（太阳传送门 / 太阳圣器）
+    if (rectsOverlap(p, lvl.exit)) {
+      this.score += 500;
+      if (this.levelIndex + 1 >= RAW_LEVELS.length) {
+        this.state = GAME_STATE.VICTORY;
+        this.onSfx('victory');
+      } else {
+        this.state = GAME_STATE.LEVEL_CLEAR;
+        this.onSfx('victory');
+      }
+    }
+  }
+
+  updateParticlesAndTexts(dt) {
+    for (let i = this.particles.length - 1; i >= 0; i--) {
+      const pt = this.particles[i];
+      pt.x += pt.vx * dt;
+      pt.y += pt.vy * dt;
+      pt.vy += 320 * dt;
+      pt.life -= dt;
+      if (pt.life <= 0) this.particles.splice(i, 1);
+    }
+
+    for (let i = this.floatingTexts.length - 1; i >= 0; i--) {
+      const ft = this.floatingTexts[i];
+      ft.y -= 28 * dt;
+      ft.life -= dt;
+      if (ft.life <= 0) this.floatingTexts.splice(i, 1);
+    }
+  }
+
+  updateBraid(dt) {
+    const p = this.player;
+    const anchorX = p.x + p.w * 0.5 - p.facing * 4;
+    const anchorY = p.y + 8;
+    p.braidPoints[0].x = anchorX;
+    p.braidPoints[0].y = anchorY;
+    for (let i = 1; i < p.braidPoints.length; i++) {
+      const prev = p.braidPoints[i - 1];
+      const curr = p.braidPoints[i];
+      const targetX = prev.x - p.facing * 5.5;
+      const targetY = prev.y + 4.5;
+      curr.x += (targetX - curr.x) * Math.min(1, dt * 16);
+      curr.y += (targetY - curr.y) * Math.min(1, dt * 16);
+    }
+  }
+
+  getHudSnapshot() {
+    const collectedInLevel = this.level.relics.filter((r) => r.collected).length;
+    return {
+      state: this.state,
+      levelId: this.level.id,
+      levelName: this.level.name,
+      levelSubtitle: this.level.subtitle,
+      hint: this.level.hint,
+      hp: this.player.hp,
+      maxHp: this.player.maxHp,
+      relicsInLevel: collectedInLevel,
+      relicsTotalInLevel: this.level.relics.length,
+      totalRelicsCollected: this.totalRelicsCollected,
+      score: this.score,
+      elapsedTime: this.elapsedTime,
+      boss: this.level.boss
+        ? {
+            name: this.level.boss.name,
+            hp: this.level.boss.hp,
+            maxHp: this.level.boss.maxHp,
+            alive: this.level.boss.alive
+          }
+        : null
+    };
+  }
+}
+
+
+/* ===== src/audio.js ===== */
+/**
+ * 程序化 Web Audio API 音效合成器
+ * 零外部音频资源依赖，在首次用户交互后安全解锁 AudioContext
+ */
+class SoundEngine {
+  constructor() {
+    this.ctx = null;
+    this.muted = false;
+  }
+
+  unlock() {
+    if (this.ctx) {
+      if (this.ctx.state === 'suspended') {
+        this.ctx.resume().catch(() => {});
+      }
+      return;
+    }
+    const AudioCtx = window.AudioContext || window.webkitAudioContext;
+    if (AudioCtx) {
+      this.ctx = new AudioCtx();
+    }
+  }
+
+  setMuted(muted) {
+    this.muted = Boolean(muted);
+  }
+
+  toggleMute() {
+    this.muted = !this.muted;
+    return this.muted;
+  }
+
+  play(name) {
+    if (this.muted || !this.ctx || this.ctx.state !== 'running') return;
+    const now = this.ctx.currentTime;
+
+    switch (name) {
+      case 'shoot':
+        this.playNoise(now, 0.07, 1800, 0.18);
+        this.playTone(now, 'triangle', 260, 75, 0.08, 0.16);
+        break;
+      case 'jump':
+        this.playTone(now, 'sine', 210, 440, 0.11, 0.12);
+        break;
+      case 'roll':
+        this.playNoise(now, 0.14, 600, 0.12);
+        break;
+      case 'ledge':
+        this.playTone(now, 'square', 160, 260, 0.07, 0.09);
+        break;
+      case 'lever':
+        this.playTone(now, 'square', 320, 520, 0.09, 0.12);
+        this.playTone(now + 0.08, 'triangle', 520, 680, 0.1, 0.12);
+        break;
+      case 'door':
+        this.playTone(now, 'sawtooth', 95, 55, 0.42, 0.14);
+        break;
+      case 'crumble':
+        this.playNoise(now, 0.25, 420, 0.14);
+        break;
+      case 'hit':
+        this.playTone(now, 'square', 190, 90, 0.06, 0.11);
+        break;
+      case 'enemy_die':
+        this.playTone(now, 'sawtooth', 260, 70, 0.22, 0.14);
+        break;
+      case 'boss_attack':
+        this.playTone(now, 'sawtooth', 120, 48, 0.3, 0.18);
+        break;
+      case 'boss_die':
+        this.playTone(now, 'sawtooth', 180, 40, 0.65, 0.22);
+        this.playNoise(now, 0.5, 500, 0.18);
+        break;
+      case 'hurt':
+        this.playTone(now, 'sawtooth', 180, 85, 0.18, 0.18);
+        break;
+      case 'heal':
+        this.playTone(now, 'sine', 440, 660, 0.16, 0.12);
+        this.playTone(now + 0.12, 'sine', 660, 880, 0.18, 0.12);
+        break;
+      case 'relic':
+        [523.25, 659.25, 783.99, 1046.5].forEach((freq, idx) => {
+          this.playTone(now + idx * 0.065, 'sine', freq, freq, 0.16, 0.11);
+        });
+        break;
+      case 'victory':
+        [392, 523.25, 659.25, 783.99, 1046.5].forEach((freq, idx) => {
+          this.playTone(now + idx * 0.09, 'triangle', freq, freq, 0.26, 0.14);
+        });
+        break;
+      case 'gameover':
+        [311, 277, 233, 174].forEach((freq, idx) => {
+          this.playTone(now + idx * 0.13, 'sawtooth', freq, freq * 0.92, 0.22, 0.12);
+        });
+        break;
+      default:
+        break;
+    }
+  }
+
+  playTone(start, type, freqStart, freqEnd, duration, volume) {
+    const osc = this.ctx.createOscillator();
+    const gain = this.ctx.createGain();
+    osc.type = type;
+    osc.frequency.setValueAtTime(freqStart, start);
+    osc.frequency.exponentialRampToValueAtTime(Math.max(20, freqEnd), start + duration);
+    gain.gain.setValueAtTime(volume, start);
+    gain.gain.exponentialRampToValueAtTime(0.001, start + duration);
+    osc.connect(gain);
+    gain.connect(this.ctx.destination);
+    osc.start(start);
+    osc.stop(start + duration + 0.02);
+  }
+
+  playNoise(start, duration, filterFreq, volume) {
+    const sampleCount = Math.floor(this.ctx.sampleRate * duration);
+    const buffer = this.ctx.createBuffer(1, sampleCount, this.ctx.sampleRate);
+    const data = buffer.getChannelData(0);
+    for (let i = 0; i < sampleCount; i++) {
+      data[i] = Math.random() * 2 - 1;
+    }
+    const src = this.ctx.createBufferSource();
+    src.buffer = buffer;
+    const filter = this.ctx.createBiquadFilter();
+    filter.type = 'lowpass';
+    filter.frequency.setValueAtTime(filterFreq, start);
+    const gain = this.ctx.createGain();
+    gain.gain.setValueAtTime(volume, start);
+    gain.gain.exponentialRampToValueAtTime(0.001, start + duration);
+    src.connect(filter);
+    filter.connect(gain);
+    gain.connect(this.ctx.destination);
+    src.start(start);
+  }
+}
+
+
+/* ===== src/renderer.js ===== */
+/**
+ * Canvas 2D 渲染引擎
+ * 包含多层视差古墓背景、程序化砖石纹理、劳拉角色动画、动态火把光影与粒子特效
+ */
+class TombRenderer {
+  constructor(canvas) {
+    this.canvas = canvas;
+    this.ctx = canvas.getContext('2d');
+    this.lightCanvas = document.createElement('canvas');
+    this.lightCtx = this.lightCanvas.getContext('2d');
+    this.viewW = 960;
+    this.viewH = 540;
+  }
+
+  resize(width, height) {
+    this.viewW = Math.max(320, Math.floor(width));
+    this.viewH = Math.max(240, Math.floor(height));
+    this.canvas.width = this.viewW;
+    this.canvas.height = this.viewH;
+    this.lightCanvas.width = this.viewW;
+    this.lightCanvas.height = this.viewH;
+  }
+
+  render(engine) {
+    const ctx = this.ctx;
+    const lvl = engine.level;
+    const p = engine.player;
+
+    // 摄像机平滑跟随与边界钳制
+    const targetCamX = p.x + p.w * 0.5 - this.viewW * 0.5;
+    const targetCamY = p.y + p.h * 0.5 - this.viewH * 0.52;
+    const maxCamX = Math.max(0, lvl.width - this.viewW);
+    const maxCamY = Math.max(0, lvl.height - this.viewH);
+
+    engine.camera.x += (Math.max(0, Math.min(maxCamX, targetCamX)) - engine.camera.x) * 0.14;
+    engine.camera.y += (Math.max(0, Math.min(maxCamY, targetCamY)) - engine.camera.y) * 0.14;
+
+    const shakeX = engine.shakeTimer > 0 ? (Math.random() - 0.5) * engine.shakeIntensity * 2 : 0;
+    const shakeY = engine.shakeTimer > 0 ? (Math.random() - 0.5) * engine.shakeIntensity * 2 : 0;
+    const camX = Math.floor(engine.camera.x + shakeX);
+    const camY = Math.floor(engine.camera.y + shakeY);
+
+    // 1. 视差背景
+    this.drawParallaxBackground(ctx, camX, engine.time);
+
+    ctx.save();
+    ctx.translate(-camX, -camY);
+
+    // 2. 地图瓦片
+    this.drawTiles(ctx, lvl, camX, camY, engine.time);
+
+    // 3. 存档点、出口圣门、压板、拉杆、石门
+    this.drawCheckpoints(ctx, lvl, engine.time);
+    this.drawExitPortal(ctx, lvl, engine.time);
+    this.drawPlatesAndLevers(ctx, lvl);
+    this.drawDoors(ctx, lvl);
+    this.drawCrates(ctx, lvl);
+
+    // 4. 收藏品
+    this.drawRelicsAndMedipacks(ctx, lvl, engine.time);
+
+    // 5. 滚石与敌人、Boss
+    this.drawBoulders(ctx, lvl);
+    this.drawEnemies(ctx, lvl, engine.time);
+    this.drawBoss(ctx, lvl, engine.time);
+
+    // 6. 劳拉角色
+    this.drawLara(ctx, p, engine.time);
+
+    // 7. 子弹、敌方投射物、粒子与飘字
+    this.drawProjectiles(ctx, engine);
+    this.drawParticles(ctx, engine);
+    this.drawFloatingTexts(ctx, engine);
+
+    ctx.restore();
+
+    // 8. 动态火把与古墓暗场光影层
+    this.drawDynamicLighting(ctx, engine, camX, camY);
+  }
+
+  drawParallaxBackground(ctx, camX, time) {
+    const grad = ctx.createLinearGradient(0, 0, 0, this.viewH);
+    grad.addColorStop(0, PALETTE.bgTop);
+    grad.addColorStop(1, PALETTE.bgBottom);
+    ctx.fillStyle = grad;
+    ctx.fillRect(0, 0, this.viewW, this.viewH);
+
+    // 远景石柱
+    ctx.fillStyle = 'rgba(42, 35, 29, 0.55)';
+    const pillarSpacing = 170;
+    const offset = -(camX * 0.25) % pillarSpacing;
+    for (let x = offset - pillarSpacing; x < this.viewW + pillarSpacing; x += pillarSpacing) {
+      ctx.fillRect(x, 0, 38, this.viewH);
+      ctx.fillStyle = 'rgba(65, 54, 44, 0.35)';
+      ctx.fillRect(x + 8, 0, 8, this.viewH);
+      ctx.fillStyle = 'rgba(42, 35, 29, 0.55)';
+    }
+
+    // 漂浮尘埃微粒
+    ctx.fillStyle = 'rgba(245, 210, 140, 0.16)';
+    for (let i = 0; i < 24; i++) {
+      const px = ((i * 97 + time * 12 - camX * 0.15) % this.viewW + this.viewW) % this.viewW;
+      const py = ((i * 53 + Math.sin(time + i) * 18) % this.viewH + this.viewH) % this.viewH;
+      ctx.beginPath();
+      ctx.arc(px, py, 1.5 + (i % 2), 0, Math.PI * 2);
+      ctx.fill();
+    }
+  }
+
+  drawTiles(ctx, lvl, camX, camY, time) {
+    const startCol = Math.max(0, Math.floor(camX / TILE_SIZE) - 1);
+    const endCol = Math.min(lvl.cols - 1, Math.ceil((camX + this.viewW) / TILE_SIZE) + 1);
+    const startRow = Math.max(0, Math.floor(camY / TILE_SIZE) - 1);
+    const endRow = Math.min(lvl.rows - 1, Math.ceil((camY + this.viewH) / TILE_SIZE) + 1);
+
+    for (let r = startRow; r <= endRow; r++) {
+      for (let c = startCol; c <= endCol; c++) {
+        const t = lvl.grid[r][c];
+        if (t === TILE.EMPTY) continue;
+        const x = c * TILE_SIZE;
+        const y = r * TILE_SIZE;
+
+        if (t === TILE.SOLID || t === TILE.MOSS_SOLID) {
+          ctx.fillStyle = PALETTE.stoneDark;
+          ctx.fillRect(x, y, TILE_SIZE, TILE_SIZE);
+          ctx.fillStyle = PALETTE.stoneMid;
+          ctx.fillRect(x + 2, y + 2, TILE_SIZE - 4, TILE_SIZE - 4);
+          // 砖石接缝
+          ctx.strokeStyle = 'rgba(15, 12, 10, 0.45)';
+          ctx.lineWidth = 1.5;
+          ctx.strokeRect(x + 1, y + 1, TILE_SIZE - 2, TILE_SIZE - 2);
+          ctx.beginPath();
+          ctx.moveTo(x, y + TILE_SIZE * 0.5);
+          ctx.lineTo(x + TILE_SIZE, y + TILE_SIZE * 0.5);
+          ctx.stroke();
+
+          if (t === TILE.MOSS_SOLID && (r === 0 || lvl.grid[r - 1][c] === TILE.EMPTY)) {
+            ctx.fillStyle = PALETTE.moss;
+            ctx.fillRect(x, y, TILE_SIZE, 8);
+            ctx.fillStyle = PALETTE.mossLight;
+            ctx.fillRect(x + 4, y + 2, TILE_SIZE - 10, 3);
+          }
+        } else if (t === TILE.PLATFORM) {
+          ctx.fillStyle = '#6e5b47';
+          ctx.fillRect(x, y, TILE_SIZE, 11);
+          ctx.fillStyle = '#947c62';
+          ctx.fillRect(x + 2, y + 2, TILE_SIZE - 4, 4);
+        } else if (t === TILE.VINE) {
+          ctx.strokeStyle = '#3b7a48';
+          ctx.lineWidth = 4;
+          ctx.beginPath();
+          ctx.moveTo(x + TILE_SIZE * 0.5, y);
+          ctx.lineTo(x + TILE_SIZE * 0.5 + Math.sin(time * 2 + r) * 2, y + TILE_SIZE);
+          ctx.stroke();
+          ctx.fillStyle = '#5ca367';
+          ctx.fillRect(x + TILE_SIZE * 0.5 - 8, y + 10, 7, 4);
+          ctx.fillRect(x + TILE_SIZE * 0.5 + 2, y + 24, 7, 4);
+        } else if (t === TILE.SPIKES) {
+          ctx.fillStyle = '#9ca3af';
+          for (let i = 0; i < 3; i++) {
+            const sx = x + i * (TILE_SIZE / 3);
+            ctx.beginPath();
+            ctx.moveTo(sx + 1, y + TILE_SIZE);
+            ctx.lineTo(sx + TILE_SIZE / 6, y + 12);
+            ctx.lineTo(sx + TILE_SIZE / 3 - 1, y + TILE_SIZE);
+            ctx.closePath();
+            ctx.fill();
+          }
+        } else if (t === TILE.WATER) {
+          ctx.fillStyle = 'rgba(20, 128, 120, 0.72)';
+          ctx.fillRect(x, y + 6, TILE_SIZE, TILE_SIZE - 6);
+          ctx.fillStyle = 'rgba(94, 234, 212, 0.45)';
+          const wave = Math.sin(time * 4 + c) * 2;
+          ctx.fillRect(x, y + 6 + wave, TILE_SIZE, 4);
+        } else if (t === TILE.TORCH) {
+          const tx = x + TILE_SIZE * 0.5;
+          const ty = y + TILE_SIZE * 0.5;
+          ctx.fillStyle = '#5c4033';
+          ctx.fillRect(tx - 3, ty, 6, 16);
+          const flicker = Math.sin(time * 14 + c) * 2.5;
+          ctx.fillStyle = '#f97316';
+          ctx.beginPath();
+          ctx.arc(tx, ty - 2, 7 + flicker * 0.3, 0, Math.PI * 2);
+          ctx.fill();
+          ctx.fillStyle = PALETTE.torchCore;
+          ctx.beginPath();
+          ctx.arc(tx, ty - 3, 3.5, 0, Math.PI * 2);
+          ctx.fill();
+        } else if (t === TILE.CRUMBLE) {
+          const cb = lvl.crumbleBlocks.find((b) => b.col === c && b.row === r);
+          if (cb && cb.state !== 'gone') {
+            const jx = cb.state === 'shaking' ? (Math.random() - 0.5) * 4 : 0;
+            ctx.fillStyle = '#735c47';
+            ctx.fillRect(x + jx, y, TILE_SIZE, TILE_SIZE * 0.65);
+            ctx.strokeStyle = '#261e17';
+            ctx.lineWidth = 2;
+            ctx.beginPath();
+            ctx.moveTo(x + 8 + jx, y + 2);
+            ctx.lineTo(x + 18 + jx, y + 14);
+            ctx.lineTo(x + 28 + jx, y + 22);
+            ctx.stroke();
+          }
+        }
+      }
+    }
+  }
+
+  drawCheckpoints(ctx, lvl, time) {
+    for (const cp of lvl.checkpoints) {
+      ctx.fillStyle = '#57534e';
+      ctx.fillRect(cp.x - 12, cp.y - 12, 24, 12);
+      if (cp.activated) {
+        const fl = Math.sin(time * 12) * 3;
+        ctx.fillStyle = '#fb923c';
+        ctx.beginPath();
+        ctx.arc(cp.x, cp.y - 20, 10 + fl * 0.3, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.fillStyle = '#fef08a';
+        ctx.beginPath();
+        ctx.arc(cp.x, cp.y - 20, 5, 0, Math.PI * 2);
+        ctx.fill();
+      }
+    }
+  }
+
+  drawExitPortal(ctx, lvl, time) {
+    const ex = lvl.exit;
+    const pulse = Math.sin(time * 4) * 0.15 + 0.85;
+    ctx.fillStyle = '#4a3d2f';
+    ctx.fillRect(ex.x - 4, ex.y - 6, ex.w + 8, ex.h + 6);
+    const grad = ctx.createRadialGradient(
+      ex.x + ex.w / 2,
+      ex.y + ex.h / 2,
+      6,
+      ex.x + ex.w / 2,
+      ex.y + ex.h / 2,
+      ex.h * 0.65
+    );
+    grad.addColorStop(0, `rgba(254, 240, 138, ${pulse})`);
+    grad.addColorStop(0.6, 'rgba(245, 158, 11, 0.72)');
+    grad.addColorStop(1, 'rgba(120, 53, 15, 0.3)');
+    ctx.fillStyle = grad;
+    ctx.fillRect(ex.x + 4, ex.y + 4, ex.w - 8, ex.h - 4);
+  }
+
+  drawPlatesAndLevers(ctx, lvl) {
+    for (const pl of lvl.plates) {
+      ctx.fillStyle = pl.pressed ? '#22c55e' : '#eab308';
+      const offsetY = pl.pressed ? 4 : 0;
+      ctx.fillRect(pl.x + 2, pl.y + offsetY, pl.w - 4, pl.h - offsetY);
+    }
+
+    for (const lv of lvl.levers) {
+      ctx.fillStyle = '#475569';
+      ctx.fillRect(lv.x + 4, lv.y + lv.h - 10, lv.w - 8, 10);
+      ctx.strokeStyle = lv.activated ? '#38bdf8' : '#f59e0b';
+      ctx.lineWidth = 4;
+      ctx.beginPath();
+      ctx.moveTo(lv.x + lv.w / 2, lv.y + lv.h - 10);
+      ctx.lineTo(lv.x + lv.w / 2 + (lv.activated ? 10 : -10), lv.y + 4);
+      ctx.stroke();
+      ctx.fillStyle = lv.activated ? '#38bdf8' : '#ef4444';
+      ctx.beginPath();
+      ctx.arc(lv.x + lv.w / 2 + (lv.activated ? 10 : -10), lv.y + 4, 5, 0, Math.PI * 2);
+      ctx.fill();
+    }
+  }
+
+  drawDoors(ctx, lvl) {
+    for (const d of lvl.doors) {
+      const h = d.h * (1 - d.openProgress);
+      if (h <= 2) continue;
+      ctx.fillStyle = '#334155';
+      ctx.fillRect(d.x, d.y, d.w, h);
+      ctx.strokeStyle = PALETTE.runeBlue;
+      ctx.lineWidth = 2;
+      ctx.strokeRect(d.x + 3, d.y + 3, d.w - 6, Math.max(0, h - 6));
+    }
+  }
+
+  drawCrates(ctx, lvl) {
+    for (const cr of lvl.crates) {
+      ctx.fillStyle = '#7c5e3c';
+      ctx.fillRect(cr.x, cr.y, cr.w, cr.h);
+      ctx.strokeStyle = '#3f2e1c';
+      ctx.lineWidth = 2.5;
+      ctx.strokeRect(cr.x + 1, cr.y + 1, cr.w - 2, cr.h - 2);
+      ctx.beginPath();
+      ctx.moveTo(cr.x + 4, cr.y + 4);
+      ctx.lineTo(cr.x + cr.w - 4, cr.y + cr.h - 4);
+      ctx.moveTo(cr.x + cr.w - 4, cr.y + 4);
+      ctx.lineTo(cr.x + 4, cr.y + cr.h - 4);
+      ctx.stroke();
+    }
+  }
+
+  drawRelicsAndMedipacks(ctx, lvl, time) {
+    for (const r of lvl.relics) {
+      if (r.collected) continue;
+      const bob = Math.sin(time * 4 + r.x) * 4;
+      ctx.fillStyle = PALETTE.goldGlow;
+      ctx.beginPath();
+      ctx.arc(r.x, r.y + bob, 14, 0, Math.PI * 2);
+      ctx.fill();
+
+      ctx.fillStyle = PALETTE.gold;
+      ctx.beginPath();
+      ctx.moveTo(r.x, r.y - 10 + bob);
+      ctx.lineTo(r.x + 9, r.y + bob);
+      ctx.lineTo(r.x, r.y + 10 + bob);
+      ctx.lineTo(r.x - 9, r.y + bob);
+      ctx.closePath();
+      ctx.fill();
+    }
+
+    for (const m of lvl.medipacks) {
+      if (m.collected) continue;
+      const bob = Math.sin(time * 3 + m.x) * 3;
+      ctx.fillStyle = '#f8fafc';
+      ctx.fillRect(m.x - 9, m.y - 8 + bob, 18, 16);
+      ctx.fillStyle = '#ef4444';
+      ctx.fillRect(m.x - 2, m.y - 5 + bob, 4, 10);
+      ctx.fillRect(m.x - 5, m.y - 2 + bob, 10, 4);
+    }
+  }
+
+  drawBoulders(ctx, lvl) {
+    for (const b of lvl.boulders) {
+      if (b.destroyed) continue;
+      ctx.save();
+      ctx.translate(b.x, b.y);
+      ctx.rotate(b.angle);
+      ctx.fillStyle = '#57534e';
+      ctx.beginPath();
+      ctx.arc(0, 0, b.radius, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.strokeStyle = '#292524';
+      ctx.lineWidth = 3;
+      ctx.stroke();
+      ctx.beginPath();
+      ctx.moveTo(-12, -8);
+      ctx.lineTo(10, 12);
+      ctx.moveTo(8, -10);
+      ctx.lineTo(-8, 10);
+      ctx.stroke();
+      ctx.restore();
+    }
+  }
+
+  drawEnemies(ctx, lvl, time) {
+    for (const e of lvl.enemies) {
+      if (!e.alive) continue;
+      ctx.save();
+      if (e.hitFlash > 0) ctx.filter = 'brightness(2.2)';
+
+      if (e.type === 'bat') {
+        const wing = Math.sin(time * 18) * 7;
+        ctx.fillStyle = '#4c1d95';
+        ctx.beginPath();
+        ctx.moveTo(e.x + e.w / 2, e.y + 10);
+        ctx.lineTo(e.x - 4, e.y + 4 + wing);
+        ctx.lineTo(e.x + e.w / 2, e.y + 16);
+        ctx.lineTo(e.x + e.w + 4, e.y + 4 + wing);
+        ctx.closePath();
+        ctx.fill();
+        ctx.fillStyle = '#f43f5e';
+        ctx.fillRect(e.x + 10, e.y + 8, 3, 3);
+        ctx.fillRect(e.x + 15, e.y + 8, 3, 3);
+      } else {
+        // 石像守卫
+        ctx.fillStyle = '#64748b';
+        ctx.fillRect(e.x + 2, e.y + 10, e.w - 4, e.h - 10);
+        ctx.fillStyle = '#94a3b8';
+        ctx.fillRect(e.x + 5, e.y, e.w - 10, 12);
+        ctx.fillStyle = '#ef4444';
+        ctx.fillRect(e.x + 9, e.y + 4, 4, 3);
+        ctx.fillRect(e.x + 15, e.y + 4, 4, 3);
+      }
+      ctx.restore();
+    }
+  }
+
+  drawBoss(ctx, lvl, time) {
+    const b = lvl.boss;
+    if (!b || !b.alive) return;
+    ctx.save();
+    if (b.hitFlash > 0) ctx.filter = 'brightness(2.2)';
+
+    // 黑曜石巨像躯体
+    ctx.fillStyle = '#1e1b2e';
+    ctx.fillRect(b.x, b.y + 14, b.w, b.h - 14);
+    ctx.strokeStyle = '#6366f1';
+    ctx.lineWidth = 2.5;
+    ctx.strokeRect(b.x + 2, b.y + 16, b.w - 4, b.h - 18);
+
+    // 发光核心
+    const pulse = 8 + Math.sin(time * 8) * 2;
+    ctx.fillStyle = b.hp < b.maxHp * 0.5 ? '#ef4444' : '#38bdf8';
+    ctx.beginPath();
+    ctx.arc(b.x + b.w / 2, b.y + 42, pulse, 0, Math.PI * 2);
+    ctx.fill();
+
+    // 头部与红眼
+    ctx.fillStyle = '#312e81';
+    ctx.fillRect(b.x + 14, b.y, b.w - 28, 18);
+    ctx.fillStyle = '#f43f5e';
+    ctx.fillRect(b.x + 20, b.y + 6, 6, 4);
+    ctx.fillRect(b.x + b.w - 26, b.y + 6, 6, 4);
+
+    ctx.restore();
+  }
+
+  drawLara(ctx, p, time) {
+    if (p.invulnTimer > 0 && Math.floor(time * 20) % 2 === 0) return;
+
+    // 物理马尾辫
+    ctx.strokeStyle = PALETTE.laraHair;
+    ctx.lineWidth = 4;
+    ctx.lineCap = 'round';
+    ctx.beginPath();
+    ctx.moveTo(p.braidPoints[0].x, p.braidPoints[0].y);
+    ctx.lineTo(p.braidPoints[1].x, p.braidPoints[1].y);
+    ctx.lineTo(p.braidPoints[2].x, p.braidPoints[2].y);
+    ctx.stroke();
+
+    const cx = p.x + p.w * 0.5;
+    if (p.rollTimer > 0) {
+      // 翻滚姿态
+      ctx.save();
+      ctx.translate(cx, p.y + p.h * 0.5);
+      ctx.rotate(p.facing * time * 20);
+      ctx.fillStyle = PALETTE.laraShirt;
+      ctx.beginPath();
+      ctx.arc(0, 0, 11, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.restore();
+      return;
+    }
+
+    const stride = p.onGround && Math.abs(p.vx) > 10 ? Math.sin(p.animTime * 16) * 5 : 0;
+
+    // 腿部与靴子
+    ctx.strokeStyle = PALETTE.laraSkin;
+    ctx.lineWidth = 4;
+    ctx.beginPath();
+    ctx.moveTo(cx - 3, p.y + 24);
+    ctx.lineTo(cx - 3 - stride, p.y + p.h);
+    ctx.moveTo(cx + 3, p.y + 24);
+    ctx.lineTo(cx + 3 + stride, p.y + p.h);
+    ctx.stroke();
+
+    // 战术短裤
+    ctx.fillStyle = PALETTE.laraShorts;
+    ctx.fillRect(cx - 7, p.y + 20, 14, 7);
+
+    // 标志性青绿色背心
+    ctx.fillStyle = PALETTE.laraShirt;
+    ctx.fillRect(cx - 6, p.y + 11, 12, 10);
+
+    // 头部与头发
+    ctx.fillStyle = PALETTE.laraSkin;
+    ctx.beginPath();
+    ctx.arc(cx, p.y + 6, 5.5, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.fillStyle = PALETTE.laraHair;
+    ctx.beginPath();
+    ctx.arc(cx - p.facing * 1.5, p.y + 4.5, 5, Math.PI, Math.PI * 2);
+    ctx.fill();
+
+    // 持双枪手臂与枪口火焰
+    const gunX = cx + p.facing * 11;
+    const gunY = p.y + 14;
+    ctx.strokeStyle = PALETTE.laraSkin;
+    ctx.lineWidth = 3;
+    ctx.beginPath();
+    ctx.moveTo(cx, p.y + 14);
+    ctx.lineTo(gunX, gunY);
+    ctx.stroke();
+    ctx.fillStyle = '#cbd5e1';
+    ctx.fillRect(p.facing > 0 ? gunX - 1 : gunX - 6, gunY - 2, 7, 3);
+
+    if (p.muzzleFlash > 0) {
+      ctx.fillStyle = '#fef08a';
+      ctx.beginPath();
+      ctx.arc(gunX + p.facing * 6, gunY - 1, 5, 0, Math.PI * 2);
+      ctx.fill();
+    }
+  }
+
+  drawProjectiles(ctx, engine) {
+    ctx.fillStyle = '#fde047';
+    for (const b of engine.bullets) {
+      ctx.fillRect(b.x, b.y, b.w, b.h);
+    }
+
+    for (const pr of engine.enemyProjectiles) {
+      if (pr.type === 'shockwave') {
+        ctx.fillStyle = '#38bdf8';
+        ctx.fillRect(pr.x, pr.y, pr.w, pr.h);
+        ctx.fillStyle = '#e0f2fe';
+        ctx.fillRect(pr.x + 3, pr.y + 3, pr.w - 6, pr.h - 6);
+      } else {
+        ctx.fillStyle = '#a3e635';
+        ctx.fillRect(pr.x, pr.y, pr.w, pr.h);
+      }
+    }
+  }
+
+  drawParticles(ctx, engine) {
+    for (const pt of engine.particles) {
+      ctx.globalAlpha = Math.max(0, pt.life / pt.maxLife);
+      ctx.fillStyle = pt.color;
+      ctx.fillRect(pt.x - pt.size / 2, pt.y - pt.size / 2, pt.size, pt.size);
+    }
+    ctx.globalAlpha = 1;
+  }
+
+  drawFloatingTexts(ctx, engine) {
+    ctx.font = 'bold 13px sans-serif';
+    ctx.textAlign = 'center';
+    for (const ft of engine.floatingTexts) {
+      ctx.globalAlpha = Math.min(1, ft.life);
+      ctx.fillStyle = '#000000';
+      ctx.fillText(ft.text, ft.x + 1, ft.y + 1);
+      ctx.fillStyle = ft.color;
+      ctx.fillText(ft.text, ft.x, ft.y);
+    }
+    ctx.globalAlpha = 1;
+  }
+
+  drawDynamicLighting(ctx, engine, camX, camY) {
+    const lctx = this.lightCtx;
+    const lvl = engine.level;
+    const p = engine.player;
+
+    lctx.globalCompositeOperation = 'source-over';
+    lctx.clearRect(0, 0, this.viewW, this.viewH);
+    lctx.fillStyle = `rgba(6, 8, 12, ${lvl.ambientDarkness})`;
+    lctx.fillRect(0, 0, this.viewW, this.viewH);
+
+    lctx.globalCompositeOperation = 'destination-out';
+
+    const punchLight = (wx, wy, radius) => {
+      const sx = wx - camX;
+      const sy = wy - camY;
+      if (sx < -radius || sx > this.viewW + radius || sy < -radius || sy > this.viewH + radius) return;
+      const g = lctx.createRadialGradient(sx, sy, radius * 0.12, sx, sy, radius);
+      g.addColorStop(0, 'rgba(0,0,0,1)');
+      g.addColorStop(1, 'rgba(0,0,0,0)');
+      lctx.fillStyle = g;
+      lctx.beginPath();
+      lctx.arc(sx, sy, radius, 0, Math.PI * 2);
+      lctx.fill();
+    };
+
+    // 劳拉随身照明光晕
+    punchLight(p.x + p.w * 0.5, p.y + p.h * 0.5, 165);
+
+    // 壁挂火把动态光晕
+    for (const t of lvl.torches) {
+      const r = 125 + Math.sin(engine.time * 10 + t.phase) * 10;
+      punchLight(t.x, t.y, r);
+    }
+
+    // 圣物微光
+    for (const r of lvl.relics) {
+      if (!r.collected) punchLight(r.x, r.y, 70);
+    }
+
+    // 终点传送门强光
+    punchLight(lvl.exit.x + lvl.exit.w / 2, lvl.exit.y + lvl.exit.h / 2, 145);
+
+    ctx.drawImage(this.lightCanvas, 0, 0);
+  }
+}
+
+
+/* ===== src/main.js ===== */
+/**
+ * 浏览器入口与 UI 控制器
+ * 管理键盘/触屏输入、固定时间步长循环、HUD 同步、关卡切换与本地最高分存储
+ */
+
+
+
+
+const STORAGE_KEY = 'tomb_raider_web_best_v1';
+
+function loadBestRecord() {
+  try {
+    const raw = window.localStorage.getItem(STORAGE_KEY);
+    return raw ? JSON.parse(raw) : { bestScore: 0, bestRelics: 0 };
+  } catch {
+    return { bestScore: 0, bestRelics: 0 };
+  }
+}
+
+function saveBestRecord(score, relics) {
+  try {
+    const prev = loadBestRecord();
+    const next = {
+      bestScore: Math.max(prev.bestScore || 0, score),
+      bestRelics: Math.max(prev.bestRelics || 0, relics)
+    };
+    window.localStorage.setItem(STORAGE_KEY, JSON.stringify(next));
+    return next;
+  } catch {
+    return { bestScore: score, bestRelics: relics };
+  }
+}
+
+function formatTime(sec) {
+  const s = Math.max(0, Math.floor(sec));
+  const mm = String(Math.floor(s / 60)).padStart(2, '0');
+  const ss = String(s % 60).padStart(2, '0');
+  return `${mm}:${ss}`;
+}
+function bootGame() {
+  const canvas = document.getElementById('gameCanvas');
+  const stageWrap = document.getElementById('stageWrap');
+  const hpFill = document.getElementById('hpFill');
+  const hpText = document.getElementById('hpText');
+  const levelLabel = document.getElementById('levelLabel');
+  const relicCount = document.getElementById('relicCount');
+  const scoreVal = document.getElementById('scoreVal');
+  const timerVal = document.getElementById('timerVal');
+  const hintBar = document.getElementById('hintBar');
+  const bossHud = document.getElementById('bossHud');
+  const bossNameEl = document.getElementById('bossName');
+  const bossHpFill = document.getElementById('bossHpFill');
+  const toastEl = document.getElementById('toast');
+
+  const overlay = document.getElementById('overlay');
+  const overlayTitle = document.getElementById('overlayTitle');
+  const overlayDesc = document.getElementById('overlayDesc');
+  const overlayStats = document.getElementById('overlayStats');
+  const primaryBtn = document.getElementById('primaryActionBtn');
+  const secondaryBtn = document.getElementById('secondaryActionBtn');
+  const levelSelectRow = document.getElementById('levelSelectRow');
+
+  const btnMute = document.getElementById('btnMute');
+  const btnPause = document.getElementById('btnPause');
+  const btnRestart = document.getElementById('btnRestart');
+  const btnTouchToggle = document.getElementById('btnTouchToggle');
+  const touchControls = document.getElementById('touchControls');
+
+  const sound = new SoundEngine();
+  const renderer = new TombRenderer(canvas);
+
+  let toastTimer = null;
+  function showToast(msg) {
+    if (!toastEl) return;
+    toastEl.textContent = msg;
+    toastEl.classList.add('visible');
+    if (toastTimer) clearTimeout(toastTimer);
+    toastTimer = setTimeout(() => toastEl.classList.remove('visible'), 2400);
+  }
+
+  const engine = new TombRaiderEngine({
+    onSfx: (name) => sound.play(name),
+    onToast: (msg) => showToast(msg)
+  });
+
+  // 键盘与触屏统一输入状态
+  const keys = {
+    left: false,
+    right: false,
+    up: false,
+    down: false,
+    jump: false,
+    shoot: false
+  };
+  const edge = {
+    jumpPressed: false,
+    rollPressed: false,
+    interactPressed: false
+  };
+
+  function handleResize() {
+    const rect = stageWrap.getBoundingClientRect();
+    const w = Math.max(320, Math.floor(rect.width));
+    const h = Math.max(260, Math.floor(rect.height));
+    renderer.resize(w, h);
+    renderer.render(engine);
+  }
+
+  window.addEventListener('resize', handleResize);
+  handleResize();
+
+  const keyMap = {
+    ArrowLeft: 'left',
+    KeyA: 'left',
+    ArrowRight: 'right',
+    KeyD: 'right',
+    ArrowUp: 'up',
+    KeyW: 'up',
+    ArrowDown: 'down',
+    KeyS: 'down',
+    Space: 'jump',
+    KeyJ: 'shoot',
+    KeyZ: 'shoot'
+  };
+
+  window.addEventListener('keydown', (e) => {
+    sound.unlock();
+    if (e.code === 'KeyP' || e.code === 'Escape') {
+      if (engine.state === GAME_STATE.PLAYING || engine.state === GAME_STATE.PAUSED) {
+        engine.togglePause();
+        syncOverlay();
+      }
+      return;
+    }
+    if (e.code === 'KeyR' && engine.state === GAME_STATE.PLAYING) {
+      engine.loadLevel(engine.levelIndex, true);
+      syncOverlay();
+      return;
+    }
+
+    const mapped = keyMap[e.code];
+    if (mapped) {
+      e.preventDefault();
+      if (mapped === 'jump' && !keys.jump) edge.jumpPressed = true;
+      keys[mapped] = true;
+    }
+    if ((e.code === 'ShiftLeft' || e.code === 'ShiftRight' || e.code === 'KeyK') && !e.repeat) {
+      e.preventDefault();
+      edge.rollPressed = true;
+    }
+    if ((e.code === 'KeyE' || e.code === 'KeyF') && !e.repeat) {
+      e.preventDefault();
+      edge.interactPressed = true;
+    }
+  });
+
+  window.addEventListener('keyup', (e) => {
+    const mapped = keyMap[e.code];
+    if (mapped) {
+      keys[mapped] = false;
+    }
+  });
+
+  // 画布鼠标点击射击支持
+  canvas.addEventListener('mousedown', () => {
+    sound.unlock();
+    if (engine.state === GAME_STATE.PLAYING) {
+      keys.shoot = true;
+    }
+  });
+  window.addEventListener('mouseup', () => {
+    keys.shoot = false;
+  });
+
+  // 触屏虚拟按键绑定
+  function bindTouchHold(el, prop, triggerEdge = null) {
+    if (!el) return;
+    const onDown = (e) => {
+      e.preventDefault();
+      sound.unlock();
+      if (prop) keys[prop] = true;
+      if (triggerEdge) edge[triggerEdge] = true;
+    };
+    const onUp = (e) => {
+      e.preventDefault();
+      if (prop) keys[prop] = false;
+    };
+    el.addEventListener('pointerdown', onDown);
+    el.addEventListener('pointerup', onUp);
+    el.addEventListener('pointerleave', onUp);
+    el.addEventListener('pointercancel', onUp);
+  }
+
+  bindTouchHold(document.getElementById('tcLeft'), 'left');
+  bindTouchHold(document.getElementById('tcRight'), 'right');
+  bindTouchHold(document.getElementById('tcUp'), 'up');
+  bindTouchHold(document.getElementById('tcDown'), 'down');
+  bindTouchHold(document.getElementById('tcJump'), 'jump', 'jumpPressed');
+  bindTouchHold(document.getElementById('tcShoot'), 'shoot');
+  bindTouchHold(document.getElementById('tcRoll'), null, 'rollPressed');
+  bindTouchHold(document.getElementById('tcInteract'), null, 'interactPressed');
+
+  // 顶部工具栏按钮
+  btnMute.addEventListener('click', () => {
+    sound.unlock();
+    const muted = sound.toggleMute();
+    btnMute.textContent = muted ? '静音' : '音效';
+  });
+
+  btnPause.addEventListener('click', () => {
+    sound.unlock();
+    if (engine.state === GAME_STATE.PLAYING || engine.state === GAME_STATE.PAUSED) {
+      engine.togglePause();
+      syncOverlay();
+    }
+  });
+
+  btnRestart.addEventListener('click', () => {
+    sound.unlock();
+    engine.loadLevel(engine.levelIndex, true);
+    syncOverlay();
+  });
+
+  btnTouchToggle.addEventListener('click', () => {
+    touchControls.classList.toggle('force-show');
+  });
+
+  // 关卡选择按钮
+  levelSelectRow.querySelectorAll('button[data-level]').forEach((btn) => {
+    btn.addEventListener('click', () => {
+      sound.unlock();
+      const idx = Number(btn.getAttribute('data-level')) || 0;
+      engine.startNewGame(idx);
+      syncOverlay();
+    });
+  });
+
+  primaryBtn.addEventListener('click', () => {
+    sound.unlock();
+    if (engine.state === GAME_STATE.TITLE || engine.state === GAME_STATE.VICTORY) {
+      engine.startNewGame(0);
+    } else if (engine.state === GAME_STATE.PAUSED) {
+      engine.togglePause();
+    } else if (engine.state === GAME_STATE.LEVEL_CLEAR) {
+      engine.nextLevel();
+    } else if (engine.state === GAME_STATE.GAME_OVER) {
+      engine.loadLevel(engine.levelIndex, true);
+    }
+    syncOverlay();
+  });
+
+  secondaryBtn.addEventListener('click', () => {
+    sound.unlock();
+    engine.startNewGame(0);
+    syncOverlay();
+  });
+
+  let lastOverlayState = null;
+  function syncOverlay() {
+    const snap = engine.getHudSnapshot();
+    lastOverlayState = snap.state;
+
+    if (snap.state === GAME_STATE.PLAYING) {
+      overlay.classList.add('hidden');
+      return;
+    }
+
+    overlay.classList.remove('hidden');
+    const best = loadBestRecord();
+    secondaryBtn.classList.add('hidden');
+    levelSelectRow.classList.add('hidden');
+
+    if (snap.state === GAME_STATE.TITLE) {
+      overlayTitle.textContent = '古墓丽影：太阳圣殿';
+      overlayDesc.textContent =
+        '化身劳拉深入失落神庙：运用抓崖攀爬、双枪射击、翻滚闪避与古墓机关解谜，收集全部圣物并击败黑曜石守卫！';
+      overlayStats.textContent = `历史最高分：${best.bestScore} · 历史最多圣物：${best.bestRelics}/9`;
+      primaryBtn.textContent = '开始探险';
+      levelSelectRow.classList.remove('hidden');
+    } else if (snap.state === GAME_STATE.PAUSED) {
+      overlayTitle.textContent = '探险已暂停';
+      overlayDesc.textContent = '按 P / ESC 或点击下方按钮继续探索古墓。';
+      overlayStats.textContent = `当前关卡：${snap.levelName} · 分数：${snap.score}`;
+      primaryBtn.textContent = '继续游戏';
+      secondaryBtn.textContent = '重头开始';
+      secondaryBtn.classList.remove('hidden');
+    } else if (snap.state === GAME_STATE.LEVEL_CLEAR) {
+      saveBestRecord(snap.score, snap.totalRelicsCollected);
+      overlayTitle.textContent = `${snap.levelName} · 通关！`;
+      overlayDesc.textContent = '你成功解开了神庙机关并抵达圣殿传送门，前方还有更深层的秘境等待探索。';
+      overlayStats.textContent = `本关圣物：${snap.relicsInLevel}/${snap.relicsTotalInLevel} · 当前总分：${snap.score} · 用时：${formatTime(snap.elapsedTime)}`;
+      primaryBtn.textContent = '进入下一关';
+    } else if (snap.state === GAME_STATE.GAME_OVER) {
+      saveBestRecord(snap.score, snap.totalRelicsCollected);
+      overlayTitle.textContent = '探险受挫';
+      overlayDesc.textContent = '古墓陷阱与守卫异常凶险，调整节奏并善用 Shift 翻滚无敌帧再试一次！';
+      overlayStats.textContent = `当前总分：${snap.score} · 已收集圣物：${snap.totalRelicsCollected}`;
+      primaryBtn.textContent = '重玩本关';
+      secondaryBtn.textContent = '回到第一关';
+      secondaryBtn.classList.remove('hidden');
+    } else if (snap.state === GAME_STATE.VICTORY) {
+      const updated = saveBestRecord(snap.score, snap.totalRelicsCollected);
+      overlayTitle.textContent = '传奇达成 · 夺取太阳圣器！';
+      overlayDesc.textContent = '恭喜你征服全部三座古墓、击溃黑曜石守卫，成功带回传说中的太阳圣器！';
+      overlayStats.textContent = `最终得分：${snap.score} · 圣物收集：${snap.totalRelicsCollected}/9 · 总用时：${formatTime(snap.elapsedTime)} · 最高纪录：${updated.bestScore}`;
+      primaryBtn.textContent = '再次挑战';
+      levelSelectRow.classList.remove('hidden');
+    }
+  }
+
+  function syncHud() {
+    const snap = engine.getHudSnapshot();
+    const pct = Math.max(0, Math.min(100, (snap.hp / snap.maxHp) * 100));
+    hpFill.style.width = `${pct}%`;
+    hpText.textContent = `${Math.ceil(snap.hp)} / ${snap.maxHp}`;
+    levelLabel.textContent = snap.levelName;
+    relicCount.textContent = `${snap.relicsInLevel}/${snap.relicsTotalInLevel}`;
+    scoreVal.textContent = String(snap.score);
+    timerVal.textContent = formatTime(snap.elapsedTime);
+    hintBar.textContent = snap.hint;
+
+    if (snap.boss && snap.boss.alive) {
+      bossHud.classList.remove('hidden');
+      bossNameEl.textContent = snap.boss.name;
+      bossHpFill.style.width = `${Math.max(0, (snap.boss.hp / snap.boss.maxHp) * 100)}%`;
+    } else {
+      bossHud.classList.add('hidden');
+    }
+
+    if (snap.state !== lastOverlayState) {
+      syncOverlay();
+    }
+  }
+
+  syncOverlay();
+  syncHud();
+
+  let rafId = null;
+  let lastTime = performance.now();
+  let accumulator = 0;
+
+  function frame(now) {
+    const dt = Math.min(PHYSICS.MAX_DT, (now - lastTime) / 1000);
+    lastTime = now;
+
+    if (engine.state === GAME_STATE.PLAYING) {
+      accumulator += dt;
+      while (accumulator >= PHYSICS.FIXED_DT) {
+        engine.step(PHYSICS.FIXED_DT, {
+          left: keys.left,
+          right: keys.right,
+          up: keys.up,
+          down: keys.down,
+          jump: keys.jump,
+          shoot: keys.shoot,
+          jumpPressed: edge.jumpPressed,
+          rollPressed: edge.rollPressed,
+          interactPressed: edge.interactPressed
+        });
+        edge.jumpPressed = false;
+        edge.rollPressed = false;
+        edge.interactPressed = false;
+        accumulator -= PHYSICS.FIXED_DT;
+      }
+    }
+
+    renderer.render(engine);
+    syncHud();
+    rafId = window.requestAnimationFrame(frame);
+  }
+
+  if (rafId) cancelAnimationFrame(rafId);
+  rafId = window.requestAnimationFrame(frame);
+}
+
+window.addEventListener('load', bootGame);
+
+})();
+  </script>
+</body>
+</html>

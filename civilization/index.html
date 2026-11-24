@@ -1,0 +1,149 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>文明：纪元演进 — 网页版 4X 策略游戏</title>
+  <link rel="stylesheet" href="styles/main.css" />
+</head>
+<body>
+  <div id="app">
+    <header class="top-bar">
+      <div class="hud-group">
+        <div class="civ-badge">
+          <span id="hud-civ-dot" class="civ-dot"></span>
+          <span id="hud-civ-name">华夏帝国</span>
+        </div>
+        <div class="stat-pill"><span>🪙</span><span id="hud-gold" class="val-gold">50 (+2)</span></div>
+        <div class="stat-pill clickable" id="btn-tech" title="打开科技树 (T)">
+          <span>🔬</span><span id="hud-science" class="val-sci">+2</span>
+          <span id="hud-tech-label" class="panel-sub">制陶 (0/25)</span>
+        </div>
+        <div class="stat-pill"><span>🏆</span><span id="hud-score">0</span></div>
+      </div>
+
+      <div class="hud-group">
+        <span id="hud-turn" class="stat-pill">第 1/100 回合 · 公元前 4000 年</span>
+        <button class="btn" id="btn-diplo">⚖ 外交</button>
+        <button class="btn" id="btn-save">💾 存档</button>
+        <button class="btn" id="btn-load">📂 读档</button>
+        <button class="btn" id="btn-new-game">🌍 新局</button>
+        <button class="btn" id="btn-help">❓ 指南</button>
+        <button class="btn" id="btn-mute" title="开关音效">🔊</button>
+      </div>
+    </header>
+
+    <main class="viewport">
+      <canvas id="game-canvas"></canvas>
+      <div id="toast" class="toast"></div>
+      <div id="tile-tooltip" class="tile-tooltip">悬停任意地块查看地形与产出</div>
+      <div id="event-log" class="event-log"></div>
+
+      <section id="selection-panel" class="bottom-left"></section>
+
+      <aside class="bottom-right">
+        <div class="zoom-controls">
+          <button class="btn" id="btn-zoom-in" title="放大">＋</button>
+          <button class="btn" id="btn-zoom-out" title="缩小">－</button>
+        </div>
+        <div class="minimap-wrap">
+          <canvas id="minimap-canvas" width="176" height="112"></canvas>
+        </div>
+        <button class="btn btn-primary" id="btn-next-turn">下一回合 ⏭</button>
+      </aside>
+    </main>
+  </div>
+
+  <!-- Tech Tree Modal -->
+  <div id="modal-tech" class="modal-backdrop">
+    <div class="modal">
+      <div class="modal-header">
+        <h2>🔬 帝国科技树（远古 → 古典 → 中世纪）</h2>
+        <button class="btn" data-close="modal-tech">关闭</button>
+      </div>
+      <div id="tech-modal-body"></div>
+    </div>
+  </div>
+
+  <!-- Diplomacy & Ledger Modal -->
+  <div id="modal-diplo" class="modal-backdrop">
+    <div class="modal">
+      <div class="modal-header">
+        <h2>⚖ 国际外交与文明总览</h2>
+        <button class="btn" data-close="modal-diplo">关闭</button>
+      </div>
+      <div id="diplo-modal-body"></div>
+    </div>
+  </div>
+
+  <!-- New Game Modal -->
+  <div id="modal-new" class="modal-backdrop">
+    <div class="modal" style="max-width:460px">
+      <div class="modal-header">
+        <h2>🌍 开启新纪元</h2>
+        <button class="btn" data-close="modal-new">取消</button>
+      </div>
+      <div class="form-grid">
+        <div class="form-field">
+          <label for="new-civ">选择文明</label>
+          <select id="new-civ">
+            <option value="huaxia">华夏帝国（科研 +15%）</option>
+            <option value="rome">罗马帝国（战斗力 +15%）</option>
+            <option value="egypt">古埃及（产能 +15%）</option>
+            <option value="greece">雅典城邦（金币 +20%）</option>
+          </select>
+        </div>
+        <div class="form-field">
+          <label for="new-preset">世界规模</label>
+          <select id="new-preset">
+            <option value="small">小型 (18×12 · 3文明)</option>
+            <option value="standard" selected>标准 (22×14 · 4文明)</option>
+            <option value="large">大型 (26×16 · 4文明)</option>
+          </select>
+        </div>
+        <div class="form-field">
+          <label for="new-seed">世界种子（可复现地图）</label>
+          <input id="new-seed" type="number" value="2026" />
+        </div>
+      </div>
+      <button class="btn btn-primary" id="btn-start-new" style="width:100%;padding:9px">开启新游戏</button>
+    </div>
+  </div>
+
+  <!-- Help Modal -->
+  <div id="modal-help" class="modal-backdrop">
+    <div class="modal" style="max-width:540px">
+      <div class="modal-header">
+        <h2>❓ 玩法与快捷键指南</h2>
+        <button class="btn" data-close="modal-help">我知道了</button>
+      </div>
+      <div style="line-height:1.7;color:#cbd5e1;font-size:13px">
+        <p><strong>核心目标（三种胜利方式）：</strong></p>
+        <p>1. <strong>征服胜利</strong>：消灭所有敌方文明。<br>
+           2. <strong>科技胜利</strong>：研发至「天文学」并建成世界奇观「大天文台」。<br>
+           3. <strong>积分胜利</strong>：第 100 回合结束时文明综合总分最高。</p>
+        <p style="margin-top:8px"><strong>操作说明：</strong></p>
+        <p>• 选中单位后，<strong>蓝色高亮格</strong>可点击移动，<strong>红色高亮格</strong>可点击攻击。<br>
+           • 选中开拓者点击「建立城市」即可奠基；点击己方城市可排产单位/建筑或金币速买。<br>
+           • 快捷键：<code>WASD/方向键</code> 移动镜头，<code>Tab</code> 切换待命单位，<code>B</code> 建城，<code>F</code> 驻守，<code>T</code> 科技树，<code>Space/Enter</code> 下一回合。</p>
+      </div>
+    </div>
+  </div>
+
+  <!-- Victory Modal -->
+  <div id="modal-victory" class="modal-backdrop">
+    <div class="modal" style="max-width:440px;text-align:center">
+      <div class="modal-header" style="justify-content:center">
+        <h2 id="victory-title">🏆 胜利！</h2>
+      </div>
+      <p id="victory-desc" style="margin:14px 0 20px;line-height:1.6;color:#e2e8f0"></p>
+      <div style="display:flex;gap:10px;justify-content:center">
+        <button class="btn btn-primary" id="btn-victory-new">开启新纪元</button>
+        <button class="btn" data-close="modal-victory">留在此地图</button>
+      </div>
+    </div>
+  </div>
+
+  <script type="module" src="src/main.js"></script>
+</body>
+</html>

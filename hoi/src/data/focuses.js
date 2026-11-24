@@ -1,0 +1,88 @@
+/**
+ * 国家焦点树 (National Focus Tree)
+ * 每个焦点需要消耗固定天数，完成后触发工业、政治、军事或外交效果。
+ */
+
+export const NATIONAL_FOCUSES = [
+  {
+    id: 'four_year_plan',
+    name: '四年工业计划',
+    category: '经济',
+    days: 35,
+    prereq: [],
+    desc: '首都新增 2 座民用工厂，政治点数 +30。',
+    effect: { addCivToCapital: 2, politicalPower: 30 },
+  },
+  {
+    id: 'five_year_plan',
+    name: '重工业五年计划',
+    category: '经济',
+    days: 35,
+    prereq: [],
+    desc: '首都新增 2 座军用工厂，稳定度 +5%。',
+    effect: { addMilToCapital: 2, stability: 0.05 },
+  },
+  {
+    id: 'industrial_modernization',
+    name: '工业现代化改造',
+    category: '经济',
+    days: 30,
+    prereq: [],
+    desc: '首都新增 1 座民工与 1 座军工，政治点数 +25。',
+    effect: { addCivToCapital: 1, addMilToCapital: 1, politicalPower: 25 },
+  },
+  {
+    id: 'rearmament_act',
+    name: '全面重整军备法案',
+    category: '军事',
+    days: 35,
+    prereq: ['industrial_modernization'],
+    desc: '战争支持度 +10%，补充 300 步兵装备与 30 辆中型坦克。',
+    effect: { warSupport: 0.1, equipment: { infantry_eq: 300, tanks: 30 }, tension: 5 },
+  },
+  {
+    id: 'rhineland_remil',
+    name: '进军莱茵兰',
+    category: '政治',
+    days: 30,
+    prereq: [],
+    desc: '政治点数 +80，战争支持度 +8%，全球紧张度 +6%。',
+    effect: { politicalPower: 80, warSupport: 0.08, tension: 6 },
+  },
+  {
+    id: 'heavy_industry',
+    name: '乌拉尔军工扩张',
+    category: '经济',
+    days: 40,
+    prereq: ['five_year_plan'],
+    desc: '首都新增 2 座军工，补充 40 辆中型坦克与 40 门火炮。',
+    effect: { addMilToCapital: 2, equipment: { tanks: 40, artillery: 40 } },
+  },
+  {
+    id: 'defensive_focus',
+    name: '边境要塞化工程',
+    category: '军事',
+    days: 35,
+    prereq: [],
+    desc: '全国前线稳定度 +6%，补充 350 步兵装备与 40 门火炮。',
+    effect: { stability: 0.06, equipment: { infantry_eq: 350, artillery: 40 } },
+  },
+  {
+    id: 'red_army_reform',
+    name: '总参谋部军事改革',
+    category: '军事',
+    days: 40,
+    prereq: ['heavy_industry'],
+    desc: '人力动员 +300,000，战争支持度 +10%。',
+    effect: { manpower: 300000, warSupport: 0.1 },
+  },
+  {
+    id: 'danzig_or_war',
+    name: '但泽或战争',
+    category: '外交',
+    days: 35,
+    prereq: ['rhineland_remil'],
+    desc: '政治点数 +50，战争支持度 +12%，全球紧张度 +15%，获得强硬宣战借口。',
+    effect: { politicalPower: 50, warSupport: 0.12, tension: 15, manpower: 200000 },
+  },
+];

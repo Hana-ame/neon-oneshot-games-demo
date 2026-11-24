@@ -1,0 +1,2726 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<title>钩肥大战 · Pudge Wars War3 复刻版</title>
+<style>
+  :root {
+    --bg-dark: #0d0f12;
+    --panel-bg: rgba(18, 22, 28, 0.94);
+    --panel-border: #3a3228;
+    --gold: #f5c542;
+    --gold-dim: #a68225;
+    --crimson: #e04848;
+    --azure: #38a8e8;
+    --venom: #39d98a;
+    --text-main: #ede6d6;
+    --text-muted: #989286;
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; user-select: none; -webkit-user-select: none; }
+  html, body {
+    width: 100%; height: 100%; overflow: hidden;
+    background: var(--bg-dark); color: var(--text-main);
+    font-family: "Inter", "PingFang SC", "Microsoft YaHei", system-ui, sans-serif;
+  }
+
+  /* Layout */
+  #app {
+    display: flex; flex-direction: column; width: 100%; height: 100%;
+    position: relative;
+  }
+
+  /* Top HUD Bar */
+  #top-bar {
+    height: 48px; min-height: 48px;
+    background: linear-gradient(180deg, #1b1815 0%, #111317 100%);
+    border-bottom: 1px solid var(--panel-border);
+    display: flex; align-items: center; justify-content: space-between;
+    padding: 0 12px; gap: 8px; z-index: 20;
+  }
+  .brand {
+    display: flex; align-items: center; gap: 8px; font-weight: 800;
+    font-size: 15px; letter-spacing: 0.5px; color: var(--gold);
+    white-space: nowrap;
+  }
+  .brand-badge {
+    font-size: 10px; padding: 2px 6px; border-radius: 4px;
+    background: rgba(245, 197, 66, 0.14); border: 1px solid rgba(245, 197, 66, 0.35);
+    color: var(--gold); font-weight: 700;
+  }
+
+  .scoreboard {
+    display: flex; align-items: center; gap: 10px;
+    background: rgba(0,0,0,0.45); border: 1px solid #2e2a25;
+    padding: 4px 14px; border-radius: 8px;
+  }
+  .score-team {
+    display: flex; align-items: center; gap: 6px; font-weight: 800; font-size: 18px;
+  }
+  .score-west { color: #ff6b6b; }
+  .score-east { color: #4fc3f7; }
+  .score-label { font-size: 11px; font-weight: 600; opacity: 0.8; }
+  .score-mid {
+    display: flex; flex-direction: column; align-items: center;
+    padding: 0 10px; border-left: 1px solid #2e2a25; border-right: 1px solid #2e2a25;
+    line-height: 1.1;
+  }
+  .score-goal { font-size: 10px; color: var(--gold); font-weight: 700; }
+  .score-time { font-size: 12px; color: var(--text-muted); font-variant-numeric: tabular-nums; }
+
+  .top-actions {
+    display: flex; align-items: center; gap: 6px;
+  }
+  .btn {
+    background: #232730; color: var(--text-main); border: 1px solid #3c4250;
+    border-radius: 6px; padding: 5px 10px; font-size: 12px; font-weight: 600;
+    cursor: pointer; transition: all 0.15s ease; white-space: nowrap;
+  }
+  .btn:hover { background: #2e3440; border-color: var(--gold-dim); }
+  .btn:active { transform: translateY(1px); }
+  .btn-gold {
+    background: linear-gradient(180deg, #d9a426 0%, #9c6f12 100%);
+    color: #16120b; border-color: #f5c542; font-weight: 800;
+  }
+  .btn-gold:hover { filter: brightness(1.1); }
+  .btn-active { background: #362e1e; border-color: var(--gold); color: var(--gold); }
+
+  /* Main Arena Container */
+  #arena-wrap {
+    flex: 1; position: relative; overflow: hidden;
+    display: flex; align-items: center; justify-content: center;
+    background: radial-gradient(circle at center, #14191e 0%, #090b0e 100%);
+  }
+  #game-canvas {
+    display: block; cursor: crosshair; touch-action: none;
+    box-shadow: 0 0 40px rgba(0,0,0,0.8);
+  }
+
+  /* Kill feed & Announcements */
+  #kill-feed {
+    position: absolute; top: 10px; right: 12px;
+    display: flex; flex-direction: column; gap: 4px;
+    pointer-events: none; z-index: 15; max-width: 280px;
+  }
+  .kill-item {
+    background: rgba(12, 15, 20, 0.82); border: 1px solid rgba(255,255,255,0.08);
+    padding: 4px 8px; border-radius: 5px; font-size: 11px;
+    display: flex; align-items: center; gap: 5px; backdrop-filter: blur(4px);
+    animation: fadeSlideIn 0.2s ease;
+  }
+  @keyframes fadeSlideIn {
+    from { opacity: 0; transform: translateX(12px); }
+    to { opacity: 1; transform: translateX(0); }
+  }
+
+  #banner-announce {
+    position: absolute; top: 14%; left: 50%; transform: translateX(-50%);
+    pointer-events: none; z-index: 16; text-align: center;
+    opacity: 0; transition: opacity 0.2s ease, transform 0.2s ease;
+  }
+  #banner-announce.show { opacity: 1; transform: translateX(-50%) scale(1.04); }
+  .banner-title {
+    font-size: 30px; font-weight: 900; letter-spacing: 2px;
+    text-shadow: 0 3px 14px rgba(0,0,0,0.95), 0 0 18px rgba(245,197,66,0.5);
+  }
+  .banner-sub {
+    font-size: 13px; color: #f1e8d6; font-weight: 600;
+    text-shadow: 0 2px 6px #000;
+  }
+
+  /* Bottom War3-style Control Console */
+  #bottom-hud {
+    min-height: 92px;
+    background: linear-gradient(180deg, #16181e 0%, #0e1014 100%);
+    border-top: 2px solid var(--panel-border);
+    display: flex; align-items: center; justify-content: space-between;
+    padding: 6px 12px; gap: 10px; z-index: 20; flex-wrap: wrap;
+  }
+  .hud-section {
+    display: flex; align-items: center; gap: 8px;
+  }
+  .hero-card {
+    display: flex; align-items: center; gap: 10px;
+    background: rgba(0,0,0,0.35); border: 1px solid #2d313c;
+    border-radius: 8px; padding: 6px 10px; min-width: 210px;
+  }
+  .hero-avatar {
+    width: 44px; height: 44px; border-radius: 8px;
+    background: radial-gradient(circle at 35% 30%, #a83c3c, #4a1515);
+    border: 2px solid var(--gold-dim);
+    display: flex; align-items: center; justify-content: center;
+    font-size: 22px; flex-shrink: 0; position: relative;
+  }
+  .hero-lv {
+    position: absolute; bottom: -4px; right: -4px;
+    background: #141414; border: 1px solid var(--gold); color: var(--gold);
+    font-size: 10px; font-weight: 800; padding: 0 4px; border-radius: 4px;
+  }
+  .hero-bars { flex: 1; display: flex; flex-direction: column; gap: 4px; }
+  .hero-top-row {
+    display: flex; justify-content: space-between; align-items: center;
+    font-size: 12px; font-weight: 700;
+  }
+  .gold-text { color: var(--gold); font-variant-numeric: tabular-nums; }
+  .bar-bg {
+    height: 12px; background: #1d1f26; border-radius: 4px;
+    overflow: hidden; position: relative; border: 1px solid #2f333f;
+  }
+  .bar-fill {
+    height: 100%; transition: width 0.1s linear;
+  }
+  .bar-hp { background: linear-gradient(90deg, #2ca352, #4ce07a); }
+  .bar-cd { background: linear-gradient(90deg, #b8860b, #f5c542); }
+  .bar-text {
+    position: absolute; inset: 0; display: flex; align-items: center; justify-content: center;
+    font-size: 9px; font-weight: 800; color: #fff; text-shadow: 0 1px 2px #000;
+  }
+
+  /* Upgrade buttons */
+  .upgrades-grid {
+    display: flex; gap: 6px; flex-wrap: wrap;
+  }
+  .upg-btn {
+    background: #1c2029; border: 1px solid #353b4a; border-radius: 7px;
+    padding: 5px 8px; min-width: 84px; cursor: pointer;
+    display: flex; flex-direction: column; align-items: flex-start; gap: 2px;
+    transition: all 0.12s ease; color: var(--text-main); position: relative;
+  }
+  .upg-btn:hover:not(:disabled) { border-color: var(--gold); background: #262b36; transform: translateY(-1px); }
+  .upg-btn:disabled { opacity: 0.48; cursor: not-allowed; }
+  .upg-btn.affordable { border-color: rgba(245,197,66,0.55); box-shadow: inset 0 0 8px rgba(245,197,66,0.1); }
+  .upg-head {
+    width: 100%; display: flex; justify-content: space-between; align-items: center;
+    font-size: 11px; font-weight: 700;
+  }
+  .upg-key {
+    font-size: 9px; padding: 1px 4px; border-radius: 3px;
+    background: #2f3542; color: #c7cbd4;
+  }
+  .upg-val { font-size: 10px; color: #9ec5fe; font-variant-numeric: tabular-nums; }
+  .upg-cost { font-size: 10px; color: var(--gold); font-weight: 700; }
+
+  /* Inventory slots & skills */
+  .inv-bar {
+    display: flex; align-items: center; gap: 5px;
+  }
+  .inv-slot {
+    width: 38px; height: 38px; border-radius: 6px;
+    background: #14171d; border: 1px solid #323744;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 18px; position: relative; cursor: pointer;
+  }
+  .inv-slot.owned { border-color: var(--gold-dim); background: #211e16; }
+  .inv-slot .slot-cd {
+    position: absolute; inset: 0; background: rgba(0,0,0,0.68);
+    display: flex; align-items: center; justify-content: center;
+    font-size: 11px; font-weight: 800; color: #fff; border-radius: 5px;
+  }
+
+  /* Modals */
+  .modal-backdrop {
+    position: absolute; inset: 0; background: rgba(6, 8, 12, 0.78);
+    backdrop-filter: blur(4px); z-index: 40;
+    display: none; align-items: center; justify-content: center; padding: 14px;
+  }
+  .modal-backdrop.open { display: flex; }
+  .modal-box {
+    background: var(--panel-bg); border: 1px solid var(--panel-border);
+    border-radius: 12px; width: 100%; max-width: 660px; max-height: 90%;
+    overflow-y: auto; padding: 18px 20px;
+    box-shadow: 0 20px 50px rgba(0,0,0,0.85);
+  }
+  .modal-header {
+    display: flex; justify-content: space-between; align-items: center;
+    margin-bottom: 14px; padding-bottom: 10px; border-bottom: 1px solid #2c2a26;
+  }
+  .modal-title { font-size: 18px; font-weight: 800; color: var(--gold); }
+
+  /* Shop grid */
+  .shop-grid {
+    display: grid; grid-template-columns: repeat(auto-fill, minmax(190px, 1fr));
+    gap: 10px;
+  }
+  .shop-card {
+    background: #181c24; border: 1px solid #2e3442; border-radius: 9px;
+    padding: 10px; display: flex; flex-direction: column; gap: 6px;
+  }
+  .shop-card.owned { border-color: var(--venom); background: rgba(57,217,138,0.06); }
+  .shop-card-top { display: flex; justify-content: space-between; align-items: center; }
+  .shop-name { font-size: 13px; font-weight: 800; display: flex; align-items: center; gap: 6px; }
+  .shop-price { font-size: 12px; font-weight: 800; color: var(--gold); }
+  .shop-desc { font-size: 11px; color: var(--text-muted); line-height: 1.45; flex: 1; }
+
+  /* Start / Settings Menu */
+  .mode-grid {
+    display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; margin-bottom: 14px;
+  }
+  .mode-opt {
+    background: #1a1e26; border: 1px solid #323846; border-radius: 8px;
+    padding: 10px; text-align: center; cursor: pointer; transition: all 0.15s;
+  }
+  .mode-opt:hover { border-color: var(--gold-dim); }
+  .mode-opt.selected { border-color: var(--gold); background: rgba(245,197,66,0.12); }
+  .mode-opt h4 { font-size: 14px; color: var(--text-main); margin-bottom: 3px; }
+  .mode-opt p { font-size: 11px; color: var(--text-muted); }
+
+  .ctrl-help {
+    background: rgba(0,0,0,0.35); border: 1px solid #2a2f3a; border-radius: 8px;
+    padding: 10px 12px; font-size: 12px; line-height: 1.6; color: #cfc9bc;
+    margin-bottom: 14px;
+  }
+  .ctrl-help b { color: var(--gold); }
+
+  /* Stats & Balance table */
+  .stats-table {
+    width: 100%; border-collapse: collapse; font-size: 12px; margin-top: 8px;
+  }
+  .stats-table th, .stats-table td {
+    padding: 6px 8px; text-align: left; border-bottom: 1px solid #252a34;
+  }
+  .stats-table th { color: var(--text-muted); font-weight: 600; }
+
+  /* Touch Controls (visible on touch or narrow screens) */
+  #touch-controls {
+    display: none; position: absolute; inset: 0; pointer-events: none; z-index: 18;
+  }
+  .touch-pad {
+    position: absolute; bottom: 16px; left: 16px; width: 110px; height: 110px;
+    border-radius: 50%; background: rgba(255,255,255,0.06);
+    border: 2px solid rgba(255,255,255,0.18); pointer-events: auto; touch-action: none;
+  }
+  .touch-knob {
+    position: absolute; left: 50%; top: 50%; width: 42px; height: 42px;
+    margin-left: -21px; margin-top: -21px; border-radius: 50%;
+    background: rgba(245,197,66,0.55); border: 2px solid var(--gold);
+  }
+  .touch-btns {
+    position: absolute; bottom: 18px; right: 16px; display: flex; gap: 10px;
+    pointer-events: auto;
+  }
+  .touch-action {
+    width: 60px; height: 60px; border-radius: 50%; border: 2px solid var(--gold);
+    background: rgba(180, 48, 48, 0.75); color: #fff; font-weight: 900; font-size: 13px;
+    display: flex; align-items: center; justify-content: center;
+  }
+  .touch-action.blink-btn {
+    width: 48px; height: 48px; margin-top: 12px;
+    background: rgba(56, 168, 232, 0.72); border-color: #8fd3fe; font-size: 11px;
+  }
+
+  /* Toast */
+  #toast {
+    position: absolute; bottom: 104px; left: 50%; transform: translateX(-50%);
+    background: rgba(20, 24, 30, 0.94); border: 1px solid var(--gold-dim);
+    color: var(--gold); padding: 6px 14px; border-radius: 20px;
+    font-size: 12px; font-weight: 700; pointer-events: none; z-index: 50;
+    opacity: 0; transition: opacity 0.2s;
+  }
+  #toast.show { opacity: 1; }
+
+  @media (max-width: 820px) {
+    .brand-badge, .score-label { display: none; }
+    .hero-card { min-width: 165px; }
+    .upg-btn { min-width: 72px; padding: 4px 6px; }
+    #bottom-hud { padding: 4px 8px; gap: 6px; }
+  }
+  @media (hover: none) and (pointer: coarse) {
+    #touch-controls { display: block; }
+  }
+</style>
+</head>
+<body>
+<div id="app">
+  <!-- Top Bar -->
+  <div id="top-bar">
+    <div class="brand">
+      <span>🪝 钩肥大战</span>
+      <span class="brand-badge">WAR3 复刻平衡版</span>
+    </div>
+
+    <div class="scoreboard">
+      <div class="score-team score-west">
+        <span class="score-label">西岸红队</span>
+        <span id="score-west">0</span>
+      </div>
+      <div class="score-mid">
+        <span class="score-goal" id="score-goal">目标 25 杀</span>
+        <span class="score-time" id="match-time">00:00</span>
+      </div>
+      <div class="score-team score-east">
+        <span id="score-east">0</span>
+        <span class="score-label">东岸蓝队</span>
+      </div>
+    </div>
+
+    <div class="top-actions">
+      <button class="btn" id="btn-shop" title="打开装备商店 (B)">🛒 商店 [B]</button>
+      <button class="btn" id="btn-stats" title="查看战绩与平衡参数">📊 战绩</button>
+      <button class="btn" id="btn-pause" title="暂停/继续">⏸ 暂停</button>
+      <button class="btn" id="btn-mute" title="开关音效">🔊</button>
+      <button class="btn btn-gold" id="btn-menu">⚙ 对局设置</button>
+    </div>
+  </div>
+
+  <!-- Arena -->
+  <div id="arena-wrap">
+    <canvas id="game-canvas"></canvas>
+    <div id="kill-feed"></div>
+    <div id="banner-announce">
+      <div class="banner-title" id="banner-title">HEADSHOT!</div>
+      <div class="banner-sub" id="banner-sub">双钩爆头斩杀！</div>
+    </div>
+
+    <!-- Touch Controls -->
+    <div id="touch-controls">
+      <div class="touch-pad" id="touch-pad"><div class="touch-knob" id="touch-knob"></div></div>
+      <div class="touch-btns">
+        <button class="touch-action blink-btn" id="touch-blink">闪烁</button>
+        <button class="touch-action" id="touch-hook">出钩</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Bottom HUD -->
+  <div id="bottom-hud">
+    <div class="hud-section">
+      <div class="hero-card">
+        <div class="hero-avatar">
+          <span>🥩</span>
+          <span class="hero-lv" id="hud-kda">0/0</span>
+        </div>
+        <div class="hero-bars">
+          <div class="hero-top-row">
+            <span id="hud-name">西岸屠夫 (你)</span>
+            <span class="gold-text" id="hud-gold">120 G</span>
+          </div>
+          <div class="bar-bg">
+            <div class="bar-fill bar-hp" id="hud-hp-bar" style="width:100%"></div>
+            <div class="bar-text" id="hud-hp-text">480 / 480</div>
+          </div>
+          <div class="bar-bg" style="height:9px">
+            <div class="bar-fill bar-cd" id="hud-cd-bar" style="width:100%"></div>
+            <div class="bar-text" id="hud-cd-text">肉钩就绪</div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- 4 Classic Hook Upgrades -->
+    <div class="hud-section upgrades-grid">
+      <button class="upg-btn" id="upg-damage" data-stat="damage">
+        <div class="upg-head"><span>⚔ 伤害 <span id="lv-damage">Lv1</span></span><span class="upg-key">1</span></div>
+        <div class="upg-val" id="val-damage">185</div>
+        <div class="upg-cost" id="cost-damage">55 G</div>
+      </button>
+      <button class="upg-btn" id="upg-range" data-stat="range">
+        <div class="upg-head"><span>📏 长度 <span id="lv-range">Lv1</span></span><span class="upg-key">2</span></div>
+        <div class="upg-val" id="val-range">520</div>
+        <div class="upg-cost" id="cost-range">55 G</div>
+      </button>
+      <button class="upg-btn" id="upg-speed" data-stat="speed">
+        <div class="upg-head"><span>⚡ 速度 <span id="lv-speed">Lv1</span></span><span class="upg-key">3</span></div>
+        <div class="upg-val" id="val-speed">560</div>
+        <div class="upg-cost" id="cost-speed">55 G</div>
+      </button>
+      <button class="upg-btn" id="upg-radius" data-stat="radius">
+        <div class="upg-head"><span>🎯 半径 <span id="lv-radius">Lv1</span></span><span class="upg-key">4</span></div>
+        <div class="upg-val" id="val-radius">18</div>
+        <div class="upg-cost" id="cost-radius">55 G</div>
+      </button>
+    </div>
+
+    <!-- Items & Active Blink -->
+    <div class="hud-section">
+      <div class="inv-bar" id="inv-bar">
+        <div class="inv-slot" id="slot-blink" title="闪烁匕首 / 紧急滑步 [E / Space]">💨</div>
+        <div class="inv-slot" data-item="boots" title="动力鞋：移速 +52">👢</div>
+        <div class="inv-slot" data-item="rupture" title="撕裂钩爪：拖拽附加流血伤害">🩸</div>
+        <div class="inv-slot" data-item="ricochet" title="折射棱镜：墙体反弹加伤">🪞</div>
+        <div class="inv-slot" data-item="chain" title="迅捷链轮：肉钩冷却缩减">⛓️</div>
+        <div class="inv-slot" data-item="heart" title="泰坦之心：最大生命与脱战回血">❤️</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Toast -->
+  <div id="toast">提示</div>
+
+  <!-- Start / Mode Modal -->
+  <div class="modal-backdrop open" id="modal-menu">
+    <div class="modal-box">
+      <div class="modal-header">
+        <div class="modal-title">🪝 钩肥大战 · War3 RPG 经典复刻</div>
+        <button class="btn" id="btn-close-menu">✕</button>
+      </div>
+
+      <div class="ctrl-help">
+        <b>操作说明：</b><b>WASD</b> 或 <b>鼠标右键</b> 移动走位 · <b>鼠标左键 / Q</b> 发射肉钩 · <b>E / Space</b> 紧急滑步（购闪烁匕首后升级为瞬移）· <b>1/2/3/4</b> 快速升级钩子四维 · <b>B</b> 开关商店。<br>
+        <b>经典机制：</b>隔河对钩 · <b>回钩也能命中造成伤害</b> · <b>把敌人钩过河围殴平A</b>（客场可踩后方传送阵或由队友钩回）· <b>墙体反弹</b> · <b>双钩爆头</b> · <b>河道神符</b>。
+      </div>
+
+      <div style="font-size:12px;color:var(--text-muted);margin-bottom:6px;font-weight:700;">对战模式</div>
+      <div class="mode-grid" id="mode-grid">
+        <div class="mode-opt" data-teamsize="1"><h4>1v1 巅峰单挑</h4><p>纯粹走位与反弹钩心理战</p></div>
+        <div class="mode-opt selected" data-teamsize="3"><h4>3v3 经典团战</h4><p>爆头配合与救队友黄金节奏</p></div>
+        <div class="mode-opt" data-teamsize="5"><h4>5v5 满屏混战</h4><p>十肥乱舞 · 极致爽快</p></div>
+      </div>
+
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:16px;">
+        <div>
+          <div style="font-size:12px;color:var(--text-muted);margin-bottom:6px;font-weight:700;">AI 难度</div>
+          <div style="display:flex;gap:6px;" id="diff-group">
+            <button class="btn" data-diff="easy">新手</button>
+            <button class="btn btn-active" data-diff="normal">标准</button>
+            <button class="btn" data-diff="hard">噩梦</button>
+          </div>
+        </div>
+        <div>
+          <div style="font-size:12px;color:var(--text-muted);margin-bottom:6px;font-weight:700;">目标击杀数</div>
+          <div style="display:flex;gap:6px;" id="goal-group">
+            <button class="btn" data-goal="15">15 杀</button>
+            <button class="btn btn-active" data-goal="25">25 杀</button>
+            <button class="btn" data-goal="40">40 杀</button>
+          </div>
+        </div>
+      </div>
+
+      <div style="display:flex;justify-content:space-between;align-items:center;gap:10px;flex-wrap:wrap;">
+        <label style="font-size:12px;color:var(--text-muted);display:flex;align-items:center;gap:6px;cursor:pointer;">
+          <input type="checkbox" id="chk-spectate"> AI 全自动观战模式（检验平衡性）
+        </label>
+        <button class="btn btn-gold" id="btn-start-game" style="padding:9px 24px;font-size:14px;">⚔ 开始新对局</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Shop Modal -->
+  <div class="modal-backdrop" id="modal-shop">
+    <div class="modal-box">
+      <div class="modal-header">
+        <div class="modal-title">🛒 屠夫军械库 · 当前金币：<span id="shop-gold">120 G</span></div>
+        <button class="btn" id="btn-close-shop">✕ 关闭 [B]</button>
+      </div>
+      <div class="shop-grid" id="shop-grid"></div>
+    </div>
+  </div>
+
+  <!-- Stats / Game Over Modal -->
+  <div class="modal-backdrop" id="modal-stats">
+    <div class="modal-box">
+      <div class="modal-header">
+        <div class="modal-title" id="stats-title">📊 对局战绩统计</div>
+        <button class="btn" id="btn-close-stats">✕ 关闭</button>
+      </div>
+      <div id="stats-summary" style="font-size:13px;margin-bottom:10px;color:#d6d0c4;"></div>
+      <table class="stats-table">
+        <thead>
+          <tr>
+            <th>屠夫</th><th>阵营</th><th>击杀</th><th>死亡</th><th>助攻</th><th>爆头</th><th>命中率</th><th>装备数</th>
+          </tr>
+        </thead>
+        <tbody id="stats-tbody"></tbody>
+      </table>
+      <div style="margin-top:14px;display:flex;justify-content:flex-end;gap:8px;">
+        <button class="btn btn-gold" id="btn-rematch">🔄 再来一局</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+/* ============================================================================
+   PUDGE WARS ENGINE (Pure headless-compatible simulation + balance constants)
+   ============================================================================ */
+// ENGINE_START
+const BALANCE = {
+  // Arena geometry (strictly symmetric around x = 640)
+  WIDTH: 1280,
+  HEIGHT: 760,
+  WALL: 36,
+  RIVER_LEFT: 565,
+  RIVER_RIGHT: 715,
+
+  // Pudge base stats
+  PUDGE_RADIUS: 20,
+  BASE_HP: 480,
+  BASE_MOVE_SPEED: 215,
+  BASE_HP_REGEN: 4.5,
+  RESPAWN_TIME: 3.6,
+  SPAWN_SHIELD_TIME: 1.3,
+
+  // Melee Cleaver Auto-Attack (for cross-river brawls!)
+  MELEE_RANGE: 60,
+  MELEE_DAMAGE: 44,
+  MELEE_CD: 0.88,
+  RETURN_HOOK_DMG_MULT: 0.75,
+  PORTAL_RADIUS: 28,
+  PORTAL_CHANNEL_TIME: 1.0,
+  PORTALS: {
+    west: { x: 86, y: 380 },
+    east: { x: 1194, y: 380 }
+  },
+
+  // Dash / Blink
+  DASH_DIST: 105,
+  DASH_CD: 9.0,
+  BLINK_DIST: 205,
+  BLINK_CD: 6.5,
+
+  // Hook base & upgrades (Lv 1..8)
+  MAX_LEVEL: 8,
+  UPGRADE_COSTS: [55, 85, 120, 160, 205, 255, 310],
+  HOOK_BASE_DAMAGE: 185,
+  HOOK_STEP_DAMAGE: 34,
+  HOOK_BASE_RANGE: 520,
+  HOOK_STEP_RANGE: 74,
+  HOOK_BASE_SPEED: 560,
+  HOOK_STEP_SPEED: 75,
+  HOOK_BASE_RADIUS: 18,
+  HOOK_STEP_RADIUS: 3.8,
+  HOOK_BASE_CD: 2.65,
+  HOOK_RETRACT_MULT: 1.28,
+  HOOK_MAX_BOUNCES: 1,
+  RICOCHET_BONUS_MULT: 0.25,
+  HEADSHOT_BONUS_DMG: 9999, // Classic instant kill on mid-drag double hook
+
+  // Economy
+  START_GOLD: 120,
+  PASSIVE_GOLD_PER_SEC: 5.5,
+  KILL_GOLD: 105,
+  ASSIST_GOLD: 42,
+  HEADSHOT_GOLD: 55,
+  RICOCHET_KILL_GOLD: 35,
+  RUNE_GOLD: 35,
+  STREAK_BONUS_STEP: 25,
+
+  // Runes
+  RUNE_SPAWN_INTERVAL: 13.5,
+  RUNE_MAX_ACTIVE: 2,
+  RUNE_RADIUS: 17,
+  RUNE_SPOTS: [
+    { x: 640, y: 175 },
+    { x: 640, y: 380 },
+    { x: 640, y: 585 }
+  ],
+
+  // Classic Shop Items
+  ITEMS: {
+    boots: {
+      id: 'boots', name: '动力鞋', icon: '👢', cost: 145,
+      desc: '移动速度 +54，近战攻速 +15%，增强躲钩与过河肉搏能力。',
+      speedBonus: 54
+    },
+    rupture: {
+      id: 'rupture', name: '撕裂钩爪', icon: '🩸', cost: 245,
+      desc: '钩中敌人拖拽时，每拉动 100 距离附加 18 点流血伤害。',
+      dragDmgPer100: 18
+    },
+    ricochet: {
+      id: 'ricochet', name: '折射棱镜', icon: '🪞', cost: 195,
+      desc: '墙体反弹上限提升至 3 次，反弹钩额外伤害提升至 +50%。',
+      extraBounces: 2, bonusMult: 0.25
+    },
+    chain: {
+      id: 'chain', name: '迅捷链轮', icon: '⛓️', cost: 225,
+      desc: '肉钩冷却时间 -20%，收回速度 +18%。',
+      cdMult: 0.80, retractBonus: 0.18
+    },
+    heart: {
+      id: 'heart', name: '泰坦之心', icon: '❤️', cost: 265,
+      desc: '最大生命 +210，脱战 3 秒后每秒回复 24 点生命，过河抗揍神装。',
+      hpBonus: 210, oocRegen: 24
+    },
+    blink: {
+      id: 'blink', name: '闪烁匕首', icon: '💨', cost: 250,
+      desc: '强化 [E/Space] 为长距离瞬移闪烁（205距离，冷却6.5秒）。'
+    }
+  }
+};
+
+const RUNE_TYPES = [
+  { id: 'dd', name: '双倍伤害', color: '#4fc3f7', icon: '⚔️', duration: 10 },
+  { id: 'haste', name: '极速神符', color: '#ff5252', icon: '⚡', duration: 8 },
+  { id: 'regen', name: '恢复神符', color: '#4ce07a', icon: '💚', duration: 5 },
+  { id: 'lightning', name: '雷霆爆裂', color: '#ffd54f', icon: '💥', duration: 12 },
+  { id: 'bounty', name: '赏金神符', color: '#ffb74d', icon: '💰', duration: 0 }
+];
+
+const WEST_NAMES = ['屠夫老王', '血腥屠宰者', '钩神阿肥', '铁链狂魔', '地狱厨师'];
+const EAST_NAMES = ['东岸帕吉', '腐肉领主', '深渊钩手', '暗影屠夫', '剧毒巨魔'];
+
+function clamp(v, lo, hi) { return Math.max(lo, Math.min(hi, v)); }
+function dist(ax, ay, bx, by) { return Math.hypot(bx - ax, by - ay); }
+function randRange(a, b, rng = Math.random) { return a + rng() * (b - a); }
+
+class PudgeWarsEngine {
+  constructor(config = {}) {
+    this.teamSize = config.teamSize || 3;
+    this.killGoal = config.killGoal || 25;
+    this.difficulty = config.difficulty || 'normal';
+    this.spectate = !!config.spectate;
+    this.rng = config.rng || Math.random;
+    this.onEvent = config.onEvent || (() => {});
+    this.aiBuildProfiles = config.aiBuildProfiles || null; // optional for balance testing
+    this.reset();
+  }
+
+  reset() {
+    this.time = 0;
+    this.paused = false;
+    this.winner = null; // 'west' | 'east' | null
+    this.scores = { west: 0, east: 0 };
+    this.firstBloodTaken = false;
+    this.pudges = [];
+    this.hooks = [];
+    this.runes = [];
+    this.particles = [];
+    this.floatTexts = [];
+    this.bloodStains = [];
+    this.slashEffects = [];
+    this.runeTimer = 5.0; // First rune spawns early for action
+    this.goldAccum = 0;
+
+    // Spawn West and East teams symmetrically
+    for (let i = 0; i < this.teamSize; i++) {
+      const yFrac = (i + 1) / (this.teamSize + 1);
+      const sy = BALANCE.WALL + 60 + yFrac * (BALANCE.HEIGHT - (BALANCE.WALL + 60) * 2);
+      const isPlayer = (i === 0 && !this.spectate);
+      const westProfile = this.aiBuildProfiles ? this.aiBuildProfiles.west : null;
+      const eastProfile = this.aiBuildProfiles ? this.aiBuildProfiles.east : null;
+
+      this.pudges.push(this._createPudge({
+        id: `west_${i}`,
+        name: isPlayer ? '西岸屠夫 (你)' : WEST_NAMES[i % WEST_NAMES.length],
+        team: 'west',
+        isPlayer,
+        spawnX: 160,
+        spawnY: sy,
+        buildProfile: westProfile || this._pickAiProfile(i)
+      }));
+
+      this.pudges.push(this._createPudge({
+        id: `east_${i}`,
+        name: EAST_NAMES[i % EAST_NAMES.length],
+        team: 'east',
+        isPlayer: false,
+        spawnX: BALANCE.WIDTH - 160,
+        spawnY: sy,
+        buildProfile: eastProfile || this._pickAiProfile(i)
+      }));
+    }
+  }
+
+  _pickAiProfile(idx) {
+    const profiles = ['balanced', 'burst', 'speed', 'shop'];
+    return profiles[idx % profiles.length];
+  }
+
+  _createPudge({ id, name, team, isPlayer, spawnX, spawnY, buildProfile }) {
+    return {
+      id, name, team, isPlayer, buildProfile,
+      spawnX, spawnY,
+      x: spawnX, y: spawnY,
+      vx: 0, vy: 0,
+      angle: team === 'west' ? 0 : Math.PI,
+      radius: BALANCE.PUDGE_RADIUS,
+      hp: BALANCE.BASE_HP,
+      maxHp: BALANCE.BASE_HP,
+      alive: true,
+      respawnTimer: 0,
+      shieldTimer: BALANCE.SPAWN_SHIELD_TIME,
+      gold: BALANCE.START_GOLD,
+      upgrades: { damage: 1, range: 1, speed: 1, radius: 1 },
+      items: {},
+      hookCd: 0,
+      blinkCd: 0,
+      meleeCd: 0,
+      portalTimer: 0,
+      attackTargetId: null,
+      activeHookId: null,
+      grabbedByHookId: null,
+      lastDamagedTime: -10,
+      lastHitBy: null,
+      assistList: [], // [{ id, time }]
+      buffs: { dd: 0, haste: 0, regen: 0, lightning: 0 },
+      // Stats
+      kills: 0, deaths: 0, assists: 0,
+      headshots: 0, ricochetKills: 0,
+      hooksFired: 0, hooksHit: 0,
+      streak: 0,
+      // Movement target (for right-click / AI)
+      moveTarget: null,
+      aiState: {
+        thinkTimer: randRange(0.1, 0.5, this.rng),
+        strafeDir: this.rng() < 0.5 ? 1 : -1,
+        waypoint: { x: spawnX + (team === 'west' ? 160 : -160), y: spawnY },
+        shopTimer: randRange(1.0, 2.5, this.rng)
+      }
+    };
+  }
+
+  getPlayer() {
+    return this.pudges.find(p => p.isPlayer) || this.pudges[0];
+  }
+
+  getHookStats(p) {
+    const u = p.upgrades;
+    const hasteMult = p.buffs.haste > 0 ? 1.28 : 1.0;
+    const ddMult = p.buffs.dd > 0 ? 2.0 : 1.0;
+    const cdMult = p.items.chain ? BALANCE.ITEMS.chain.cdMult : 1.0;
+    const retractBonus = p.items.chain ? BALANCE.ITEMS.chain.retractBonus : 0;
+    const maxBounces = BALANCE.HOOK_MAX_BOUNCES + (p.items.ricochet ? BALANCE.ITEMS.ricochet.extraBounces : 0);
+    const ricochetBonus = BALANCE.RICOCHET_BONUS_MULT + (p.items.ricochet ? BALANCE.ITEMS.ricochet.bonusMult : 0);
+
+    return {
+      damage: (BALANCE.HOOK_BASE_DAMAGE + (u.damage - 1) * BALANCE.HOOK_STEP_DAMAGE + (u.radius - 1) * 13) * ddMult,
+      range: BALANCE.HOOK_BASE_RANGE + (u.range - 1) * BALANCE.HOOK_STEP_RANGE,
+      speed: (BALANCE.HOOK_BASE_SPEED + (u.speed - 1) * BALANCE.HOOK_STEP_SPEED) * hasteMult,
+      radius: BALANCE.HOOK_BASE_RADIUS + (u.radius - 1) * BALANCE.HOOK_STEP_RADIUS,
+      cd: BALANCE.HOOK_BASE_CD * cdMult * Math.pow(0.95, u.speed - 1),
+      retractMult: BALANCE.HOOK_RETRACT_MULT + retractBonus,
+      maxBounces,
+      ricochetBonus
+    };
+  }
+
+  getMoveSpeed(p) {
+    let spd = BALANCE.BASE_MOVE_SPEED;
+    if (p.items.boots) spd += BALANCE.ITEMS.boots.speedBonus;
+    if (p.buffs.haste > 0) spd *= 1.38;
+    return spd;
+  }
+
+  getUpgradeCost(p, stat) {
+    const lv = p.upgrades[stat];
+    if (lv >= BALANCE.MAX_LEVEL) return Infinity;
+    return BALANCE.UPGRADE_COSTS[lv - 1];
+  }
+
+  buyUpgrade(p, stat) {
+    if (!p || !['damage', 'range', 'speed', 'radius'].includes(stat)) return false;
+    const cost = this.getUpgradeCost(p, stat);
+    if (p.gold < cost || !isFinite(cost)) return false;
+    p.gold -= cost;
+    p.upgrades[stat] += 1;
+    this.onEvent({ type: 'upgrade', pudge: p, stat, level: p.upgrades[stat] });
+    return true;
+  }
+
+  buyItem(p, itemId) {
+    const item = BALANCE.ITEMS[itemId];
+    if (!p || !item || p.items[itemId] || p.gold < item.cost) return false;
+    p.gold -= item.cost;
+    p.items[itemId] = true;
+    if (itemId === 'heart') {
+      p.maxHp += item.hpBonus;
+      p.hp = Math.min(p.maxHp, p.hp + item.hpBonus);
+    }
+    this.onEvent({ type: 'buy', pudge: p, itemId });
+    return true;
+  }
+
+  triggerBlink(p, targetX, targetY) {
+    if (!p || !p.alive || p.grabbedByHookId || p.blinkCd > 0) return false;
+    const hasBlink = !!p.items.blink;
+    const maxDist = hasBlink ? BALANCE.BLINK_DIST : BALANCE.DASH_DIST;
+    const cd = hasBlink ? BALANCE.BLINK_CD : BALANCE.DASH_CD;
+    let dx = targetX - p.x;
+    let dy = targetY - p.y;
+    const d = Math.hypot(dx, dy);
+    if (d < 1) {
+      dx = Math.cos(p.angle);
+      dy = Math.sin(p.angle);
+    } else {
+      dx /= d; dy /= d;
+    }
+    const moveD = Math.min(maxDist, d > 1 ? d : maxDist);
+    const oldX = p.x, oldY = p.y;
+    const clamped = this._clampToSide(this.getShore(p.x), p.x + dx * moveD, p.y + dy * moveD, p.radius);
+    p.x = clamped.x;
+    p.y = clamped.y;
+    p.blinkCd = cd;
+    p.moveTarget = null;
+    this._spawnParticles(oldX, oldY, hasBlink ? '#4fc3f7' : '#e0d6c2', 10, 120);
+    this._spawnParticles(p.x, p.y, hasBlink ? '#8fd3fe' : '#f5c542', 10, 140);
+    this.onEvent({ type: 'blink', pudge: p, upgraded: hasBlink });
+    return true;
+  }
+
+  fireHook(p, targetX, targetY) {
+    if (!p || !p.alive || p.grabbedByHookId || p.hookCd > 0 || p.activeHookId) return null;
+    const dx = targetX - p.x;
+    const dy = targetY - p.y;
+    const angle = Math.atan2(dy, dx);
+    p.angle = angle;
+
+    const stats = this.getHookStats(p);
+    const hookId = `hook_${p.id}_${Math.floor(this.time * 1000)}_${Math.floor(this.rng() * 9999)}`;
+    const hook = {
+      id: hookId,
+      ownerId: p.id,
+      team: p.team,
+      x: p.x + Math.cos(angle) * (p.radius + 6),
+      y: p.y + Math.sin(angle) * (p.radius + 6),
+      vx: Math.cos(angle) * stats.speed,
+      vy: Math.sin(angle) * stats.speed,
+      speed: stats.speed,
+      retractSpeed: stats.speed * stats.retractMult,
+      radius: stats.radius,
+      damage: stats.damage,
+      maxRange: stats.range,
+      traveled: 0,
+      bounces: 0,
+      maxBounces: stats.maxBounces,
+      ricochetBonus: stats.ricochetBonus,
+      lightning: p.buffs.lightning > 0,
+      state: 'extending', // 'extending' | 'retracting'
+      grabbedPudgeId: null,
+      grabbedRuneId: null,
+      dragDistance: 0,
+      // Path vertices for chain rendering (supports wall bounce bends!)
+      vertices: [{ x: p.x, y: p.y }]
+    };
+
+    if (p.buffs.lightning > 0) p.buffs.lightning = 0; // consumed on shot
+
+    p.activeHookId = hookId;
+    p.hookCd = stats.cd;
+    p.hooksFired += 1;
+    this.hooks.push(hook);
+    this.onEvent({ type: 'hook_fire', pudge: p, hook });
+    return hook;
+  }
+
+  getShore(x) {
+    return x < BALANCE.WIDTH / 2 ? 'west' : 'east';
+  }
+
+  _clampToSide(shore, x, y, r) {
+    const minY = BALANCE.WALL + r;
+    const maxY = BALANCE.HEIGHT - BALANCE.WALL - r;
+    let minX, maxX;
+    if (shore === 'west') {
+      minX = BALANCE.WALL + r;
+      maxX = BALANCE.RIVER_LEFT - r;
+    } else {
+      minX = BALANCE.RIVER_RIGHT + r;
+      maxX = BALANCE.WIDTH - BALANCE.WALL - r;
+    }
+    return { x: clamp(x, minX, maxX), y: clamp(y, minY, maxY) };
+  }
+
+  step(dt, playerInput = null) {
+    if (this.paused || this.winner) return;
+    dt = Math.min(dt, 0.05);
+    this.time += dt;
+
+    // Passive gold
+    this.goldAccum += BALANCE.PASSIVE_GOLD_PER_SEC * dt;
+    if (this.goldAccum >= 1) {
+      const whole = Math.floor(this.goldAccum);
+      this.goldAccum -= whole;
+      for (const p of this.pudges) p.gold += whole;
+    }
+
+    // Rune spawning
+    this.runeTimer -= dt;
+    if (this.runeTimer <= 0) {
+      this.runeTimer = BALANCE.RUNE_SPAWN_INTERVAL;
+      this._trySpawnRune();
+    }
+
+    // Update pudges
+    for (const p of this.pudges) {
+      if (p.hookCd > 0) p.hookCd = Math.max(0, p.hookCd - dt);
+      if (p.blinkCd > 0) p.blinkCd = Math.max(0, p.blinkCd - dt);
+      if (p.meleeCd > 0) p.meleeCd = Math.max(0, p.meleeCd - dt);
+      if (p.shieldTimer > 0) p.shieldTimer = Math.max(0, p.shieldTimer - dt);
+
+      // Buffs decay
+      for (const k of ['dd', 'haste', 'regen', 'lightning']) {
+        if (p.buffs[k] > 0) p.buffs[k] = Math.max(0, p.buffs[k] - dt);
+      }
+
+      if (!p.alive) {
+        p.respawnTimer -= dt;
+        if (p.respawnTimer <= 0) this._respawnPudge(p);
+        continue;
+      }
+
+      // HP Regeneration
+      let regen = BALANCE.BASE_HP_REGEN;
+      if (p.buffs.regen > 0) regen += 95;
+      if (p.items.heart && (this.time - p.lastDamagedTime) >= 3.0) {
+        regen += BALANCE.ITEMS.heart.oocRegen;
+      }
+      if (p.hp < p.maxHp) {
+        p.hp = Math.min(p.maxHp, p.hp + regen * dt);
+      }
+
+      // Clean old assists (> 8s)
+      p.assistList = p.assistList.filter(a => (this.time - a.time) <= 8.0);
+
+      // Movement
+      if (p.grabbedByHookId) {
+        p.vx = 0; p.vy = 0;
+        continue;
+      }
+
+      if (p.isPlayer && playerInput) {
+        this._updatePlayerMovement(p, playerInput, dt);
+      } else {
+        this._updateAI(p, dt);
+      }
+      this._tryMeleeAttack(p);
+      this._updateReturnPortal(p, dt);
+    }
+
+    // Separate overlapping pudges on same side
+    this._resolvePudgeSeparation();
+
+    // Update hooks
+    this._updateHooks(dt);
+
+    // Update visual effects
+    this._updateEffects(dt);
+  }
+
+  _updatePlayerMovement(p, input, dt) {
+    const spd = this.getMoveSpeed(p);
+    let mx = 0, my = 0;
+    if (input.up) my -= 1;
+    if (input.down) my += 1;
+    if (input.left) mx -= 1;
+    if (input.right) mx += 1;
+
+    if (input.joyX || input.joyY) {
+      mx = input.joyX; my = input.joyY;
+    }
+
+    const curShore = this.getShore(p.x);
+    if (mx !== 0 || my !== 0) {
+      const len = Math.hypot(mx, my);
+      if (len > 1) { mx /= len; my /= len; }
+      p.moveTarget = null;
+      p.attackTargetId = null;
+      p.vx = mx * spd;
+      p.vy = my * spd;
+      p.x += p.vx * dt;
+      p.y += p.vy * dt;
+    } else if (p.attackTargetId) {
+      const tgt = this.pudges.find(t => t.id === p.attackTargetId && t.alive && this.getShore(t.x) === curShore);
+      if (!tgt) {
+        p.attackTargetId = null;
+        p.vx = 0; p.vy = 0;
+      } else {
+        const dx = tgt.x - p.x, dy = tgt.y - p.y;
+        const d = Math.hypot(dx, dy);
+        if (d > BALANCE.MELEE_RANGE - 8) {
+          p.vx = (dx / d) * spd;
+          p.vy = (dy / d) * spd;
+          p.x += p.vx * dt;
+          p.y += p.vy * dt;
+        } else {
+          p.vx = 0; p.vy = 0;
+        }
+      }
+    } else if (p.moveTarget) {
+      const dx = p.moveTarget.x - p.x;
+      const dy = p.moveTarget.y - p.y;
+      const d = Math.hypot(dx, dy);
+      if (d < 6) {
+        p.moveTarget = null;
+        p.vx = 0; p.vy = 0;
+      } else {
+        p.vx = (dx / d) * spd;
+        p.vy = (dy / d) * spd;
+        p.x += p.vx * dt;
+        p.y += p.vy * dt;
+      }
+    } else {
+      p.vx = 0; p.vy = 0;
+    }
+
+    if (input.aimX !== undefined && input.aimY !== undefined) {
+      p.angle = Math.atan2(input.aimY - p.y, input.aimX - p.x);
+    }
+
+    const c = this._clampToSide(curShore, p.x, p.y, p.radius);
+    p.x = c.x; p.y = c.y;
+  }
+
+  _tryMeleeAttack(p) {
+    if (!p.alive || p.grabbedByHookId || p.meleeCd > 0) return false;
+    const myShore = this.getShore(p.x);
+    let target = null;
+    let bestD = BALANCE.MELEE_RANGE + 1;
+    for (const e of this.pudges) {
+      if (!e.alive || e.team === p.team) continue;
+      if (this.getShore(e.x) !== myShore) continue;
+      const d = dist(p.x, p.y, e.x, e.y);
+      if (d <= BALANCE.MELEE_RANGE && d < bestD) {
+        bestD = d;
+        target = e;
+      }
+    }
+    if (!target) return false;
+
+    const hasteSpd = p.buffs.haste > 0 ? 0.72 : 1.0;
+    const bootsSpd = p.items.boots ? 0.85 : 1.0;
+    p.meleeCd = BALANCE.MELEE_CD * hasteSpd * bootsSpd;
+
+    const ddMult = p.buffs.dd > 0 ? 2.0 : 1.0;
+    let dmg = BALANCE.MELEE_DAMAGE * ddMult;
+    if (target.shieldTimer > 0) dmg *= 0.45;
+
+    const ang = Math.atan2(target.y - p.y, target.x - p.x);
+    p.angle = ang;
+    this.slashEffects.push({
+      x: p.x + Math.cos(ang) * 18,
+      y: p.y + Math.sin(ang) * 18,
+      angle: ang,
+      color: p.team === 'west' ? '#ff6b6b' : '#4fc3f7',
+      life: 0.22, maxLife: 0.22
+    });
+    this._spawnParticles(target.x, target.y, '#c62828', 8, 120);
+    this._addFloatText(target.x, target.y - 24, `🔪 -${Math.round(dmg)}`, '#ff8a65', 13);
+    this.onEvent({ type: 'melee_hit', attacker: p, target, damage: dmg });
+    this._applyDamage(target, p, dmg, { isMelee: true });
+    return true;
+  }
+
+  _updateReturnPortal(p, dt) {
+    const curShore = this.getShore(p.x);
+    if (curShore === p.team) {
+      p.portalTimer = 0;
+      return;
+    }
+    const portal = BALANCE.PORTALS[curShore];
+    if (dist(p.x, p.y, portal.x, portal.y) <= BALANCE.PORTAL_RADIUS + p.radius * 0.6) {
+      p.portalTimer += dt;
+      if (p.portalTimer >= BALANCE.PORTAL_CHANNEL_TIME) {
+        p.portalTimer = 0;
+        this._spawnParticles(p.x, p.y, '#4fc3f7', 16, 150);
+        p.x = p.spawnX;
+        p.y = p.spawnY;
+        p.moveTarget = null;
+        p.attackTargetId = null;
+        this._spawnParticles(p.x, p.y, '#4ce07a', 16, 150);
+        this._addFloatText(p.x, p.y - 28, '✨ 传送回岸!', '#4ce07a', 14);
+        this.onEvent({ type: 'portal_return', pudge: p });
+      }
+    } else {
+      p.portalTimer = Math.max(0, p.portalTimer - dt * 2);
+    }
+  }
+
+  _updateAI(p, dt) {
+    const ai = p.aiState;
+    const diffCfg = {
+      easy:   { leadAcc: 0.30, dodgeChance: 0.25, fireRate: 0.55, bounceChance: 0.08, aimJitter: 0.16 },
+      normal: { leadAcc: 0.65, dodgeChance: 0.58, fireRate: 0.80, bounceChance: 0.22, aimJitter: 0.08 },
+      hard:   { leadAcc: 0.92, dodgeChance: 0.85, fireRate: 0.96, bounceChance: 0.38, aimJitter: 0.03 }
+    }[this.difficulty] || { leadAcc: 0.65, dodgeChance: 0.58, fireRate: 0.80, bounceChance: 0.22, aimJitter: 0.08 };
+
+    // 1. Shopping / upgrading decision
+    ai.shopTimer -= dt;
+    if (ai.shopTimer <= 0) {
+      ai.shopTimer = randRange(1.2, 2.6, this.rng);
+      this._aiSpendGold(p);
+    }
+
+    // 2. Danger check: dodge incoming enemy hooks
+    let dodgeVec = null;
+    for (const h of this.hooks) {
+      if (h.team === p.team || h.state !== 'extending') continue;
+      const toX = p.x - h.x;
+      const toY = p.y - h.y;
+      const hSpd = Math.hypot(h.vx, h.vy) || 1;
+      const ux = h.vx / hSpd, uy = h.vy / hSpd;
+      const proj = toX * ux + toY * uy;
+      if (proj > 0 && proj < 340) {
+        const perp = Math.abs(toX * -uy + toY * ux);
+        if (perp < (h.radius + p.radius + 30)) {
+          if (this.rng() < diffCfg.dodgeChance) {
+            const sign = (toX * -uy + toY * ux) >= 0 ? 1 : -1;
+            dodgeVec = { x: -uy * sign, y: ux * sign };
+            // Use blink if close and lethal
+            if (proj < 145 && p.blinkCd <= 0 && (p.items.blink || p.hp < 240)) {
+              this.triggerBlink(p, p.x + dodgeVec.x * 160, p.y + dodgeVec.y * 160);
+              return;
+            }
+            break;
+          }
+        }
+      }
+    }
+
+    // 3. Movement (with cross-river melee brawl & return portal logic)
+    const curShore = this.getShore(p.x);
+    const spd = this.getMoveSpeed(p);
+    const sameShoreEnemies = this.pudges.filter(e => e.alive && e.team !== p.team && this.getShore(e.x) === curShore);
+    const onEnemyShore = (curShore !== p.team);
+
+    let brawlTarget = null;
+    if (sameShoreEnemies.length > 0) {
+      sameShoreEnemies.sort((a, b) => dist(p.x, p.y, a.x, a.y) - dist(p.x, p.y, b.x, b.y));
+      const nearest = sameShoreEnemies[0];
+      // Chase to melee if on home shore (gang up on hooked intruder!) or if healthy in close brawl
+      if (!onEnemyShore || (p.hp >= nearest.hp * 0.75 && dist(p.x, p.y, nearest.x, nearest.y) < 180)) {
+        brawlTarget = nearest;
+      }
+    }
+
+    ai.thinkTimer -= dt;
+    if (onEnemyShore && !brawlTarget) {
+      // Head to return portal to get back to home shore
+      const portal = BALANCE.PORTALS[curShore];
+      ai.waypoint = { x: portal.x, y: portal.y };
+    } else if (brawlTarget) {
+      ai.waypoint = { x: brawlTarget.x, y: brawlTarget.y };
+    } else if (ai.thinkTimer <= 0) {
+      ai.thinkTimer = randRange(0.45, 1.15, this.rng);
+      if (this.rng() < 0.45) ai.strafeDir *= -1;
+      const isWest = curShore === 'west';
+      const minX = isWest ? BALANCE.WALL + 60 : BALANCE.RIVER_RIGHT + 45;
+      const maxX = isWest ? BALANCE.RIVER_LEFT - 45 : BALANCE.WIDTH - BALANCE.WALL - 60;
+      const lowHp = p.hp < p.maxHp * 0.38;
+      const prefX = lowHp
+        ? (isWest ? minX + 55 : maxX - 55)
+        : randRange(minX + 60, maxX - 30, this.rng);
+      ai.waypoint = {
+        x: clamp(prefX, minX, maxX),
+        y: clamp(p.y + ai.strafeDir * randRange(90, 210, this.rng), BALANCE.WALL + 55, BALANCE.HEIGHT - BALANCE.WALL - 55)
+      };
+    }
+
+    if (dodgeVec) {
+      p.vx = dodgeVec.x * spd;
+      p.vy = dodgeVec.y * spd;
+    } else {
+      const dx = ai.waypoint.x - p.x;
+      const dy = ai.waypoint.y - p.y;
+      const d = Math.hypot(dx, dy);
+      if (d > (brawlTarget ? BALANCE.MELEE_RANGE - 10 : 10)) {
+        p.vx = (dx / d) * spd;
+        p.vy = (dy / d) * spd;
+      } else {
+        p.vx = 0; p.vy = 0;
+      }
+    }
+    p.x += p.vx * dt;
+    p.y += p.vy * dt;
+    const clamped = this._clampToSide(curShore, p.x, p.y, p.radius);
+    p.x = clamped.x; p.y = clamped.y;
+
+    // 4. Hook Firing Decision
+    if (p.hookCd <= 0 && !p.activeHookId) {
+      const stats = this.getHookStats(p);
+      // Priority A: Grab valuable rune if in range
+      if (this.runes.length > 0 && this.rng() < 0.45) {
+        const rune = this.runes[Math.floor(this.rng() * this.runes.length)];
+        if (dist(p.x, p.y, rune.x, rune.y) < stats.range * 0.92) {
+          this.fireHook(p, rune.x, rune.y);
+          return;
+        }
+      }
+
+      // Priority B: Headshot opportunity (enemy currently being dragged!)
+      const enemies = this.pudges.filter(e => e.team !== p.team && e.alive);
+      let target = enemies.find(e => e.grabbedByHookId && dist(p.x, p.y, e.x, e.y) < stats.range * 0.95);
+      if (!target && enemies.length > 0) {
+        // Choose closest reachable enemy
+        const reachable = enemies.filter(e => dist(p.x, p.y, e.x, e.y) < stats.range * 0.96);
+        if (reachable.length > 0) {
+          reachable.sort((a, b) => dist(p.x, p.y, a.x, a.y) - dist(p.x, p.y, b.x, b.y));
+          target = reachable[0];
+        }
+      }
+
+      if (target && this.rng() < diffCfg.fireRate * dt * 6.5) {
+        const d = dist(p.x, p.y, target.x, target.y);
+        const travelTime = d / stats.speed;
+        let aimX = target.x + target.vx * travelTime * diffCfg.leadAcc;
+        let aimY = target.y + target.vy * travelTime * diffCfg.leadAcc;
+
+        // Occasional trick-shot wall bounce!
+        if (this.rng() < diffCfg.bounceChance && d < stats.range * 0.8) {
+          const wallY = target.y < BALANCE.HEIGHT / 2 ? BALANCE.WALL + 8 : BALANCE.HEIGHT - BALANCE.WALL - 8;
+          aimY = 2 * wallY - aimY;
+        }
+
+        const baseAngle = Math.atan2(aimY - p.y, aimX - p.x);
+        const jitter = (this.rng() - 0.5) * 2 * diffCfg.aimJitter;
+        const finalAngle = baseAngle + jitter;
+        this.fireHook(p, p.x + Math.cos(finalAngle) * 300, p.y + Math.sin(finalAngle) * 300);
+      }
+    }
+  }
+
+  _aiSpendGold(p) {
+    // Different strategic profiles for variety & balance testing
+    const prof = p.buildProfile;
+    if (prof === 'shop') {
+      const order = ['boots', 'rupture', 'chain', 'heart', 'blink', 'ricochet'];
+      for (const id of order) {
+        if (!p.items[id] && p.gold >= BALANCE.ITEMS[id].cost) {
+          this.buyItem(p, id);
+          return;
+        }
+      }
+    } else if (prof === 'burst') {
+      if (this.buyUpgrade(p, 'damage')) return;
+      if (p.upgrades.damage >= 3 && !p.items.rupture && this.buyItem(p, 'rupture')) return;
+      if (this.buyUpgrade(p, 'range')) return;
+    } else if (prof === 'speed') {
+      if (!p.items.boots && this.buyItem(p, 'boots')) return;
+      if (this.buyUpgrade(p, 'speed')) return;
+      if (this.buyUpgrade(p, 'radius')) return;
+      if (!p.items.chain && this.buyItem(p, 'chain')) return;
+    }
+
+    // Balanced / fallback
+    if (p.gold >= 240 && !p.items.boots && this.rng() < 0.45) {
+      if (this.buyItem(p, 'boots')) return;
+    }
+    if (p.gold >= 250 && this.rng() < 0.35) {
+      const itemIds = Object.keys(BALANCE.ITEMS).filter(id => !p.items[id]);
+      if (itemIds.length > 0) {
+        const pick = itemIds[Math.floor(this.rng() * itemIds.length)];
+        if (this.buyItem(p, pick)) return;
+      }
+    }
+    const stats = ['damage', 'range', 'speed', 'radius'];
+    stats.sort((a, b) => p.upgrades[a] - p.upgrades[b]);
+    this.buyUpgrade(p, stats[0]);
+  }
+
+  _resolvePudgeSeparation() {
+    for (let i = 0; i < this.pudges.length; i++) {
+      const a = this.pudges[i];
+      if (!a.alive || a.grabbedByHookId) continue;
+      for (let j = i + 1; j < this.pudges.length; j++) {
+        const b = this.pudges[j];
+        if (!b.alive || b.grabbedByHookId || this.getShore(a.x) !== this.getShore(b.x)) continue;
+        const dx = b.x - a.x, dy = b.y - a.y;
+        const d = Math.hypot(dx, dy);
+        const minD = a.radius + b.radius + 2;
+        if (d > 0.01 && d < minD) {
+          const push = (minD - d) * 0.5;
+          const nx = dx / d, ny = dy / d;
+          const sa = this.getShore(a.x);
+          a.x -= nx * push; a.y -= ny * push;
+          b.x += nx * push; b.y += ny * push;
+          const ca = this._clampToSide(sa, a.x, a.y, a.radius);
+          const cb = this._clampToSide(sa, b.x, b.y, b.radius);
+          a.x = ca.x; a.y = ca.y;
+          b.x = cb.x; b.y = cb.y;
+        }
+      }
+    }
+  }
+
+  _updateHooks(dt) {
+    const toRemove = new Set();
+
+    // Check hook-vs-hook clash sparks
+    for (let i = 0; i < this.hooks.length; i++) {
+      for (let j = i + 1; j < this.hooks.length; j++) {
+        const ha = this.hooks[i], hb = this.hooks[j];
+        if (ha.team !== hb.team && ha.state === 'extending' && hb.state === 'extending') {
+          if (dist(ha.x, ha.y, hb.x, hb.y) < ha.radius + hb.radius) {
+            this._spawnParticles((ha.x + hb.x) / 2, (ha.y + hb.y) / 2, '#ffd54f', 10, 180);
+          }
+        }
+      }
+    }
+
+    for (const h of this.hooks) {
+      const owner = this.pudges.find(p => p.id === h.ownerId);
+      if (!owner) { toRemove.add(h.id); continue; }
+
+      // Keep anchor attached to owner
+      h.vertices[0] = { x: owner.x, y: owner.y };
+
+      if (h.state === 'extending') {
+        const stepDist = Math.hypot(h.vx * dt, h.vy * dt);
+        h.x += h.vx * dt;
+        h.y += h.vy * dt;
+        h.traveled += stepDist;
+
+        // Wall Bounce (Top & Bottom walls bounce! Left/Right walls also bounce if bounces remain)
+        const minY = BALANCE.WALL + 6;
+        const maxY = BALANCE.HEIGHT - BALANCE.WALL - 6;
+        const minX = BALANCE.WALL + 6;
+        const maxX = BALANCE.WIDTH - BALANCE.WALL - 6;
+
+        let bounced = false;
+        if (h.y <= minY && h.vy < 0) {
+          if (h.bounces < h.maxBounces) {
+            h.y = minY; h.vy = -h.vy; bounced = true;
+          } else { h.state = 'retracting'; }
+        } else if (h.y >= maxY && h.vy > 0) {
+          if (h.bounces < h.maxBounces) {
+            h.y = maxY; h.vy = -h.vy; bounced = true;
+          } else { h.state = 'retracting'; }
+        } else if (h.x <= minX && h.vx < 0) {
+          if (h.bounces < h.maxBounces) {
+            h.x = minX; h.vx = -h.vx; bounced = true;
+          } else { h.state = 'retracting'; }
+        } else if (h.x >= maxX && h.vx > 0) {
+          if (h.bounces < h.maxBounces) {
+            h.x = maxX; h.vx = -h.vx; bounced = true;
+          } else { h.state = 'retracting'; }
+        }
+
+        if (bounced) {
+          h.bounces += 1;
+          h.vertices.push({ x: h.x, y: h.y });
+          this._spawnParticles(h.x, h.y, '#ffd54f', 12, 160);
+          this.onEvent({ type: 'hook_bounce', hook: h, owner });
+        }
+
+        // Check rune hit
+        for (const r of this.runes) {
+          if (r.grabbedBy) continue;
+          if (dist(h.x, h.y, r.x, r.y) <= h.radius + BALANCE.RUNE_RADIUS) {
+            r.grabbedBy = h.id;
+            h.grabbedRuneId = r.id;
+            h.state = 'retracting';
+            this._spawnParticles(r.x, r.y, r.color, 12, 130);
+            break;
+          }
+        }
+
+        // Check pudge hit
+        if (h.state === 'extending') {
+          for (const target of this.pudges) {
+            if (!target.alive || target.id === owner.id) continue;
+            if (dist(h.x, h.y, target.x, target.y) <= h.radius + target.radius) {
+              this._onHookHitPudge(h, owner, target);
+              break;
+            }
+          }
+        }
+
+        if (h.traveled >= h.maxRange) {
+          h.state = 'retracting';
+        }
+      } else {
+        // Retracting along reverse vertex path
+        const prevVert = h.vertices[h.vertices.length - 1];
+        const dx = prevVert.x - h.x;
+        const dy = prevVert.y - h.y;
+        const d = Math.hypot(dx, dy);
+        const step = h.retractSpeed * dt;
+
+        let moved = step;
+        if (d <= step) {
+          h.x = prevVert.x;
+          h.y = prevVert.y;
+          moved = d;
+          if (h.vertices.length > 1) {
+            h.vertices.pop();
+          } else {
+            // Reached owner!
+            this._finishHook(h, owner);
+            toRemove.add(h.id);
+          }
+        } else {
+          h.x += (dx / d) * step;
+          h.y += (dy / d) * step;
+        }
+
+        // Return Hook collision: empty retracting hook can STILL latch onto runes or pudges!
+        if (!h.grabbedPudgeId && !h.grabbedRuneId && !toRemove.has(h.id)) {
+          for (const r of this.runes) {
+            if (r.grabbedBy) continue;
+            if (dist(h.x, h.y, r.x, r.y) <= h.radius + BALANCE.RUNE_RADIUS) {
+              r.grabbedBy = h.id;
+              h.grabbedRuneId = r.id;
+              this._spawnParticles(r.x, r.y, r.color, 12, 130);
+              break;
+            }
+          }
+          if (!h.grabbedRuneId) {
+            for (const target of this.pudges) {
+              if (!target.alive || target.id === owner.id) continue;
+              if (dist(h.x, h.y, target.x, target.y) <= h.radius + target.radius) {
+                this._onHookHitPudge(h, owner, target, true);
+                break;
+              }
+            }
+          }
+        }
+
+        // Move grabbed rune
+        if (h.grabbedRuneId) {
+          const rune = this.runes.find(r => r.id === h.grabbedRuneId);
+          if (rune) { rune.x = h.x; rune.y = h.y; }
+        }
+
+        // Drag grabbed pudge
+        if (h.grabbedPudgeId) {
+          const victim = this.pudges.find(p => p.id === h.grabbedPudgeId);
+          if (victim && victim.alive && victim.grabbedByHookId === h.id) {
+            victim.x = h.x;
+            victim.y = h.y;
+            h.dragDistance += moved;
+
+            // Rupture (Barbed Hook) bleed damage while dragging enemy!
+            if (victim.team !== owner.team && owner.items.rupture && moved > 0) {
+              const bleed = (moved / 100) * BALANCE.ITEMS.rupture.dragDmgPer100;
+              this._applyDamage(victim, owner, bleed, { isRupture: true, bounces: h.bounces });
+              if (this.rng() < 0.35) {
+                this._spawnParticles(victim.x, victim.y, '#c62828', 2, 60);
+              }
+            }
+          } else {
+            h.grabbedPudgeId = null;
+          }
+        }
+      }
+    }
+
+    if (toRemove.size > 0) {
+      this.hooks = this.hooks.filter(h => !toRemove.has(h.id));
+    }
+  }
+
+  _onHookHitPudge(h, owner, target, isReturnHook = false) {
+    owner.hooksHit += 1;
+    h.state = 'retracting';
+
+    const isEnemy = target.team !== owner.team;
+    if (!isEnemy) {
+      // Friendly hook save! (No damage, frees from enemy hook if grabbed)
+      if (target.grabbedByHookId) {
+        const oldHook = this.hooks.find(oh => oh.id === target.grabbedByHookId);
+        if (oldHook) oldHook.grabbedPudgeId = null;
+        this._addFloatText(target.x, target.y - 26, '救援成功!', '#4ce07a', 15);
+      }
+      target.grabbedByHookId = h.id;
+      h.grabbedPudgeId = target.id;
+      this.onEvent({ type: 'hook_save', owner, target });
+      return;
+    }
+
+    // Enemy hit! Check HEADSHOT (already grabbed by another hook!)
+    const isHeadshot = !!target.grabbedByHookId;
+    if (isHeadshot) {
+      const oldHook = this.hooks.find(oh => oh.id === target.grabbedByHookId);
+      if (oldHook) oldHook.grabbedPudgeId = null;
+    }
+
+    target.grabbedByHookId = h.id;
+    h.grabbedPudgeId = target.id;
+
+    // Calculate damage
+    let dmg = h.damage * (isReturnHook ? BALANCE.RETURN_HOOK_DMG_MULT : 1.0);
+    if (h.bounces > 0) {
+      dmg *= (1 + h.ricochetBonus * h.bounces);
+    }
+    if (target.shieldTimer > 0) {
+      dmg *= 0.45; // Spawn shield reduces damage
+    }
+
+    if (isHeadshot) {
+      dmg = BALANCE.HEADSHOT_BONUS_DMG;
+      owner.headshots += 1;
+      owner.gold += BALANCE.HEADSHOT_GOLD;
+      this._addFloatText(target.x, target.y - 34, '💀 HEADSHOT!', '#ffd54f', 20);
+      this._spawnParticles(target.x, target.y, '#ff1744', 28, 260);
+      this.onEvent({ type: 'headshot', owner, target });
+    } else {
+      const prefix = isReturnHook ? '回钩 ' : (h.bounces > 0 ? '反弹 ' : '');
+      const label = `${prefix}-${Math.round(dmg)}${(isReturnHook || h.bounces > 0) ? '!' : ''}`;
+      this._addFloatText(target.x, target.y - 26, label, h.bounces > 0 ? '#ffd54f' : '#ff6b6b', h.bounces > 0 ? 16 : 14);
+      this._spawnParticles(target.x, target.y, '#d32f2f', 16, 170);
+      this.onEvent({ type: 'hook_hit', owner, target, bounces: h.bounces, damage: dmg });
+    }
+
+    // Lightning rune AoE burst
+    if (h.lightning) {
+      this._spawnParticles(target.x, target.y, '#ffd54f', 24, 240);
+      this._addFloatText(target.x, target.y - 46, '⚡ 雷霆爆裂!', '#ffd54f', 16);
+      for (const other of this.pudges) {
+        if (other.alive && other.team !== owner.team && dist(target.x, target.y, other.x, other.y) <= 135) {
+          this._applyDamage(other, owner, 115, { isHeadshot: false, bounces: h.bounces });
+        }
+      }
+    }
+
+    this._applyDamage(target, owner, dmg, { isHeadshot, bounces: h.bounces });
+  }
+
+  _finishHook(h, owner) {
+    if (owner.activeHookId === h.id) owner.activeHookId = null;
+
+    if (h.grabbedRuneId) {
+      const idx = this.runes.findIndex(r => r.id === h.grabbedRuneId);
+      if (idx >= 0) {
+        const rune = this.runes[idx];
+        this.runes.splice(idx, 1);
+        this._applyRune(owner, rune);
+      }
+    }
+
+    if (h.grabbedPudgeId) {
+      const target = this.pudges.find(p => p.id === h.grabbedPudgeId);
+      if (target && target.grabbedByHookId === h.id) {
+        target.grabbedByHookId = null;
+        // Classic Pudge Wars: enemy is pulled ALL THE WAY across the river onto the hooker's shore for melee brawling!
+        const landingShore = this.getShore(owner.x);
+        const c = this._clampToSide(landingShore, target.x, target.y, target.radius);
+        target.x = c.x;
+        target.y = c.y;
+        target.moveTarget = null;
+      }
+    }
+  }
+
+  _applyDamage(victim, attacker, amount, meta = {}) {
+    if (!victim.alive) return;
+    victim.hp -= amount;
+    victim.lastDamagedTime = this.time;
+    victim.lastHitBy = attacker.id;
+
+    if (!victim.assistList.find(a => a.id === attacker.id)) {
+      victim.assistList.push({ id: attacker.id, time: this.time });
+    } else {
+      victim.assistList.find(a => a.id === attacker.id).time = this.time;
+    }
+
+    if (victim.hp <= 0) {
+      this._killPudge(victim, attacker, meta);
+    }
+  }
+
+  _killPudge(victim, killer, meta = {}) {
+    victim.alive = false;
+    victim.hp = 0;
+    victim.deaths += 1;
+    victim.respawnTimer = BALANCE.RESPAWN_TIME;
+    victim.grabbedByHookId = null;
+    victim.moveTarget = null;
+
+    // Release victim's active hook if any
+    if (victim.activeHookId) {
+      const vh = this.hooks.find(h => h.id === victim.activeHookId);
+      if (vh) vh.state = 'retracting';
+    }
+
+    // Blood stain on ground
+    this.bloodStains.push({ x: victim.x, y: victim.y, r: randRange(18, 30, this.rng), alpha: 0.65 });
+    if (this.bloodStains.length > 35) this.bloodStains.shift();
+    this._spawnParticles(victim.x, victim.y, '#b71c1c', 26, 220);
+
+    // Rewards
+    const endedStreak = victim.streak >= 3 ? victim.streak : 0;
+    victim.streak = 0;
+
+    killer.kills += 1;
+    killer.streak += 1;
+    let reward = BALANCE.KILL_GOLD + (endedStreak * BALANCE.STREAK_BONUS_STEP);
+    if (meta.bounces > 0) {
+      killer.ricochetKills += 1;
+      reward += BALANCE.RICOCHET_KILL_GOLD;
+    }
+    killer.gold += reward;
+
+    // Assists
+    for (const a of victim.assistList) {
+      if (a.id === killer.id) continue;
+      const ally = this.pudges.find(p => p.id === a.id);
+      if (ally) {
+        ally.assists += 1;
+        ally.gold += BALANCE.ASSIST_GOLD;
+      }
+    }
+    victim.assistList = [];
+
+    // Team score
+    this.scores[killer.team] += 1;
+
+    const isFirstBlood = !this.firstBloodTaken;
+    if (isFirstBlood) {
+      this.firstBloodTaken = true;
+      killer.gold += 60;
+    }
+
+    this.onEvent({
+      type: 'kill',
+      killer, victim,
+      isFirstBlood,
+      isHeadshot: !!meta.isHeadshot,
+      bounces: meta.bounces || 0,
+      streak: killer.streak,
+      reward
+    });
+
+    if (this.scores[killer.team] >= this.killGoal) {
+      this.winner = killer.team;
+      this.onEvent({ type: 'gameover', winner: this.winner });
+    }
+  }
+
+  _respawnPudge(p) {
+    p.alive = true;
+    p.hp = p.maxHp;
+    p.x = p.spawnX;
+    p.y = p.spawnY;
+    p.vx = 0; p.vy = 0;
+    p.shieldTimer = BALANCE.SPAWN_SHIELD_TIME;
+    p.grabbedByHookId = null;
+    p.moveTarget = null;
+    this._spawnParticles(p.x, p.y, '#4ce07a', 14, 130);
+  }
+
+  _trySpawnRune() {
+    if (this.runes.length >= BALANCE.RUNE_MAX_ACTIVE) return;
+    const occupied = new Set(this.runes.map(r => r.spotIdx));
+    const freeSpots = [0, 1, 2].filter(idx => !occupied.has(idx));
+    if (freeSpots.length === 0) return;
+    const spotIdx = freeSpots[Math.floor(this.rng() * freeSpots.length)];
+    const spot = BALANCE.RUNE_SPOTS[spotIdx];
+    const tpl = RUNE_TYPES[Math.floor(this.rng() * RUNE_TYPES.length)];
+    const rune = {
+      id: `rune_${Math.floor(this.time * 1000)}_${spotIdx}`,
+      spotIdx,
+      type: tpl.id,
+      name: tpl.name,
+      color: tpl.color,
+      icon: tpl.icon,
+      duration: tpl.duration,
+      x: spot.x,
+      y: spot.y,
+      grabbedBy: null,
+      pulse: 0
+    };
+    this.runes.push(rune);
+    this.onEvent({ type: 'rune_spawn', rune });
+  }
+
+  _applyRune(p, rune) {
+    p.gold += BALANCE.RUNE_GOLD;
+    if (rune.type === 'bounty') {
+      p.gold += 110;
+      this._addFloatText(p.x, p.y - 30, '+145 G 赏金!', '#ffd54f', 16);
+    } else if (rune.type === 'regen') {
+      p.buffs.regen = rune.duration;
+      p.hp = Math.min(p.maxHp, p.hp + 180);
+      this._addFloatText(p.x, p.y - 30, '💚 恢复神符!', '#4ce07a', 15);
+    } else {
+      p.buffs[rune.type] = rune.duration;
+      this._addFloatText(p.x, p.y - 30, `${rune.icon} ${rune.name}!`, rune.color, 15);
+    }
+    this._spawnParticles(p.x, p.y, rune.color, 16, 150);
+    this.onEvent({ type: 'rune_pickup', pudge: p, rune });
+  }
+
+  _spawnParticles(x, y, color, count, speed) {
+    for (let i = 0; i < count; i++) {
+      const a = this.rng() * Math.PI * 2;
+      const s = (0.3 + this.rng() * 0.7) * speed;
+      this.particles.push({
+        x, y, vx: Math.cos(a) * s, vy: Math.sin(a) * s,
+        color, r: randRange(2, 4.5, this.rng), life: randRange(0.25, 0.55, this.rng), maxLife: 0.55
+      });
+    }
+    if (this.particles.length > 260) {
+      this.particles.splice(0, this.particles.length - 260);
+    }
+  }
+
+  _addFloatText(x, y, text, color, size = 14) {
+    this.floatTexts.push({ x, y, text, color, size, life: 1.0, maxLife: 1.0 });
+  }
+
+  _updateEffects(dt) {
+    for (const r of this.runes) r.pulse += dt * 3.5;
+    for (let i = this.particles.length - 1; i >= 0; i--) {
+      const pt = this.particles[i];
+      pt.x += pt.vx * dt;
+      pt.y += pt.vy * dt;
+      pt.vx *= 0.92; pt.vy *= 0.92;
+      pt.life -= dt;
+      if (pt.life <= 0) this.particles.splice(i, 1);
+    }
+    for (let i = this.slashEffects.length - 1; i >= 0; i--) {
+      this.slashEffects[i].life -= dt;
+      if (this.slashEffects[i].life <= 0) this.slashEffects.splice(i, 1);
+    }
+    for (let i = this.floatTexts.length - 1; i >= 0; i--) {
+      const ft = this.floatTexts[i];
+      ft.y -= 34 * dt;
+      ft.life -= dt;
+      if (ft.life <= 0) this.floatTexts.splice(i, 1);
+    }
+  }
+}
+// ENGINE_END
+
+/* ============================================================================
+   WEB AUDIO SYNTHESIZER (No external audio files needed)
+   ============================================================================ */
+class SoundFX {
+  constructor() {
+    this.ctx = null;
+    this.muted = false;
+  }
+  unlock() {
+    if (!this.ctx) {
+      const AC = window.AudioContext || window.webkitAudioContext;
+      if (AC) this.ctx = new AC();
+    }
+    if (this.ctx && this.ctx.state === 'suspended') {
+      this.ctx.resume().catch(() => {});
+    }
+  }
+  play(type) {
+    if (this.muted || !this.ctx) return;
+    const now = this.ctx.currentTime;
+    const osc = this.ctx.createOscillator();
+    const gain = this.ctx.createGain();
+    osc.connect(gain);
+    gain.connect(this.ctx.destination);
+
+    if (type === 'hook') {
+      osc.type = 'sawtooth';
+      osc.frequency.setValueAtTime(220, now);
+      osc.frequency.exponentialRampToValueAtTime(95, now + 0.16);
+      gain.gain.setValueAtTime(0.11, now);
+      gain.gain.exponentialRampToValueAtTime(0.001, now + 0.18);
+      osc.start(now); osc.stop(now + 0.18);
+    } else if (type === 'bounce') {
+      osc.type = 'triangle';
+      osc.frequency.setValueAtTime(620, now);
+      osc.frequency.exponentialRampToValueAtTime(340, now + 0.11);
+      gain.gain.setValueAtTime(0.14, now);
+      gain.gain.exponentialRampToValueAtTime(0.001, now + 0.12);
+      osc.start(now); osc.stop(now + 0.12);
+    } else if (type === 'hit') {
+      osc.type = 'square';
+      osc.frequency.setValueAtTime(140, now);
+      osc.frequency.exponentialRampToValueAtTime(48, now + 0.15);
+      gain.gain.setValueAtTime(0.16, now);
+      gain.gain.exponentialRampToValueAtTime(0.001, now + 0.16);
+      osc.start(now); osc.stop(now + 0.16);
+    } else if (type === 'headshot') {
+      osc.type = 'sawtooth';
+      osc.frequency.setValueAtTime(520, now);
+      osc.frequency.exponentialRampToValueAtTime(110, now + 0.42);
+      gain.gain.setValueAtTime(0.22, now);
+      gain.gain.exponentialRampToValueAtTime(0.001, now + 0.44);
+      osc.start(now); osc.stop(now + 0.44);
+    } else if (type === 'kill') {
+      osc.type = 'triangle';
+      osc.frequency.setValueAtTime(330, now);
+      osc.frequency.setValueAtTime(440, now + 0.08);
+      osc.frequency.setValueAtTime(587, now + 0.16);
+      gain.gain.setValueAtTime(0.15, now);
+      gain.gain.exponentialRampToValueAtTime(0.001, now + 0.36);
+      osc.start(now); osc.stop(now + 0.36);
+    } else if (type === 'buy' || type === 'rune') {
+      osc.type = 'sine';
+      osc.frequency.setValueAtTime(type === 'buy' ? 680 : 520, now);
+      osc.frequency.exponentialRampToValueAtTime(type === 'buy' ? 1020 : 880, now + 0.14);
+      gain.gain.setValueAtTime(0.12, now);
+      gain.gain.exponentialRampToValueAtTime(0.001, now + 0.15);
+      osc.start(now); osc.stop(now + 0.15);
+    } else if (type === 'blink') {
+      osc.type = 'sine';
+      osc.frequency.setValueAtTime(840, now);
+      osc.frequency.exponentialRampToValueAtTime(260, now + 0.12);
+      gain.gain.setValueAtTime(0.11, now);
+      gain.gain.exponentialRampToValueAtTime(0.001, now + 0.13);
+      osc.start(now); osc.stop(now + 0.13);
+    } else if (type === 'melee') {
+      osc.type = 'sawtooth';
+      osc.frequency.setValueAtTime(190, now);
+      osc.frequency.exponentialRampToValueAtTime(70, now + 0.09);
+      gain.gain.setValueAtTime(0.10, now);
+      gain.gain.exponentialRampToValueAtTime(0.001, now + 0.10);
+      osc.start(now); osc.stop(now + 0.10);
+    }
+  }
+}
+
+/* ============================================================================
+   UI CONTROLLER & CANVAS RENDERER
+   ============================================================================ */
+const sfx = new SoundFX();
+const canvas = document.getElementById('game-canvas');
+const ctx = canvas.getContext('2d');
+const arenaWrap = document.getElementById('arena-wrap');
+
+let engine = null;
+let rafId = null;
+let lastFrameTime = 0;
+let canvasScale = 1;
+let bannerTimeout = null;
+let toastTimeout = null;
+
+const selectedConfig = {
+  teamSize: 3,
+  difficulty: 'normal',
+  killGoal: 25,
+  spectate: false
+};
+
+const playerInput = {
+  up: false, down: false, left: false, right: false,
+  joyX: 0, joyY: 0,
+  aimX: BALANCE.WIDTH * 0.7, aimY: BALANCE.HEIGHT * 0.5
+};
+
+function showToast(msg) {
+  const el = document.getElementById('toast');
+  el.textContent = msg;
+  el.classList.add('show');
+  clearTimeout(toastTimeout);
+  toastTimeout = setTimeout(() => el.classList.remove('show'), 1800);
+}
+
+function showBanner(title, sub, color = '#f5c542') {
+  const box = document.getElementById('banner-announce');
+  const t = document.getElementById('banner-title');
+  const s = document.getElementById('banner-sub');
+  t.textContent = title;
+  t.style.color = color;
+  s.textContent = sub;
+  box.classList.add('show');
+  clearTimeout(bannerTimeout);
+  bannerTimeout = setTimeout(() => box.classList.remove('show'), 2100);
+}
+
+function addKillFeed(killer, victim, tags) {
+  const feed = document.getElementById('kill-feed');
+  const item = document.createElement('div');
+  item.className = 'kill-item';
+  const kc = killer.team === 'west' ? '#ff7b7b' : '#5bc8ff';
+  const vc = victim.team === 'west' ? '#ff7b7b' : '#5bc8ff';
+  item.innerHTML = `<span style="color:${kc};font-weight:700">${killer.name}</span>
+    <span style="color:#9e978b">🪝</span>
+    <span style="color:${vc};font-weight:700">${victim.name}</span>
+    ${tags ? `<span style="color:#f5c542;font-weight:800">${tags}</span>` : ''}`;
+  feed.prepend(item);
+  while (feed.children.length > 5) feed.lastChild.remove();
+  setTimeout(() => { if (item.parentNode) item.remove(); }, 5500);
+}
+
+function handleEngineEvent(ev) {
+  if (ev.type === 'hook_fire') {
+    if (ev.pudge.isPlayer) sfx.play('hook');
+  } else if (ev.type === 'hook_bounce') {
+    sfx.play('bounce');
+  } else if (ev.type === 'hook_hit') {
+    sfx.play('hit');
+  } else if (ev.type === 'melee_hit') {
+    sfx.play('melee');
+  } else if (ev.type === 'portal_return') {
+    sfx.play('blink');
+  } else if (ev.type === 'headshot') {
+    sfx.play('headshot');
+    showBanner('HEADSHOT!', `${ev.owner.name} 双钩爆头斩杀 ${ev.target.name} (+55G)`, '#ff5252');
+  } else if (ev.type === 'blink') {
+    if (ev.pudge.isPlayer) sfx.play('blink');
+  } else if (ev.type === 'rune_pickup') {
+    if (ev.pudge.isPlayer) sfx.play('rune');
+  } else if (ev.type === 'buy' || ev.type === 'upgrade') {
+    if (ev.pudge.isPlayer) sfx.play('buy');
+  } else if (ev.type === 'kill') {
+    sfx.play('kill');
+    let tag = '';
+    if (ev.isHeadshot) tag += ' 💀爆头';
+    if (ev.bounces > 0) tag += ' 🪞反弹';
+    addKillFeed(ev.killer, ev.victim, tag);
+
+    if (ev.isFirstBlood) {
+      showBanner('FIRST BLOOD!', `${ev.killer.name} 拿下一血 (+60G)`, '#ff5252');
+    } else if (ev.streak === 3) {
+      showBanner('KILLING SPREE!', `${ev.killer.name} 已经大杀特杀 (3连杀)`, '#ffa726');
+    } else if (ev.streak === 5) {
+      showBanner('UNSTOPPABLE!', `${ev.killer.name} 势不可挡 (5连杀)`, '#ff7043');
+    } else if (ev.streak >= 7) {
+      showBanner('GODLIKE!', `${ev.killer.name} 已经超越神了 (${ev.streak}连杀)`, '#f5c542');
+    }
+  } else if (ev.type === 'gameover') {
+    const winText = ev.winner === 'west' ? '🏆 西岸红队获胜！' : '🏆 东岸蓝队获胜！';
+    showBanner(winText, `最终比分 ${engine.scores.west} : ${engine.scores.east}`, ev.winner === 'west' ? '#ff6b6b' : '#4fc3f7');
+    setTimeout(() => openStatsModal(true), 900);
+  }
+}
+
+function startNewGame() {
+  if (rafId) cancelAnimationFrame(rafId);
+  engine = new PudgeWarsEngine({
+    teamSize: selectedConfig.teamSize,
+    difficulty: selectedConfig.difficulty,
+    killGoal: selectedConfig.killGoal,
+    spectate: selectedConfig.spectate,
+    onEvent: handleEngineEvent
+  });
+  document.getElementById('kill-feed').innerHTML = '';
+  document.getElementById('score-goal').textContent = `目标 ${engine.killGoal} 杀`;
+  document.getElementById('modal-menu').classList.remove('open');
+  document.getElementById('modal-stats').classList.remove('open');
+  document.getElementById('modal-shop').classList.remove('open');
+  document.getElementById('btn-pause').textContent = '⏸ 暂停';
+  resizeCanvas();
+  renderShop();
+  updateHUD();
+  lastFrameTime = performance.now();
+  rafId = requestAnimationFrame(gameLoop);
+}
+
+function resizeCanvas() {
+  const rect = arenaWrap.getBoundingClientRect();
+  const scaleX = rect.width / BALANCE.WIDTH;
+  const scaleY = rect.height / BALANCE.HEIGHT;
+  canvasScale = Math.min(scaleX, scaleY);
+  const w = Math.floor(BALANCE.WIDTH * canvasScale);
+  const h = Math.floor(BALANCE.HEIGHT * canvasScale);
+  const dpr = Math.min(window.devicePixelRatio || 1, 2);
+  canvas.style.width = w + 'px';
+  canvas.style.height = h + 'px';
+  canvas.width = Math.floor(w * dpr);
+  canvas.height = Math.floor(h * dpr);
+  ctx.setTransform(dpr * canvasScale, 0, 0, dpr * canvasScale, 0, 0);
+  if (engine) drawGame();
+}
+
+function screenToWorld(clientX, clientY) {
+  const rect = canvas.getBoundingClientRect();
+  return {
+    x: (clientX - rect.left) / canvasScale,
+    y: (clientY - rect.top) / canvasScale
+  };
+}
+
+function gameLoop(now) {
+  const dt = Math.min((now - lastFrameTime) / 1000, 0.05);
+  lastFrameTime = now;
+  if (engine) {
+    engine.step(dt, playerInput);
+    drawGame();
+    updateHUD();
+  }
+  rafId = requestAnimationFrame(gameLoop);
+}
+
+/* ============================================================================
+   WAR3-INSPIRED CANVAS RENDERER
+   ============================================================================ */
+function drawGame() {
+  const W = BALANCE.WIDTH, H = BALANCE.HEIGHT, WALL = BALANCE.WALL;
+  const RL = BALANCE.RIVER_LEFT, RR = BALANCE.RIVER_RIGHT;
+
+  // 1. Stone floor tiles (West darker warm slate, East cooler slate)
+  ctx.fillStyle = '#1b1d22';
+  ctx.fillRect(0, 0, W, H);
+
+  // Subtle tile grid
+  ctx.strokeStyle = 'rgba(255,255,255,0.035)';
+  ctx.lineWidth = 1;
+  for (let x = WALL; x < W - WALL; x += 64) {
+    ctx.beginPath(); ctx.moveTo(x, WALL); ctx.lineTo(x, H - WALL); ctx.stroke();
+  }
+  for (let y = WALL; y < H - WALL; y += 64) {
+    ctx.beginPath(); ctx.moveTo(WALL, y); ctx.lineTo(W - WALL, y); ctx.stroke();
+  }
+
+  // Subtle team territory tint
+  const gWest = ctx.createLinearGradient(WALL, 0, RL, 0);
+  gWest.addColorStop(0, 'rgba(180, 42, 42, 0.14)');
+  gWest.addColorStop(1, 'rgba(180, 42, 42, 0.02)');
+  ctx.fillStyle = gWest;
+  ctx.fillRect(WALL, WALL, RL - WALL, H - WALL * 2);
+
+  const gEast = ctx.createLinearGradient(RR, 0, W - WALL, 0);
+  gEast.addColorStop(0, 'rgba(42, 130, 195, 0.02)');
+  gEast.addColorStop(1, 'rgba(42, 130, 195, 0.14)');
+  ctx.fillStyle = gEast;
+  ctx.fillRect(RR, WALL, W - WALL - RR, H - WALL * 2);
+
+  // 2. Toxic / Shadow River in center
+  const riverGrad = ctx.createLinearGradient(RL, 0, RR, 0);
+  riverGrad.addColorStop(0, '#0a2224');
+  riverGrad.addColorStop(0.5, '#0f3836');
+  riverGrad.addColorStop(1, '#0a2224');
+  ctx.fillStyle = riverGrad;
+  ctx.fillRect(RL, WALL, RR - RL, H - WALL * 2);
+
+  // Animated water ripples
+  ctx.strokeStyle = 'rgba(57, 217, 138, 0.16)';
+  ctx.lineWidth = 2;
+  const offset = (engine.time * 28) % 60;
+  for (let y = WALL + offset; y < H - WALL; y += 60) {
+    ctx.beginPath();
+    ctx.moveTo(RL + 18, y);
+    ctx.bezierCurveTo(RL + 55, y - 10, RR - 55, y + 10, RR - 18, y);
+    ctx.stroke();
+  }
+
+  // River banks (stone ledges)
+  ctx.fillStyle = '#332f2a';
+  ctx.fillRect(RL - 6, WALL, 8, H - WALL * 2);
+  ctx.fillRect(RR - 2, WALL, 8, H - WALL * 2);
+
+  // Rune pedestals in river
+  for (const spot of BALANCE.RUNE_SPOTS) {
+    ctx.beginPath();
+    ctx.arc(spot.x, spot.y, 24, 0, Math.PI * 2);
+    ctx.fillStyle = 'rgba(20, 48, 45, 0.85)';
+    ctx.fill();
+    ctx.strokeStyle = 'rgba(57, 217, 138, 0.35)';
+    ctx.lineWidth = 2;
+    ctx.stroke();
+  }
+
+  // 3. Stone Walls (reflectable borders)
+  ctx.fillStyle = '#2b2723';
+  ctx.fillRect(0, 0, W, WALL);
+  ctx.fillRect(0, H - WALL, W, WALL);
+  ctx.fillRect(0, 0, WALL, H);
+  ctx.fillRect(W - WALL, 0, WALL, H);
+
+  // Inner metallic bounce trim
+  ctx.strokeStyle = '#6e5c43';
+  ctx.lineWidth = 3;
+  ctx.strokeRect(WALL, WALL, W - WALL * 2, H - WALL * 2);
+
+  // Wall brick notches
+  ctx.strokeStyle = 'rgba(0,0,0,0.45)';
+  ctx.lineWidth = 1.5;
+  for (let x = 0; x < W; x += 64) {
+    ctx.beginPath(); ctx.moveTo(x, 0); ctx.lineTo(x, WALL); ctx.stroke();
+    ctx.beginPath(); ctx.moveTo(x, H - WALL); ctx.lineTo(x, H); ctx.stroke();
+  }
+
+  // 3.5 Return Portals (for cross-river pudges to teleport back home)
+  for (const shore of ['west', 'east']) {
+    const pt = BALANCE.PORTALS[shore];
+    const pulse = 0.5 + 0.5 * Math.sin(engine.time * 4);
+    ctx.beginPath();
+    ctx.arc(pt.x, pt.y, BALANCE.PORTAL_RADIUS, 0, Math.PI * 2);
+    ctx.fillStyle = `rgba(79, 195, 247, ${0.10 + pulse * 0.08})`;
+    ctx.fill();
+    ctx.strokeStyle = `rgba(79, 195, 247, ${0.38 + pulse * 0.25})`;
+    ctx.lineWidth = 2;
+    ctx.setLineDash([6, 4]);
+    ctx.stroke();
+    ctx.setLineDash([]);
+    ctx.font = '700 10px Inter, sans-serif';
+    ctx.textAlign = 'center';
+    ctx.fillStyle = 'rgba(158, 224, 255, 0.78)';
+    ctx.fillText('回岸阵', pt.x, pt.y + 4);
+  }
+
+  // 4. Blood stains
+  for (const bs of engine.bloodStains) {
+    ctx.beginPath();
+    ctx.arc(bs.x, bs.y, bs.r, 0, Math.PI * 2);
+    ctx.fillStyle = `rgba(110, 14, 14, ${bs.alpha * 0.45})`;
+    ctx.fill();
+  }
+
+  // 5. Player aim laser / range preview
+  const player = engine.getPlayer();
+  if (player && player.isPlayer && player.alive && !player.activeHookId) {
+    const stats = engine.getHookStats(player);
+    const angle = Math.atan2(playerInput.aimY - player.y, playerInput.aimX - player.x);
+    const ex = player.x + Math.cos(angle) * Math.min(stats.range, 360);
+    const ey = player.y + Math.sin(angle) * Math.min(stats.range, 360);
+    ctx.save();
+    ctx.setLineDash([7, 7]);
+    ctx.strokeStyle = player.hookCd <= 0 ? 'rgba(245, 197, 66, 0.36)' : 'rgba(255,255,255,0.12)';
+    ctx.lineWidth = 2;
+    ctx.beginPath();
+    ctx.moveTo(player.x, player.y);
+    ctx.lineTo(ex, ey);
+    ctx.stroke();
+    ctx.restore();
+  }
+
+  // 6. Runes
+  for (const r of engine.runes) {
+    const glow = 22 + Math.sin(r.pulse) * 4;
+    ctx.beginPath();
+    ctx.arc(r.x, r.y, glow, 0, Math.PI * 2);
+    ctx.fillStyle = r.color + '33';
+    ctx.fill();
+
+    ctx.beginPath();
+    ctx.arc(r.x, r.y, BALANCE.RUNE_RADIUS, 0, Math.PI * 2);
+    ctx.fillStyle = '#141920';
+    ctx.fill();
+    ctx.strokeStyle = r.color;
+    ctx.lineWidth = 2.5;
+    ctx.stroke();
+
+    ctx.font = '16px sans-serif';
+    ctx.textAlign = 'center';
+    ctx.textBaseline = 'middle';
+    ctx.fillText(r.icon, r.x, r.y + 1);
+  }
+
+  // 7. Hooks (Chains + Claw Head)
+  for (const h of engine.hooks) {
+    drawHook(h);
+  }
+
+  // 8. Pudges
+  for (const p of engine.pudges) {
+    if (!p.alive) continue;
+    drawPudge(p);
+  }
+
+  // 8.5 Melee Cleaver Slash Arcs
+  for (const sl of engine.slashEffects) {
+    const a = clamp(sl.life / sl.maxLife, 0, 1);
+    ctx.save();
+    ctx.translate(sl.x, sl.y);
+    ctx.rotate(sl.angle);
+    ctx.globalAlpha = a;
+    ctx.strokeStyle = sl.color;
+    ctx.lineWidth = 4;
+    ctx.beginPath();
+    ctx.arc(0, 0, 28, -0.9, 0.9);
+    ctx.stroke();
+    ctx.strokeStyle = '#fff';
+    ctx.lineWidth = 2;
+    ctx.beginPath();
+    ctx.arc(2, 0, 26, -0.7, 0.7);
+    ctx.stroke();
+    ctx.restore();
+  }
+  ctx.globalAlpha = 1;
+
+  // 9. Particles
+  for (const pt of engine.particles) {
+    ctx.globalAlpha = clamp(pt.life / pt.maxLife, 0, 1);
+    ctx.fillStyle = pt.color;
+    ctx.beginPath();
+    ctx.arc(pt.x, pt.y, pt.r, 0, Math.PI * 2);
+    ctx.fill();
+  }
+  ctx.globalAlpha = 1;
+
+  // 10. Floating Combat Text
+  for (const ft of engine.floatTexts) {
+    ctx.globalAlpha = clamp(ft.life / ft.maxLife, 0, 1);
+    ctx.font = `900 ${ft.size}px Inter, sans-serif`;
+    ctx.textAlign = 'center';
+    ctx.fillStyle = '#000';
+    ctx.fillText(ft.text, ft.x + 1.5, ft.y + 1.5);
+    ctx.fillStyle = ft.color;
+    ctx.fillText(ft.text, ft.x, ft.y);
+  }
+  ctx.globalAlpha = 1;
+}
+
+function drawHook(h) {
+  const pts = [...h.vertices, { x: h.x, y: h.y }];
+
+  // Draw chain links along polyline
+  ctx.strokeStyle = h.bounces > 0 ? '#f5c542' : '#9aa0a8';
+  ctx.lineWidth = 5;
+  ctx.lineCap = 'round';
+  ctx.beginPath();
+  ctx.moveTo(pts[0].x, pts[0].y);
+  for (let i = 1; i < pts.length; i++) ctx.lineTo(pts[i].x, pts[i].y);
+  ctx.stroke();
+
+  // Chain link dots
+  ctx.strokeStyle = '#2b2f36';
+  ctx.lineWidth = 2;
+  ctx.setLineDash([4, 8]);
+  ctx.beginPath();
+  ctx.moveTo(pts[0].x, pts[0].y);
+  for (let i = 1; i < pts.length; i++) ctx.lineTo(pts[i].x, pts[i].y);
+  ctx.stroke();
+  ctx.setLineDash([]);
+
+  // Hook claw head
+  const prev = pts[pts.length - 2];
+  const ang = Math.atan2(h.y - prev.y, h.x - prev.x);
+  ctx.save();
+  ctx.translate(h.x, h.y);
+  ctx.rotate(ang);
+
+  // Hitbox ring hint
+  ctx.beginPath();
+  ctx.arc(0, 0, h.radius, 0, Math.PI * 2);
+  ctx.fillStyle = h.lightning ? 'rgba(255,213,79,0.22)' : 'rgba(255,255,255,0.08)';
+  ctx.fill();
+
+  // Curved steel meat hook claw
+  ctx.strokeStyle = h.bounces > 0 ? '#ffd54f' : '#dde3ea';
+  ctx.lineWidth = 4.5;
+  ctx.beginPath();
+  ctx.arc(2, 0, Math.max(10, h.radius * 0.62), -Math.PI * 0.75, Math.PI * 0.65);
+  ctx.stroke();
+
+  // Razor tip
+  ctx.fillStyle = '#e53935';
+  ctx.beginPath();
+  ctx.moveTo(Math.max(12, h.radius * 0.7), -3);
+  ctx.lineTo(Math.max(19, h.radius * 0.95), 2);
+  ctx.lineTo(Math.max(10, h.radius * 0.5), 6);
+  ctx.closePath();
+  ctx.fill();
+  ctx.restore();
+}
+
+function drawPudge(p) {
+  const isWest = p.team === 'west';
+  const teamColor = isWest ? '#e54d4d' : '#38a8e8';
+
+  ctx.save();
+  ctx.translate(p.x, p.y);
+
+  // Team selection ring
+  ctx.beginPath();
+  ctx.arc(0, 0, p.radius + 5, 0, Math.PI * 2);
+  ctx.strokeStyle = p.isPlayer ? '#f5c542' : teamColor + '99';
+  ctx.lineWidth = p.isPlayer ? 3 : 2;
+  ctx.stroke();
+
+  // Spawn shield halo
+  if (p.shieldTimer > 0) {
+    ctx.beginPath();
+    ctx.arc(0, 0, p.radius + 10, 0, Math.PI * 2);
+    ctx.strokeStyle = 'rgba(130, 230, 255, 0.75)';
+    ctx.lineWidth = 2.5;
+    ctx.stroke();
+  }
+
+  // Active buff aura
+  if (p.buffs.dd > 0 || p.buffs.haste > 0 || p.buffs.lightning > 0) {
+    const auraColor = p.buffs.dd > 0 ? '#4fc3f7' : (p.buffs.haste > 0 ? '#ff5252' : '#ffd54f');
+    ctx.beginPath();
+    ctx.arc(0, 0, p.radius + 9, 0, Math.PI * 2);
+    ctx.fillStyle = auraColor + '28';
+    ctx.fill();
+  }
+
+  // Pudge body (rotates toward aim)
+  ctx.save();
+  ctx.rotate(p.angle);
+
+  // Chubby butcher torso
+  ctx.beginPath();
+  ctx.arc(0, 0, p.radius, 0, Math.PI * 2);
+  const bodyGrad = ctx.createRadialGradient(-4, -4, 3, 0, 0, p.radius);
+  bodyGrad.addColorStop(0, isWest ? '#d68f78' : '#7ea8ba');
+  bodyGrad.addColorStop(1, isWest ? '#7d3a34' : '#2d4f63');
+  ctx.fillStyle = bodyGrad;
+  ctx.fill();
+  ctx.strokeStyle = '#181412';
+  ctx.lineWidth = 2.2;
+  ctx.stroke();
+
+  // Butcher apron strap
+  ctx.fillStyle = isWest ? '#8f1d1d' : '#185a82';
+  ctx.fillRect(-10, -11, 14, 22);
+
+  // Cleaver in left hand
+  ctx.fillStyle = '#cfd8dc';
+  ctx.fillRect(6, -18, 12, 6);
+
+  // Hook hand indicator (right hand)
+  ctx.fillStyle = p.hookCd <= 0 ? '#f5c542' : '#555';
+  ctx.beginPath();
+  ctx.arc(14, 11, 5, 0, Math.PI * 2);
+  ctx.fill();
+
+  ctx.restore();
+
+  // Overhead HP bar & Name
+  const bw = 46, bh = 6;
+  ctx.fillStyle = 'rgba(0,0,0,0.75)';
+  ctx.fillRect(-bw / 2 - 1, -p.radius - 16, bw + 2, bh + 2);
+  const hpPct = clamp(p.hp / p.maxHp, 0, 1);
+  ctx.fillStyle = p.isPlayer ? '#4ce07a' : (isWest ? '#ef5350' : '#42a5f5');
+  ctx.fillRect(-bw / 2, -p.radius - 15, bw * hpPct, bh);
+
+  ctx.font = '700 10px Inter, sans-serif';
+  ctx.textAlign = 'center';
+  ctx.fillStyle = '#fff';
+  ctx.fillText(p.name, 0, -p.radius - 21);
+
+  ctx.restore();
+}
+
+/* ============================================================================
+   HUD & SHOP UPDATES
+   ============================================================================ */
+function updateHUD() {
+  if (!engine) return;
+  document.getElementById('score-west').textContent = engine.scores.west;
+  document.getElementById('score-east').textContent = engine.scores.east;
+  const mins = String(Math.floor(engine.time / 60)).padStart(2, '0');
+  const secs = String(Math.floor(engine.time % 60)).padStart(2, '0');
+  document.getElementById('match-time').textContent = `${mins}:${secs}`;
+
+  const p = engine.getPlayer();
+  if (!p) return;
+  document.getElementById('hud-name').textContent = p.name;
+  document.getElementById('hud-gold').textContent = `${Math.floor(p.gold)} G`;
+  document.getElementById('hud-kda').textContent = `${p.kills}/${p.deaths}`;
+
+  const hpPct = p.alive ? clamp((p.hp / p.maxHp) * 100, 0, 100) : 0;
+  document.getElementById('hud-hp-bar').style.width = hpPct + '%';
+  document.getElementById('hud-hp-text').textContent = p.alive
+    ? `${Math.ceil(p.hp)} / ${p.maxHp}`
+    : `复活倒计时 ${p.respawnTimer.toFixed(1)}s`;
+
+  const stats = engine.getHookStats(p);
+  const cdPct = p.hookCd <= 0 ? 100 : clamp((1 - p.hookCd / stats.cd) * 100, 0, 100);
+  document.getElementById('hud-cd-bar').style.width = cdPct + '%';
+  document.getElementById('hud-cd-text').textContent = p.hookCd <= 0
+    ? '肉钩就绪 [左键 / Q]'
+    : `冷却 ${p.hookCd.toFixed(1)}s`;
+
+  // Upgrades
+  const mapVal = {
+    damage: Math.round(stats.damage),
+    range: Math.round(stats.range),
+    speed: Math.round(stats.speed),
+    radius: stats.radius.toFixed(1)
+  };
+  for (const stat of ['damage', 'range', 'speed', 'radius']) {
+    const lv = p.upgrades[stat];
+    const cost = engine.getUpgradeCost(p, stat);
+    const btn = document.getElementById(`upg-${stat}`);
+    document.getElementById(`lv-${stat}`).textContent = `Lv${lv}`;
+    document.getElementById(`val-${stat}`).textContent = mapVal[stat];
+    document.getElementById(`cost-${stat}`).textContent = isFinite(cost) ? `${cost} G` : 'MAX';
+    const canBuy = p.isPlayer && isFinite(cost) && p.gold >= cost;
+    btn.disabled = !canBuy;
+    btn.classList.toggle('affordable', canBuy);
+  }
+
+  // Blink slot
+  const blinkSlot = document.getElementById('slot-blink');
+  blinkSlot.classList.toggle('owned', !!p.items.blink);
+  blinkSlot.innerHTML = p.blinkCd > 0
+    ? `💨<div class="slot-cd">${p.blinkCd.toFixed(1)}</div>`
+    : '💨';
+
+  // Passive item slots
+  document.querySelectorAll('.inv-slot[data-item]').forEach(slot => {
+    const id = slot.dataset.item;
+    slot.classList.toggle('owned', !!p.items[id]);
+  });
+
+  if (document.getElementById('modal-shop').classList.contains('open')) {
+    document.getElementById('shop-gold').textContent = `${Math.floor(p.gold)} G`;
+    document.querySelectorAll('.shop-buy-btn').forEach(b => {
+      const id = b.dataset.item;
+      const owned = !!p.items[id];
+      const cost = BALANCE.ITEMS[id].cost;
+      b.disabled = owned || !p.isPlayer || p.gold < cost;
+      b.textContent = owned ? '✓ 已拥有' : `购买 (${cost}G)`;
+    });
+  }
+}
+
+function renderShop() {
+  const grid = document.getElementById('shop-grid');
+  grid.innerHTML = '';
+  const p = engine ? engine.getPlayer() : null;
+  for (const item of Object.values(BALANCE.ITEMS)) {
+    const owned = p && !!p.items[item.id];
+    const card = document.createElement('div');
+    card.className = 'shop-card' + (owned ? ' owned' : '');
+    card.innerHTML = `
+      <div class="shop-card-top">
+        <div class="shop-name"><span>${item.icon}</span><span>${item.name}</span></div>
+        <div class="shop-price">${item.cost} G</div>
+      </div>
+      <div class="shop-desc">${item.desc}</div>
+      <button class="btn btn-gold shop-buy-btn" data-item="${item.id}" ${owned ? 'disabled' : ''}>
+        ${owned ? '✓ 已拥有' : `购买 (${item.cost}G)`}
+      </button>
+    `;
+    grid.appendChild(card);
+  }
+  grid.querySelectorAll('.shop-buy-btn').forEach(btn => {
+    btn.addEventListener('click', () => {
+      sfx.unlock();
+      const p = engine.getPlayer();
+      if (!p.isPlayer) return showToast('观战模式由 AI 自动出装');
+      if (engine.buyItem(p, btn.dataset.item)) {
+        showToast(`已购买 ${BALANCE.ITEMS[btn.dataset.item].name}！`);
+        renderShop();
+        updateHUD();
+      } else {
+        showToast('金币不足！');
+      }
+    });
+  });
+}
+
+function openStatsModal(isGameOver = false) {
+  if (!engine) return;
+  const title = document.getElementById('stats-title');
+  const sum = document.getElementById('stats-summary');
+  if (isGameOver && engine.winner) {
+    title.textContent = engine.winner === 'west' ? '🏆 西岸红队胜利！' : '🏆 东岸蓝队胜利！';
+  } else {
+    title.textContent = '📊 实时战绩统计';
+  }
+  sum.textContent = `比分：西岸红队 ${engine.scores.west} vs ${engine.scores.east} 东岸蓝队 · 用时 ${document.getElementById('match-time').textContent}`;
+
+  const tbody = document.getElementById('stats-tbody');
+  tbody.innerHTML = '';
+  const sorted = [...engine.pudges].sort((a, b) => b.kills - a.kills || a.deaths - b.deaths);
+  for (const p of sorted) {
+    const acc = p.hooksFired > 0 ? Math.round((p.hooksHit / p.hooksFired) * 100) + '%' : '-';
+    const tr = document.createElement('tr');
+    tr.innerHTML = `
+      <td style="font-weight:700;color:${p.isPlayer ? '#f5c542' : '#ede6d6'}">${p.name}</td>
+      <td style="color:${p.team === 'west' ? '#ff6b6b' : '#4fc3f7'}">${p.team === 'west' ? '西岸' : '东岸'}</td>
+      <td>${p.kills}</td><td>${p.deaths}</td><td>${p.assists}</td>
+      <td>${p.headshots}</td><td>${acc}</td><td>${Object.keys(p.items).length}</td>
+    `;
+    tbody.appendChild(tr);
+  }
+  document.getElementById('modal-stats').classList.add('open');
+}
+
+/* ============================================================================
+   INPUT & UI EVENT BINDINGS
+   ============================================================================ */
+canvas.addEventListener('mousemove', e => {
+  const pt = screenToWorld(e.clientX, e.clientY);
+  playerInput.aimX = pt.x;
+  playerInput.aimY = pt.y;
+});
+
+canvas.addEventListener('mousedown', e => {
+  sfx.unlock();
+  if (!engine || engine.paused || engine.winner) return;
+  const p = engine.getPlayer();
+  if (!p || !p.isPlayer) return;
+  const pt = screenToWorld(e.clientX, e.clientY);
+  playerInput.aimX = pt.x;
+  playerInput.aimY = pt.y;
+  if (e.button === 0) {
+    engine.fireHook(p, pt.x, pt.y);
+  } else if (e.button === 2) {
+    const myShore = engine.getShore(p.x);
+    const clickedEnemy = engine.pudges.find(en =>
+      en.alive && en.team !== p.team && engine.getShore(en.x) === myShore &&
+      dist(pt.x, pt.y, en.x, en.y) <= en.radius + 16
+    );
+    if (clickedEnemy) {
+      p.attackTargetId = clickedEnemy.id;
+      p.moveTarget = null;
+    } else {
+      p.attackTargetId = null;
+      p.moveTarget = { x: pt.x, y: pt.y };
+    }
+  }
+});
+
+canvas.addEventListener('contextmenu', e => e.preventDefault());
+
+window.addEventListener('keydown', e => {
+  sfx.unlock();
+  const k = e.key.toLowerCase();
+  if (k === 'w' || k === 'arrowup') playerInput.up = true;
+  if (k === 's' || k === 'arrowdown') playerInput.down = true;
+  if (k === 'a' || k === 'arrowleft') playerInput.left = true;
+  if (k === 'd' || k === 'arrowright') playerInput.right = true;
+
+  if (!engine) return;
+  const p = engine.getPlayer();
+  if (k === 'b') {
+    const shop = document.getElementById('modal-shop');
+    shop.classList.toggle('open');
+    if (shop.classList.contains('open')) renderShop();
+    return;
+  }
+  if (k === 'escape') {
+    document.querySelectorAll('.modal-backdrop').forEach(m => m.classList.remove('open'));
+    return;
+  }
+  if (engine.paused || engine.winner || !p || !p.isPlayer) return;
+
+  if (k === 'q') {
+    engine.fireHook(p, playerInput.aimX, playerInput.aimY);
+  } else if (k === 'e' || k === ' ') {
+    e.preventDefault();
+    engine.triggerBlink(p, playerInput.aimX, playerInput.aimY);
+  } else if (k === '1') {
+    engine.buyUpgrade(p, 'damage');
+  } else if (k === '2') {
+    engine.buyUpgrade(p, 'range');
+  } else if (k === '3') {
+    engine.buyUpgrade(p, 'speed');
+  } else if (k === '4') {
+    engine.buyUpgrade(p, 'radius');
+  }
+});
+
+window.addEventListener('keyup', e => {
+  const k = e.key.toLowerCase();
+  if (k === 'w' || k === 'arrowup') playerInput.up = false;
+  if (k === 's' || k === 'arrowdown') playerInput.down = false;
+  if (k === 'a' || k === 'arrowleft') playerInput.left = false;
+  if (k === 'd' || k === 'arrowright') playerInput.right = false;
+});
+
+// Upgrade buttons
+document.querySelectorAll('.upg-btn').forEach(btn => {
+  btn.addEventListener('click', () => {
+    sfx.unlock();
+    if (!engine) return;
+    const p = engine.getPlayer();
+    if (!p.isPlayer) return;
+    engine.buyUpgrade(p, btn.dataset.stat);
+    updateHUD();
+  });
+});
+
+// Top bar buttons
+document.getElementById('btn-shop').addEventListener('click', () => {
+  sfx.unlock();
+  renderShop();
+  document.getElementById('modal-shop').classList.toggle('open');
+});
+document.getElementById('btn-close-shop').addEventListener('click', () => {
+  document.getElementById('modal-shop').classList.remove('open');
+});
+document.getElementById('btn-stats').addEventListener('click', () => openStatsModal(false));
+document.getElementById('btn-close-stats').addEventListener('click', () => {
+  document.getElementById('modal-stats').classList.remove('open');
+});
+document.getElementById('btn-rematch').addEventListener('click', () => {
+  sfx.unlock();
+  startNewGame();
+});
+document.getElementById('btn-pause').addEventListener('click', () => {
+  if (!engine) return;
+  engine.paused = !engine.paused;
+  document.getElementById('btn-pause').textContent = engine.paused ? '▶ 继续' : '⏸ 暂停';
+});
+document.getElementById('btn-mute').addEventListener('click', () => {
+  sfx.muted = !sfx.muted;
+  document.getElementById('btn-mute').textContent = sfx.muted ? '🔇' : '🔊';
+});
+document.getElementById('btn-menu').addEventListener('click', () => {
+  document.getElementById('modal-menu').classList.add('open');
+});
+document.getElementById('btn-close-menu').addEventListener('click', () => {
+  if (engine) document.getElementById('modal-menu').classList.remove('open');
+});
+document.getElementById('slot-blink').addEventListener('click', () => {
+  if (!engine) return;
+  const p = engine.getPlayer();
+  if (p && p.isPlayer) engine.triggerBlink(p, playerInput.aimX, playerInput.aimY);
+});
+
+// Mode / Settings selectors
+document.querySelectorAll('.mode-opt').forEach(opt => {
+  opt.addEventListener('click', () => {
+    document.querySelectorAll('.mode-opt').forEach(o => o.classList.remove('selected'));
+    opt.classList.add('selected');
+    selectedConfig.teamSize = parseInt(opt.dataset.teamsize, 10);
+  });
+});
+document.querySelectorAll('#diff-group .btn').forEach(btn => {
+  btn.addEventListener('click', () => {
+    document.querySelectorAll('#diff-group .btn').forEach(b => b.classList.remove('btn-active'));
+    btn.classList.add('btn-active');
+    selectedConfig.difficulty = btn.dataset.diff;
+  });
+});
+document.querySelectorAll('#goal-group .btn').forEach(btn => {
+  btn.addEventListener('click', () => {
+    document.querySelectorAll('#goal-group .btn').forEach(b => b.classList.remove('btn-active'));
+    btn.classList.add('btn-active');
+    selectedConfig.killGoal = parseInt(btn.dataset.goal, 10);
+  });
+});
+document.getElementById('chk-spectate').addEventListener('change', e => {
+  selectedConfig.spectate = e.target.checked;
+});
+document.getElementById('btn-start-game').addEventListener('click', () => {
+  sfx.unlock();
+  startNewGame();
+});
+
+// Touch virtual joystick & buttons
+const touchPad = document.getElementById('touch-pad');
+const touchKnob = document.getElementById('touch-knob');
+let joyActive = false;
+touchPad.addEventListener('touchstart', e => { sfx.unlock(); joyActive = true; e.preventDefault(); }, { passive: false });
+touchPad.addEventListener('touchmove', e => {
+  if (!joyActive) return;
+  const t = e.touches[0];
+  const r = touchPad.getBoundingClientRect();
+  const cx = r.left + r.width / 2, cy = r.top + r.height / 2;
+  let dx = t.clientX - cx, dy = t.clientY - cy;
+  const maxR = r.width / 2 - 18;
+  const d = Math.hypot(dx, dy);
+  if (d > maxR) { dx = (dx / d) * maxR; dy = (dy / d) * maxR; }
+  touchKnob.style.transform = `translate(${dx}px, ${dy}px)`;
+  playerInput.joyX = dx / maxR;
+  playerInput.joyY = dy / maxR;
+  e.preventDefault();
+}, { passive: false });
+touchPad.addEventListener('touchend', () => {
+  joyActive = false;
+  touchKnob.style.transform = 'translate(0,0)';
+  playerInput.joyX = 0; playerInput.joyY = 0;
+});
+
+document.getElementById('touch-hook').addEventListener('touchstart', e => {
+  sfx.unlock();
+  if (!engine) return;
+  const p = engine.getPlayer();
+  if (p && p.isPlayer) {
+    // Auto-aim toward nearest enemy on tap
+    const enemies = engine.pudges.filter(en => en.team !== p.team && en.alive);
+    if (enemies.length > 0) {
+      enemies.sort((a, b) => dist(p.x, p.y, a.x, a.y) - dist(p.x, p.y, b.x, b.y));
+      engine.fireHook(p, enemies[0].x, enemies[0].y);
+    }
+  }
+  e.preventDefault();
+}, { passive: false });
+
+document.getElementById('touch-blink').addEventListener('touchstart', e => {
+  sfx.unlock();
+  if (!engine) return;
+  const p = engine.getPlayer();
+  if (p && p.isPlayer) {
+    engine.triggerBlink(p, p.x + (playerInput.joyX || 1) * 180, p.y + playerInput.joyY * 180);
+  }
+  e.preventDefault();
+}, { passive: false });
+
+window.addEventListener('resize', resizeCanvas);
+window.onload = () => {
+  engine = new PudgeWarsEngine({
+    teamSize: selectedConfig.teamSize,
+    difficulty: selectedConfig.difficulty,
+    killGoal: selectedConfig.killGoal,
+    spectate: false,
+    onEvent: handleEngineEvent
+  });
+  engine.paused = true; // Paused behind start menu until user clicks start
+  resizeCanvas();
+  renderShop();
+  updateHUD();
+  lastFrameTime = performance.now();
+  rafId = requestAnimationFrame(gameLoop);
+};
+</script>
+</body>
+</html>

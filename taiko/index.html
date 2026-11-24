@@ -1,0 +1,231 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>网页太鼓达人 · Web Taiko Master</title>
+  <link rel="stylesheet" href="./src/styles.css" />
+</head>
+<body>
+  <div class="app-shell">
+    <header class="topbar">
+      <div class="brand">
+        <div class="brand-icon" aria-hidden="true">太</div>
+        <div>
+          <h1>网页太鼓达人 · Web Taiko Master</h1>
+          <p>Web Audio 实时合成 · 60fps Canvas 判定引擎 · TJA-Lite 谱面系统</p>
+        </div>
+      </div>
+      <nav class="toolbar" aria-label="主工具栏">
+        <button type="button" class="btn active" data-nav="select">选曲大厅</button>
+        <button type="button" class="btn" data-nav="editor">谱面编辑器</button>
+        <button type="button" class="btn" id="btn-toggle-auto">自动演奏: 关</button>
+        <button type="button" class="btn" id="btn-mute">🔊 音效</button>
+        <button type="button" class="btn" id="btn-open-settings">⚙ 设置与校准</button>
+      </nav>
+    </header>
+
+    <!-- Song Select View -->
+    <main id="view-select" class="panel">
+      <div class="select-header">
+        <div>
+          <h2>选择曲目与难度</h2>
+          <p style="font-size:0.84rem;color:var(--text-muted);">支持键盘 D / F / J / K 与触屏/鼠标鼓面双模式敲击</p>
+        </div>
+        <div class="diff-tabs" role="tablist" aria-label="难度选择">
+          <button type="button" class="diff-btn" data-diff="easy">简单 · かんたん</button>
+          <button type="button" class="diff-btn active" data-diff="normal">普通 · ふつう</button>
+          <button type="button" class="diff-btn" data-diff="oni">鬼级 · おに</button>
+        </div>
+      </div>
+
+      <div id="song-list" class="song-grid"></div>
+
+      <div class="launch-bar">
+        <div>
+          <div id="selected-song-title" style="font-weight:800;font-size:1.05rem;"></div>
+          <div id="selected-song-meta" style="font-size:0.82rem;color:var(--text-muted);"></div>
+        </div>
+        <button type="button" id="btn-start-game" class="btn btn-primary">🥁 开始演奏</button>
+      </div>
+
+      <div class="key-hint">
+        <span class="key-chip"><span class="dot-ka"></span> D / K = 咔 (蓝·鼓边)</span>
+        <span class="key-chip"><span class="dot-don"></span> F / J = 咚 (红·鼓面)</span>
+        <span class="key-chip">⚡ 良 ±25ms · 可 ±75ms · 不可 ±108ms</span>
+        <span class="key-chip">ESC = 暂停</span>
+      </div>
+    </main>
+
+    <!-- Gameplay View -->
+    <section id="view-play" class="panel hidden">
+      <div class="hud-bar">
+        <div>
+          <strong id="hud-song-title">曲目演奏中</strong>
+          <span id="hud-auto-badge" class="tag hidden" style="margin-left:8px;background:#f59e0b;color:#111827;font-weight:800;">AUTO</span>
+        </div>
+        <div class="hud-stats">
+          <div class="hud-metric">
+            <span class="label">得分</span>
+            <span class="val" id="hud-score">0</span>
+          </div>
+          <div class="hud-metric">
+            <span class="label">连击</span>
+            <span class="val" id="hud-combo">0</span>
+          </div>
+          <div class="hud-metric">
+            <span class="label">准确率</span>
+            <span class="val" id="hud-accuracy">100.0%</span>
+          </div>
+          <button type="button" class="btn" id="btn-pause">⏸ 暂停</button>
+          <button type="button" class="btn" id="btn-restart">↻ 重来</button>
+          <button type="button" class="btn" id="btn-exit-play">✕ 返回</button>
+        </div>
+      </div>
+
+      <div class="progress-track" aria-label="演奏进度">
+        <div id="hud-progress-fill" class="progress-fill"></div>
+      </div>
+
+      <div class="stage-wrap">
+        <canvas id="taiko-canvas" aria-label="太鼓达人演奏舞台"></canvas>
+        <div id="pause-overlay" class="pause-overlay hidden">
+          <h3>演奏已暂停</h3>
+          <button type="button" class="btn btn-primary" id="btn-resume">▶ 继续演奏</button>
+        </div>
+      </div>
+
+      <div class="drum-pad-grid" aria-label="触控鼓面">
+        <button type="button" class="drum-pad ka" data-pad="leftKa">
+          <span class="pad-key">D · 咔</span>
+          <span class="pad-sub">左鼓边</span>
+        </button>
+        <button type="button" class="drum-pad don" data-pad="leftDon">
+          <span class="pad-key">F · 咚</span>
+          <span class="pad-sub">左鼓面</span>
+        </button>
+        <button type="button" class="drum-pad don" data-pad="rightDon">
+          <span class="pad-key">J · 咚</span>
+          <span class="pad-sub">右鼓面</span>
+        </button>
+        <button type="button" class="drum-pad ka" data-pad="rightKa">
+          <span class="pad-key">K · 咔</span>
+          <span class="pad-sub">右鼓边</span>
+        </button>
+      </div>
+    </section>
+
+    <!-- Results View -->
+    <section id="view-result" class="panel hidden">
+      <div class="result-header">
+        <div>
+          <h2 id="res-song-title">演奏结算</h2>
+          <div style="margin-top:8px;">
+            <span id="res-stamp" class="result-stamp cleared">CLEAR</span>
+          </div>
+        </div>
+        <div id="res-rank" class="result-rank">S</div>
+      </div>
+
+      <div class="result-grid">
+        <div class="stat-box"><div class="k">最终得分</div><div class="v" id="res-score">0</div></div>
+        <div class="stat-box"><div class="k">准确率</div><div class="v" id="res-accuracy">100%</div></div>
+        <div class="stat-box"><div class="k">最大连击</div><div class="v" id="res-max-combo">0</div></div>
+        <div class="stat-box"><div class="k">魂槽进度</div><div class="v" id="res-soul">0%</div></div>
+        <div class="stat-box"><div class="k">良 (GREAT)</div><div class="v" style="color:#fde047" id="res-great">0</div></div>
+        <div class="stat-box"><div class="k">可 (GOOD)</div><div class="v" style="color:#e2e8f0" id="res-good">0</div></div>
+        <div class="stat-box"><div class="k">不可 (MISS)</div><div class="v" style="color:#94a3b8" id="res-miss">0</div></div>
+        <div class="stat-box"><div class="k">平均偏移</div><div class="v" id="res-mean-offset">0 ms</div></div>
+      </div>
+
+      <div class="histogram-box">
+        <div style="font-size:0.84rem;font-weight:700;">打击偏移分布 (ms · 负值为偏早，正值为偏晚)</div>
+        <div id="res-histogram" class="histogram"></div>
+      </div>
+
+      <div style="display:flex;gap:10px;flex-wrap:wrap;">
+        <button type="button" class="btn btn-primary" id="btn-res-retry">↻ 再来一局</button>
+        <button type="button" class="btn" id="btn-res-back">← 返回选曲大厅</button>
+      </div>
+    </section>
+
+    <!-- Custom TJA-Lite Chart Editor View -->
+    <section id="view-editor" class="panel hidden">
+      <div style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:10px;">
+        <div>
+          <h2>TJA-Lite 自定义谱面编辑器</h2>
+          <p style="font-size:0.82rem;color:var(--text-muted);">支持指令 <code>#BPMCHANGE</code>、<code>#SCROLL</code>、<code>#GOGOSTART</code>、<code>#GOGOEND</code> 与音符 0-8</p>
+        </div>
+        <div style="display:flex;gap:8px;">
+          <button type="button" class="btn" id="btn-editor-sample">载入示例谱面</button>
+          <button type="button" class="btn btn-primary" id="btn-editor-play">▶ 立即试玩</button>
+        </div>
+      </div>
+
+      <textarea id="tja-editor-input" class="editor-textarea" spellcheck="false" aria-label="TJA-Lite 谱面代码"></textarea>
+      <div id="tja-editor-error" class="editor-error hidden"></div>
+      <div id="tja-editor-stats" style="font-size:0.84rem;color:var(--accent-yellow);font-weight:600;"></div>
+    </section>
+  </div>
+
+  <!-- Settings & Calibration Modal -->
+  <div id="settings-modal" class="modal-backdrop hidden" role="dialog" aria-modal="true" aria-labelledby="settings-title">
+    <div class="modal-card">
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px;">
+        <h3 id="settings-title">⚙ 游戏设置与音频延迟校准</h3>
+        <button type="button" class="btn" id="btn-close-settings">关闭</button>
+      </div>
+
+      <div class="setting-row">
+        <label for="setting-offset" style="min-width:110px;">音频延迟补偿</label>
+        <input type="range" id="setting-offset" min="-150" max="150" step="5" value="0" />
+        <span id="setting-offset-val" style="min-width:60px;text-align:right;font-weight:700;">0 ms</span>
+      </div>
+
+      <div class="setting-row">
+        <label for="setting-speed" style="min-width:110px;">音符流速</label>
+        <input type="range" id="setting-speed" min="0.5" max="2.0" step="0.1" value="1.0" />
+        <span id="setting-speed-val" style="min-width:60px;text-align:right;font-weight:700;">1.0x</span>
+      </div>
+
+      <div class="setting-row">
+        <label for="setting-bgm" style="min-width:110px;">背景音乐音量</label>
+        <input type="range" id="setting-bgm" min="0" max="100" step="5" value="75" />
+        <span id="setting-bgm-val" style="min-width:60px;text-align:right;font-weight:700;">75%</span>
+      </div>
+
+      <div class="setting-row">
+        <label for="setting-sfx" style="min-width:110px;">鼓声打击音量</label>
+        <input type="range" id="setting-sfx" min="0" max="100" step="5" value="90" />
+        <span id="setting-sfx-val" style="min-width:60px;text-align:right;font-weight:700;">90%</span>
+      </div>
+
+      <div style="margin-top:14px;font-weight:700;font-size:0.9rem;">自定义键位（点击按钮后按下目标键）</div>
+      <div class="keybind-grid">
+        <div class="keybind-item"><span>左鼓边 (咔)</span><button type="button" class="btn" data-keybind="leftKa">D</button></div>
+        <div class="keybind-item"><span>左鼓面 (咚)</span><button type="button" class="btn" data-keybind="leftDon">F</button></div>
+        <div class="keybind-item"><span>右鼓面 (咚)</span><button type="button" class="btn" data-keybind="rightDon">J</button></div>
+        <div class="keybind-item"><span>右鼓边 (咔)</span><button type="button" class="btn" data-keybind="rightKa">K</button></div>
+      </div>
+
+      <div style="background:rgba(255,255,255,0.05);padding:12px;border-radius:10px;margin-bottom:14px;">
+        <div style="display:flex;justify-content:space-between;align-items:center;gap:10px;">
+          <strong style="font-size:0.88rem;">互动节拍校准工具 (120 BPM)</strong>
+          <button type="button" class="btn" id="btn-calibrate">开始节拍校准</button>
+        </div>
+        <div id="calibrate-status" style="font-size:0.8rem;color:var(--text-muted);margin-top:6px;">
+          点击开始后，跟随节拍器敲击 Space / F / J 键 8 次即可自动计算并保存延迟补偿。
+        </div>
+      </div>
+
+      <div style="display:flex;justify-content:flex-end;">
+        <button type="button" class="btn" id="btn-reset-settings">恢复默认设置</button>
+      </div>
+    </div>
+  </div>
+
+  <div id="toast" class="toast hidden" role="status" aria-live="polite"></div>
+
+  <script type="module" src="./src/ui/app.js"></script>
+</body>
+</html>

@@ -1,0 +1,1991 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>NukeSim Lab — 核爆效应物理模拟器</title>
+  <script src="https://cdn.tailwindcss.com/3.4.17"></script>
+  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+  <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
+  <style>
+:root {
+  --bg-deep: #070b14;
+  --bg-panel: #0f172a;
+  --bg-card: #162033;
+  --border-subtle: rgba(148, 163, 184, 0.16);
+  --accent-amber: #f59e0b;
+  --accent-red: #ef4444;
+  --accent-cyan: #38bdf8;
+  --text-primary: #f1f5f9;
+  --text-muted: #94a3b8;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+html,
+body {
+  margin: 0;
+  padding: 0;
+  background-color: var(--bg-deep);
+  color: var(--text-primary);
+  font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'PingFang SC', 'Microsoft YaHei', sans-serif;
+  -webkit-font-smoothing: antialiased;
+}
+
+/* Custom subtle scrollbars */
+::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+::-webkit-scrollbar-track {
+  background: rgba(15, 23, 42, 0.6);
+}
+::-webkit-scrollbar-thumb {
+  background: rgba(148, 163, 184, 0.3);
+  border-radius: 999px;
+}
+::-webkit-scrollbar-thumb:hover {
+  background: rgba(148, 163, 184, 0.5);
+}
+
+/* Leaflet Dark Overrides */
+.leaflet-container {
+  background-color: #070d19 !important;
+  background-image:
+    linear-gradient(rgba(56, 189, 248, 0.06) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(56, 189, 248, 0.06) 1px, transparent 1px);
+  background-size: 40px 40px;
+  font-family: inherit !important;
+}
+.leaflet-control-attribution {
+  background: rgba(15, 23, 42, 0.78) !important;
+  color: #94a3b8 !important;
+  font-size: 10px !important;
+}
+.leaflet-control-attribution a {
+  color: #38bdf8 !important;
+}
+
+/* Range slider styling */
+input[type='range'] {
+  -webkit-appearance: none;
+  appearance: none;
+  background: #1e293b;
+  height: 6px;
+  border-radius: 999px;
+  outline: none;
+}
+input[type='range']::-webkit-slider-thumb {
+  -webkit-appearance: none;
+  appearance: none;
+  width: 16px;
+  height: 16px;
+  border-radius: 50%;
+  background: #f59e0b;
+  border: 2px solid #0f172a;
+  cursor: pointer;
+  box-shadow: 0 0 10px rgba(245, 158, 11, 0.5);
+  transition: transform 0.15s ease;
+}
+input[type='range']::-webkit-slider-thumb:hover {
+  transform: scale(1.15);
+}
+
+/* Tactical pulse animation for ground zero marker */
+.gz-marker {
+  width: 18px;
+  height: 18px;
+  border-radius: 50%;
+  background: radial-gradient(circle, #fef08a 0%, #ef4444 65%, rgba(239, 68, 68, 0.2) 100%);
+  border: 2px solid #ffffff;
+  box-shadow: 0 0 14px rgba(239, 68, 68, 0.9);
+  position: relative;
+}
+.gz-marker::after {
+  content: '';
+  position: absolute;
+  inset: -8px;
+  border-radius: 50%;
+  border: 1.5px solid rgba(245, 158, 11, 0.8);
+  animation: gzPulse 1.8s ease-out infinite;
+}
+@keyframes gzPulse {
+  0% { transform: scale(0.7); opacity: 0.9; }
+  100% { transform: scale(1.9); opacity: 0; }
+}
+
+/* Detonation flash overlay */
+#flash-overlay {
+  pointer-events: none;
+  opacity: 0;
+  transition: opacity 0.65s cubic-bezier(0.16, 1, 0.3, 1);
+}
+#flash-overlay.flash-active {
+  opacity: 0.92;
+  transition: opacity 0.05s linear;
+}
+
+.preset-btn.active {
+  border-color: #f59e0b;
+  background-color: rgba(245, 158, 11, 0.16);
+  color: #fde68a;
+}
+
+.tab-btn.active {
+  color: #f59e0b;
+  border-bottom-color: #f59e0b;
+}
+
+/* Offline grid pattern when grid basemap active */
+.tactical-grid-bg {
+  background-color: #060b14 !important;
+  background-image:
+    linear-gradient(rgba(56, 189, 248, 0.08) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(56, 189, 248, 0.08) 1px, transparent 1px),
+    radial-gradient(circle at center, rgba(245, 158, 11, 0.06) 0%, transparent 70%);
+  background-size: 36px 36px, 36px 36px, 100% 100%;
+}
+
+  </style>
+</head>
+<body class="bg-slate-950 text-slate-100 min-h-screen flex flex-col overflow-x-hidden">
+  <!-- Detonation Flash Overlay -->
+  <div id="flash-overlay" class="fixed inset-0 bg-amber-100 z-[9999]"></div>
+
+  <!-- Toast Notification -->
+  <div id="toast-banner" class="fixed bottom-5 right-5 z-[9998] px-4 py-2.5 rounded-lg bg-slate-800/95 border border-amber-500/50 text-amber-200 text-xs font-medium shadow-xl opacity-0 translate-y-2 pointer-events-none transition-all duration-200"></div>
+
+  <!-- Top Navigation Bar -->
+  <header class="h-14 shrink-0 border-b border-slate-800 bg-slate-900/95 backdrop-blur px-3 sm:px-4 flex items-center justify-between gap-2 z-30">
+    <div class="flex items-center gap-2.5 min-w-0">
+      <button id="btn-toggle-sidebar" type="button" class="lg:hidden px-2.5 py-1.5 rounded-md bg-slate-800 border border-slate-700 text-xs text-slate-200 hover:bg-slate-700">☰ 参数</button>
+      <div class="w-8 h-8 rounded-lg bg-amber-500/20 border border-amber-500/50 flex items-center justify-center text-amber-400 font-bold text-base shrink-0">☢</div>
+      <div class="truncate">
+        <div class="flex items-center gap-2">
+          <h1 class="text-sm sm:text-base font-bold tracking-tight text-slate-100 truncate">NukeSim Lab</h1>
+          <span class="hidden sm:inline-block px-1.5 py-0.5 text-[10px] font-mono uppercase rounded bg-amber-500/15 text-amber-300 border border-amber-500/30">物理教学模拟</span>
+        </div>
+      </div>
+    </div>
+
+    <div class="flex items-center gap-2 shrink-0">
+      <select id="city-select" aria-label="选择目标城市" class="bg-slate-800 border border-slate-700 rounded-md px-2 py-1.5 text-xs text-slate-100 focus:outline-none focus:border-amber-500"></select>
+      <select id="basemap-select" aria-label="切换地图底图" class="hidden sm:block bg-slate-800 border border-slate-700 rounded-md px-2 py-1.5 text-xs text-slate-100 focus:outline-none focus:border-amber-500">
+        <option value="dark">暗色战术底图</option>
+        <option value="satellite">卫星影像</option>
+        <option value="street">标准街道</option>
+        <option value="grid">离线雷达网格</option>
+      </select>
+      <button id="btn-toggle-sound" type="button" class="px-2.5 py-1.5 rounded-md bg-slate-800 border border-slate-700 text-xs text-slate-200 hover:border-amber-500/60 transition">🔊 音效开</button>
+    </div>
+  </header>
+
+  <!-- Main Workspace -->
+  <div class="flex-1 flex flex-col lg:flex-row min-h-0">
+    <!-- Left Control Panel -->
+    <aside id="control-sidebar" class="w-full lg:w-80 xl:w-84 shrink-0 border-b lg:border-b-0 lg:border-r border-slate-800 bg-slate-900/90 p-3.5 overflow-y-auto lg:max-h-[calc(100vh-3.5rem)] space-y-4">
+      <!-- Action CTA -->
+      <div class="space-y-2">
+        <button id="btn-detonate" type="button" class="w-full py-2.5 px-4 rounded-lg bg-gradient-to-r from-red-600 to-amber-500 hover:from-red-500 hover:to-amber-400 text-white font-bold text-sm shadow-lg shadow-red-900/30 transition flex items-center justify-center gap-2">
+          <span>⚡</span> <span>执行模拟引爆 (DETONATE)</span>
+        </button>
+        <div class="grid grid-cols-3 gap-1.5">
+          <button id="btn-pin-compare" type="button" class="relative py-1.5 px-2 rounded-md bg-slate-800 hover:bg-slate-700 border border-slate-700 text-xs text-sky-300 transition">
+            + 对比爆点
+            <span id="pin-count-badge" class="hidden ml-1 px-1.5 py-0.2 rounded-full bg-sky-500 text-slate-950 font-bold text-[10px]">0</span>
+          </button>
+          <button id="btn-clear-pins" type="button" class="py-1.5 px-2 rounded-md bg-slate-800 hover:bg-slate-700 border border-slate-700 text-xs text-slate-300 transition">清除对比</button>
+          <button id="btn-export-json" type="button" class="py-1.5 px-2 rounded-md bg-slate-800 hover:bg-slate-700 border border-slate-700 text-xs text-emerald-300 transition">导出JSON</button>
+        </div>
+      </div>
+
+      <!-- Weapon Presets -->
+      <div>
+        <div class="flex items-center justify-between mb-2">
+          <span class="text-xs font-semibold uppercase tracking-wider text-slate-400">历史与现役当量预设</span>
+          <span id="yield-badge" class="text-xs font-mono font-bold text-amber-400">100 kt</span>
+        </div>
+        <div id="weapon-presets-grid" class="grid grid-cols-2 gap-1.5"></div>
+      </div>
+
+      <!-- Yield Slider & Exact Input -->
+      <div class="p-3 rounded-xl bg-slate-800/50 border border-slate-700/60 space-y-2.5">
+        <div class="flex items-center justify-between gap-2">
+          <label for="yield-input" class="text-xs font-medium text-slate-300">爆炸当量 (kt TNT)</label>
+          <input id="yield-input" type="number" min="0.01" max="100000" step="any" value="100" class="w-24 bg-slate-900 border border-slate-700 rounded px-2 py-1 text-xs font-mono text-right text-amber-300 focus:outline-none focus:border-amber-500" />
+        </div>
+        <input id="yield-slider" type="range" min="0" max="1000" value="571" class="w-full" />
+        <div class="flex justify-between text-[10px] font-mono text-slate-500">
+          <span>0.01 kt</span><span>15 kt</span><span>1 Mt</span><span>100 Mt</span>
+        </div>
+      </div>
+
+      <!-- Burst Type & Height of Burst -->
+      <div class="p-3 rounded-xl bg-slate-800/50 border border-slate-700/60 space-y-3">
+        <div class="grid grid-cols-2 gap-1.5">
+          <button type="button" data-burst="airburst" class="burst-type-btn py-1.5 rounded-md text-xs transition bg-amber-500 text-slate-950 font-semibold">高空空爆 (Airburst)</button>
+          <button type="button" data-burst="surface" class="burst-type-btn py-1.5 rounded-md text-xs transition bg-slate-800 text-slate-300">地面起爆 (Surface)</button>
+        </div>
+        <div id="hob-control-group" class="space-y-1.5">
+          <div class="flex items-center justify-between text-xs">
+            <span class="text-slate-300">起爆高度: <strong id="hob-display" class="text-amber-300 font-mono">882 m</strong></span>
+            <label class="flex items-center gap-1.5 text-[11px] text-slate-400 cursor-pointer">
+              <input id="auto-hob-toggle" type="checkbox" checked class="accent-amber-500" />
+              自动最优
+            </label>
+          </div>
+          <input id="hob-slider" type="range" min="0" max="15000" step="20" value="882" class="w-full" />
+          <div id="opt-hob-hint" class="text-[11px] text-slate-400">最优 5 psi 爆高: 882 m</div>
+        </div>
+      </div>
+
+      <!-- Wind & Fallout Settings -->
+      <div class="p-3 rounded-xl bg-slate-800/50 border border-slate-700/60 space-y-2.5">
+        <div class="flex items-center justify-between">
+          <span class="text-xs font-semibold text-slate-300">风场与放射性沉降</span>
+          <div class="w-6 h-6 rounded-full bg-slate-900 border border-slate-700 flex items-center justify-center" title="下风向沉降扩散方向">
+            <span id="wind-compass-arrow" class="text-purple-400 text-xs inline-block transition-transform">↑</span>
+          </div>
+        </div>
+        <div class="space-y-1">
+          <div class="flex justify-between text-[11px] text-slate-400">
+            <span>风速</span><span id="wind-speed-val" class="font-mono text-slate-200">24 km/h</span>
+          </div>
+          <input id="wind-speed-slider" type="range" min="0" max="120" value="24" class="w-full" />
+        </div>
+        <div class="space-y-1">
+          <div class="flex justify-between text-[11px] text-slate-400">
+            <span>风向 (气象来向)</span><span id="wind-dir-val" class="font-mono text-slate-200">315°</span>
+          </div>
+          <input id="wind-dir-slider" type="range" min="0" max="359" value="315" class="w-full" />
+        </div>
+      </div>
+
+      <!-- Layer Visibility Toggles -->
+      <div class="p-3 rounded-xl bg-slate-800/50 border border-slate-700/60 space-y-2">
+        <div class="text-xs font-semibold text-slate-300 mb-1">效应图层开关</div>
+        <div class="grid grid-cols-2 gap-1.5 text-xs text-slate-300">
+          <label class="flex items-center gap-1.5 cursor-pointer"><input type="checkbox" class="layer-toggle accent-yellow-400" data-layer="fireball" checked /> 火球汽化区</label>
+          <label class="flex items-center gap-1.5 cursor-pointer"><input type="checkbox" class="layer-toggle accent-red-500" data-layer="psi20" checked /> 20 psi 重损</label>
+          <label class="flex items-center gap-1.5 cursor-pointer"><input type="checkbox" class="layer-toggle accent-orange-500" data-layer="psi5" checked /> 5 psi 中损</label>
+          <label class="flex items-center gap-1.5 cursor-pointer"><input type="checkbox" class="layer-toggle accent-slate-400" data-layer="psi1" checked /> 1 psi 轻损</label>
+          <label class="flex items-center gap-1.5 cursor-pointer"><input type="checkbox" class="layer-toggle accent-amber-400" data-layer="thermal" checked /> 热辐射烧伤</label>
+          <label class="flex items-center gap-1.5 cursor-pointer"><input type="checkbox" class="layer-toggle accent-emerald-500" data-layer="radiation" checked /> 早期核辐射</label>
+          <label class="flex items-center gap-1.5 cursor-pointer col-span-2"><input type="checkbox" class="layer-toggle accent-purple-500" data-layer="fallout" checked /> 放射性沉降羽流 (触地时激活)</label>
+        </div>
+      </div>
+    </aside>
+
+    <!-- Center Map + Timeline -->
+    <main class="flex-1 flex flex-col min-w-0 relative">
+      <!-- Coordinate HUD -->
+      <div class="absolute top-3 left-3 z-[400] px-3 py-1.5 rounded-lg bg-slate-900/85 backdrop-blur border border-slate-700/80 text-xs flex items-center gap-2 pointer-events-none">
+        <span class="w-2 h-2 rounded-full bg-red-500 animate-pulse"></span>
+        <span class="text-slate-400">爆心坐标:</span>
+        <span id="coord-readout" class="font-mono text-amber-300">39.9042°N, 116.4074°E</span>
+        <span class="hidden md:inline text-slate-500">| 点击或拖拽地图移动爆心</span>
+      </div>
+
+      <!-- Explicit pixel/responsive height Leaflet Map Container -->
+      <div id="map-viewport" class="w-full h-[460px] lg:h-[calc(100vh-10.5rem)] min-h-[380px] z-10"></div>
+
+      <!-- Bottom Shockwave Timeline Bar -->
+      <section class="shrink-0 border-t border-slate-800 bg-slate-900/95 px-4 py-2.5 flex flex-wrap items-center gap-3 z-20">
+        <div class="flex items-center gap-1.5">
+          <button id="btn-play-timeline" type="button" class="px-3 py-1.5 rounded-md bg-sky-500/20 hover:bg-sky-500/30 border border-sky-500/50 text-sky-300 text-xs font-semibold transition">▶ 播放</button>
+          <button id="btn-reset-timeline" type="button" class="px-2.5 py-1.5 rounded-md bg-slate-800 hover:bg-slate-700 border border-slate-700 text-slate-300 text-xs transition">↺ 重置</button>
+        </div>
+        <div class="flex-1 min-w-[160px] flex items-center gap-2.5">
+          <span id="timeline-time-label" class="font-mono text-xs text-amber-400 w-14 shrink-0">T+0.0 s</span>
+          <input id="timeline-slider" type="range" min="0" max="60" step="0.5" value="0" class="flex-1" />
+        </div>
+        <div class="flex items-center gap-3 text-xs text-slate-300">
+          <span>冲击波前锋: <strong id="timeline-shock-label" class="font-mono text-sky-300">0.00 km</strong></span>
+          <span class="hidden sm:inline">云顶高度: <strong id="timeline-cloud-label" class="font-mono text-amber-300">0.00 km</strong></span>
+          <span id="timeline-phase-label" class="px-2 py-0.5 rounded bg-slate-800 border border-slate-700 text-[11px] text-slate-200">起爆前待命</span>
+        </div>
+      </section>
+    </main>
+
+    <!-- Right Telemetry & Analysis Panel -->
+    <section class="w-full lg:w-96 shrink-0 border-t lg:border-t-0 lg:border-l border-slate-800 bg-slate-900/95 flex flex-col lg:max-h-[calc(100vh-3.5rem)]">
+      <!-- Tabs -->
+      <div class="flex border-b border-slate-800 px-2 pt-1 shrink-0">
+        <button type="button" data-tab="overview" class="tab-btn active flex-1 py-2.5 text-xs font-semibold border-b-2 border-transparent transition">效应总览</button>
+        <button type="button" data-tab="charts" class="tab-btn flex-1 py-2.5 text-xs font-semibold border-b-2 border-transparent text-slate-400 hover:text-slate-200 transition">衰减图表</button>
+        <button type="button" data-tab="physics" class="tab-btn flex-1 py-2.5 text-xs font-semibold border-b-2 border-transparent text-slate-400 hover:text-slate-200 transition">物理模型</button>
+      </div>
+
+      <!-- Tab Content -->
+      <div class="flex-1 overflow-y-auto p-3.5 space-y-3">
+        <!-- Tab 1: Overview -->
+        <div id="tab-overview" class="tab-pane space-y-3">
+          <div id="fallout-status-box" class="p-2.5 rounded-lg bg-slate-800 text-xs text-slate-300"></div>
+
+          <div class="grid grid-cols-2 gap-2">
+            <div class="p-2.5 rounded-lg bg-slate-800/70 border-l-4 border-yellow-400">
+              <div class="text-[11px] text-slate-400">火球半径 (汽化)</div>
+              <div id="val-fireball-r" class="text-sm font-mono font-bold text-yellow-300 mt-0.5">--</div>
+              <div id="val-fireball-a" class="text-[10px] text-slate-400">--</div>
+            </div>
+            <div class="p-2.5 rounded-lg bg-slate-800/70 border-l-4 border-red-500">
+              <div class="text-[11px] text-slate-400">20 psi 重度冲击波</div>
+              <div id="val-psi20-r" class="text-sm font-mono font-bold text-red-400 mt-0.5">--</div>
+              <div id="val-psi20-a" class="text-[10px] text-slate-400">--</div>
+            </div>
+            <div class="p-2.5 rounded-lg bg-slate-800/70 border-l-4 border-orange-500">
+              <div class="text-[11px] text-slate-400">5 psi 中度冲击波</div>
+              <div id="val-psi5-r" class="text-sm font-mono font-bold text-orange-400 mt-0.5">--</div>
+              <div id="val-psi5-a" class="text-[10px] text-slate-400">--</div>
+            </div>
+            <div class="p-2.5 rounded-lg bg-slate-800/70 border-l-4 border-slate-400">
+              <div class="text-[11px] text-slate-400">1 psi 轻度冲击波</div>
+              <div id="val-psi1-r" class="text-sm font-mono font-bold text-slate-200 mt-0.5">--</div>
+              <div id="val-psi1-a" class="text-[10px] text-slate-400">--</div>
+            </div>
+            <div class="p-2.5 rounded-lg bg-slate-800/70 border-l-4 border-amber-400">
+              <div class="text-[11px] text-slate-400">热辐射三度烧伤</div>
+              <div id="val-thermal-r" class="text-sm font-mono font-bold text-amber-300 mt-0.5">--</div>
+              <div id="val-thermal-a" class="text-[10px] text-slate-400">--</div>
+            </div>
+            <div class="p-2.5 rounded-lg bg-slate-800/70 border-l-4 border-emerald-500">
+              <div class="text-[11px] text-slate-400">500 rem 早期辐射</div>
+              <div id="val-rad-r" class="text-sm font-mono font-bold text-emerald-400 mt-0.5">--</div>
+              <div id="val-rad-a" class="text-[10px] text-slate-400">--</div>
+            </div>
+          </div>
+
+          <!-- Homogeneous Population Density Simplified Estimate -->
+          <div class="p-3 rounded-xl bg-slate-800/60 border border-slate-700/70 space-y-2">
+            <div class="flex items-center justify-between">
+              <span class="text-xs font-semibold text-slate-200">均质人口影响估算（教学参考）</span>
+              <span id="est-pop-density" class="text-[11px] font-mono text-slate-400">6,500 人/km²</span>
+            </div>
+            <div class="grid grid-cols-2 gap-2">
+              <div class="p-2 rounded bg-red-950/40 border border-red-500/30">
+                <div class="text-[10px] text-red-300">估算致死暴露人数</div>
+                <div id="est-fatalities" class="text-base font-mono font-bold text-red-400">--</div>
+              </div>
+              <div class="p-2 rounded bg-amber-950/40 border border-amber-500/30">
+                <div class="text-[10px] text-amber-300">估算受伤暴露人数</div>
+                <div id="est-injuries" class="text-base font-mono font-bold text-amber-300">--</div>
+              </div>
+            </div>
+            <div class="flex items-center justify-between gap-2 pt-1">
+              <label for="pop-density-input" class="text-[11px] text-slate-400">自定义密度 (人/km²):</label>
+              <input id="pop-density-input" type="number" min="0" max="50000" step="100" value="6500" class="w-24 bg-slate-900 border border-slate-700 rounded px-2 py-0.5 text-xs font-mono text-right text-slate-200" />
+            </div>
+            <p class="text-[10px] text-slate-500 leading-relaxed">注：该模型采用均质圆环面积与固定人口密度相乘的简化估算，未计入地下掩体、地形遮蔽及实时人流分布。</p>
+          </div>
+        </div>
+
+        <!-- Tab 2: Charts -->
+        <div id="tab-charts" class="tab-pane hidden space-y-4">
+          <div class="p-3 rounded-xl bg-slate-800/60 border border-slate-700/60">
+            <div class="text-xs font-semibold text-slate-200 mb-2">各物理效应半径横向对比 (km)</div>
+            <div class="relative h-52">
+              <canvas id="chart-radii"></canvas>
+            </div>
+          </div>
+          <div class="p-3 rounded-xl bg-slate-800/60 border border-slate-700/60">
+            <div class="text-xs font-semibold text-slate-200 mb-2">超压 (psi) 与冲击风速 (km/h) 距离衰减曲线</div>
+            <div class="relative h-56">
+              <canvas id="chart-decay"></canvas>
+            </div>
+          </div>
+        </div>
+
+        <!-- Tab 3: Physics Model & Citations -->
+        <div id="tab-physics" class="tab-pane hidden space-y-3 text-xs text-slate-300">
+          <div class="p-3 rounded-xl bg-slate-800/60 border border-slate-700/60 space-y-1.5">
+            <div class="font-semibold text-amber-300 mb-1">能量释放分配 (低空核爆)</div>
+            <div class="flex justify-between"><span>总当量能量</span><span id="energy-total" class="font-mono text-slate-100">--</span></div>
+            <div class="flex justify-between"><span>冲击波与动压</span><span id="energy-blast" class="font-mono text-orange-300">--</span></div>
+            <div class="flex justify-between"><span>热辐射</span><span id="energy-thermal" class="font-mono text-amber-300">--</span></div>
+            <div class="flex justify-between"><span>早期电离辐射</span><span id="energy-initrad" class="font-mono text-emerald-300">--</span></div>
+            <div class="flex justify-between"><span>剩余辐射与沉降</span><span id="energy-resrad" class="font-mono text-purple-300">--</span></div>
+          </div>
+
+          <div class="p-3 rounded-xl bg-slate-800/60 border border-slate-700/60 space-y-2 leading-relaxed">
+            <div class="font-semibold text-sky-300">核心物理缩放律</div>
+            <p>• <strong>火球半径</strong>：遵循 <code class="text-amber-300">R ∝ Y^0.4</code>，受空爆/地爆反射系数调节。</p>
+            <p>• <strong>冲击波超压</strong>：遵循霍普金森-克兰兹立方根律 <code class="text-amber-300">R ∝ Y^(1/3)</code>；最优空爆因马赫杆效应较地爆半径扩大约 20–35%。</p>
+            <p>• <strong>热辐射烧伤</strong>：计入大气吸收修正 <code class="text-amber-300">R ∝ Y^0.41</code>，地爆因地表扬尘与遮挡衰减约 28%。</p>
+            <p>• <strong>早期核辐射</strong>：采用指数大气衰减方程 <code class="text-amber-300">D(R) ∝ (Y/R²)e^(-R/λ)</code> 数值二分求解 500 rem 等值半径。</p>
+          </div>
+
+          <div class="p-3 rounded-xl bg-slate-800/60 border border-slate-700/60 space-y-1.5 text-[11px]">
+            <div class="font-semibold text-slate-200">参考文献与数据来源</div>
+            <ul class="space-y-1 list-disc list-inside text-sky-400">
+              <li><a href="https://atomicarchive.com/resources/documents/effects/glasstone-dolan/chapter3.html" target="_blank" rel="noopener noreferrer" class="hover:underline">Glasstone &amp; Dolan (1977) — The Effects of Nuclear Weapons</a></li>
+              <li><a href="https://en.wikipedia.org/wiki/Effects_of_nuclear_explosions" target="_blank" rel="noopener noreferrer" class="hover:underline">Wikipedia — Effects of Nuclear Explosions</a></li>
+              <li><a href="https://en.wikipedia.org/wiki/Nuclear_weapon_yield" target="_blank" rel="noopener noreferrer" class="hover:underline">Wikipedia — Nuclear Weapon Yield Presets</a></li>
+              <li><a href="https://nuclearsecrecy.com/nukemap/" target="_blank" rel="noopener noreferrer" class="hover:underline">Alex Wellerstein — NUKEMAP Reference</a></li>
+            </ul>
+          </div>
+        </div>
+      </div>
+    </section>
+  </div>
+
+  <script>
+(function (root, factory) {
+  if (typeof module === 'object' && module.exports) {
+    module.exports = factory();
+  } else {
+    root.NukePhysics = factory();
+  }
+})(typeof globalThis !== 'undefined' ? globalThis : this, function () {
+  'use strict';
+
+  const MIN_YIELD_KT = 0.01;
+  const MAX_YIELD_KT = 100000;
+  const TNT_TJ_PER_KT = 4.184;
+  const SOUND_SPEED_KM_S = 0.343;
+  const EARTH_RADIUS_KM = 6371.0088;
+
+  // 1 kt reference ground radii (km) calibrated to Glasstone & Dolan (1977)
+  // Surface burst 1 kt: 5 psi ~1500 ft (0.46 km), 1 psi ~3700 ft (1.13 km)
+  // Optimum airburst increases blast radius ~20-35% via Mach stem formation
+  const BLAST_REF_1KT = {
+    surface: { psi20: 0.22, psi5: 0.46, psi1: 1.13 },
+    airburst: { psi20: 0.28, psi5: 0.62, psi1: 1.60 }
+  };
+
+  // Thermal radiation 1 kt airburst reference radii (km) with Y^0.41 scaling
+  // Calibrated to Wikipedia / Glasstone & Dolan table:
+  // 1 kt: 0.6/0.8/1.1 km; 20 kt: 2.5/3.2/4.2 km; 1 Mt: 12/15/19 km
+  const THERMAL_REF_1KT = {
+    thirdDegree: 0.68,  // ~8 cal/cm^2 (50%-100% 3rd degree burns)
+    secondDegree: 0.88, // ~5 cal/cm^2
+    firstDegree: 1.15   // ~2.5 cal/cm^2
+  };
+
+  function clamp(value, min, max) {
+    const n = Number(value);
+    if (!Number.isFinite(n)) return min;
+    return Math.min(max, Math.max(min, n));
+  }
+
+  function sanitizeParams(raw = {}) {
+    const yieldKt = clamp(raw.yieldKt ?? 100, MIN_YIELD_KT, MAX_YIELD_KT);
+    const burstType = raw.burstType === 'surface' ? 'surface' : 'airburst';
+    const optHobMeters = Math.round(computeOptimumHobKm(yieldKt) * 1000);
+    const autoHob = raw.autoHob !== undefined ? Boolean(raw.autoHob) : true;
+    let hobMeters = 0;
+    if (burstType === 'airburst') {
+      hobMeters = autoHob ? optHobMeters : clamp(raw.hobMeters ?? optHobMeters, 0, 15000);
+    }
+    const windSpeedKmh = clamp(raw.windSpeedKmh ?? 24, 0, 120);
+    const windDirDeg = ((Number(raw.windDirDeg ?? 90) % 360) + 360) % 360;
+    const fissionFraction = clamp(raw.fissionFraction ?? 0.5, 0.05, 1.0);
+    const popDensityPerKm2 = clamp(raw.popDensityPerKm2 ?? 3500, 0, 50000);
+
+    return {
+      yieldKt,
+      burstType,
+      autoHob,
+      hobMeters,
+      optHobMeters,
+      windSpeedKmh,
+      windDirDeg,
+      fissionFraction,
+      popDensityPerKm2
+    };
+  }
+
+  /**
+   * Optimum Height of Burst (km) to maximize ~5 psi blast ground area.
+   * Scales with Y^(1/3): 1 kt -> 0.19 km, 20 kt -> 0.52 km, 1 Mt -> 1.90 km.
+   */
+  function computeOptimumHobKm(yieldKt) {
+    const y = clamp(yieldKt, MIN_YIELD_KT, MAX_YIELD_KT);
+    return 0.19 * Math.cbrt(y);
+  }
+
+  /**
+   * Maximum luminous fireball radius (km), scaling as Y^0.4.
+   * Airburst: 0.066 * Y^0.4 (21 kt -> 0.223 km; Fat Man ref 0.21-0.24 km).
+   * Surface burst: 0.076 * Y^0.4 (15,000 kt -> 3.55 km; Castle Bravo ref 3.3-3.7 km).
+   */
+  function computeFireballRadiusKm(yieldKt, burstType) {
+    const y = clamp(yieldKt, MIN_YIELD_KT, MAX_YIELD_KT);
+    const coeff = burstType === 'surface' ? 0.076 : 0.066;
+    return coeff * Math.pow(y, 0.4);
+  }
+
+  /**
+   * Compute height-of-burst factor interpolating between surface (0),
+   * optimum airburst (1.0), and high-altitude attenuation (>1.0).
+   */
+  function computeBlastRadiusKm(yieldKt, psiKey, burstType, hobKm) {
+    const y = clamp(yieldKt, MIN_YIELD_KT, MAX_YIELD_KT);
+    const scale = Math.cbrt(y);
+    const rSurf = BLAST_REF_1KT.surface[psiKey] * scale;
+    const rAir = BLAST_REF_1KT.airburst[psiKey] * scale;
+
+    if (burstType === 'surface' || hobKm <= 0) {
+      return rSurf;
+    }
+
+    const optHob = computeOptimumHobKm(y);
+    const ratio = hobKm / Math.max(optHob, 0.01);
+
+    if (ratio <= 1.0) {
+      // Smooth Mach stem enhancement up to optimum HOB
+      const t = Math.sin((ratio * Math.PI) / 2);
+      return rSurf + (rAir - rSurf) * t;
+    }
+
+    // Above optimum HOB: slant range exceeds ground range; solve sqrt(R_slant^2 - hob^2)
+    // Approximate effective slant range decays slowly with altitude
+    const slantMax = Math.sqrt(rAir * rAir + optHob * optHob);
+    const effectiveSlant = slantMax * Math.pow(ratio, -0.08);
+    if (hobKm >= effectiveSlant) {
+      return 0;
+    }
+    return Math.sqrt(Math.max(0, effectiveSlant * effectiveSlant - hobKm * hobKm));
+  }
+
+  /**
+   * Thermal radiation burn radii (km), scaling as Y^0.41.
+   * Surface bursts lose ~28% thermal ground range due to ground/dust shadowing.
+   */
+  function computeThermalRadiiKm(yieldKt, burstType, hobKm) {
+    const y = clamp(yieldKt, MIN_YIELD_KT, MAX_YIELD_KT);
+    const yPow = Math.pow(y, 0.41);
+    const groundFactor = burstType === 'surface' ? 0.72 : 1.0;
+
+    function adjustSlant(rBase) {
+      const r = rBase * yPow * groundFactor;
+      if (burstType === 'surface' || hobKm <= 0) return r;
+      if (hobKm >= r) return 0;
+      return Math.sqrt(Math.max(0, r * r - hobKm * hobKm * 0.25));
+    }
+
+    return {
+      thirdDegreeKm: adjustSlant(THERMAL_REF_1KT.thirdDegree),
+      secondDegreeKm: adjustSlant(THERMAL_REF_1KT.secondDegree),
+      firstDegreeKm: adjustSlant(THERMAL_REF_1KT.firstDegree)
+    };
+  }
+
+  /**
+   * Prompt ionizing radiation ground radius (km) for a target dose in rem
+   * (default 500 rem / 5 Sv acute lethal dose).
+   * Solved numerically from D(R) = D0 * (Y / R^2) * exp(-R / lambda).
+   */
+  function computeRadiationRadiusKm(yieldKt, targetRem = 500, hobKm = 0) {
+    const y = clamp(yieldKt, MIN_YIELD_KT, MAX_YIELD_KT);
+    const doseTarget = Math.max(1, Number(targetRem) || 500);
+    // Calibrated so 1 kt -> ~0.80 km, 20 kt -> ~1.45 km, 1000 kt -> ~2.55 km at 500 rem
+    const D0 = 2950;
+    const lambdaKm = 0.36;
+
+    let lo = 0.01;
+    let hi = 25.0;
+    for (let i = 0; i < 40; i++) {
+      const mid = (lo + hi) * 0.5;
+      const dose = D0 * (y / (mid * mid)) * Math.exp(-mid / lambdaKm);
+      if (dose > doseTarget) {
+        lo = mid;
+      } else {
+        hi = mid;
+      }
+    }
+    const slantKm = (lo + hi) * 0.5;
+    if (hobKm >= slantKm) return 0;
+    return Math.sqrt(Math.max(0, slantKm * slantKm - hobKm * hobKm));
+  }
+
+  /**
+   * Compute peak static overpressure (psi) at a given ground distance (km)
+   * using smooth power-law interpolation anchored to 20, 5, and 1 psi radii.
+   */
+  function computeOverpressureAtDistancePsi(distanceKm, blast) {
+    const d = Math.max(0.01, Number(distanceKm) || 0.01);
+    const { psi20Km, psi5Km, psi1Km } = blast;
+    if (psi1Km <= 0) return 0;
+
+    if (d <= psi20Km && psi20Km > 0) {
+      return Math.min(500, 20 * Math.pow(psi20Km / d, 2.2));
+    }
+    if (d <= psi5Km && psi5Km > psi20Km && psi20Km > 0) {
+      const exp = Math.log(20 / 5) / Math.log(psi5Km / psi20Km);
+      return 5 * Math.pow(psi5Km / d, exp);
+    }
+    if (psi1Km > psi5Km && psi5Km > 0) {
+      const exp = Math.log(5 / 1) / Math.log(psi1Km / psi5Km);
+      return 1 * Math.pow(psi1Km / d, exp);
+    }
+    return 0;
+  }
+
+  /**
+   * Dynamic blast wind velocity (km/h) approximated from overpressure (psi)
+   * using Rankine-Hugoniot shock relation in sea-level air (P0 = 14.7 psi).
+   */
+  function computeBlastWindKmh(overpressurePsi) {
+    const p = Math.max(0, Number(overpressurePsi) || 0);
+    if (p <= 0) return 0;
+    const p0 = 14.7;
+    const c0 = 1235; // km/h speed of sound
+    // u = (5 * p / (7 * p0)) * c0 / sqrt(1 + 6*p / (7*p0))
+    const term = (5 * p) / (7 * p0);
+    const denom = Math.sqrt(1 + (6 * p) / (7 * p0));
+    return (term / denom) * c0;
+  }
+
+  /**
+   * Simplified downwind radioactive fallout plume contours (1000, 100, 10 rad/hr).
+   * Significant local fallout occurs only when fireball touches ground (surface/low burst).
+   */
+  function computeFalloutPlume(yieldKt, fissionFraction, touchesGround, windSpeedKmh, windDirDeg) {
+    if (!touchesGround || windSpeedKmh <= 0) {
+      return {
+        significant: false,
+        contours: []
+      };
+    }
+
+    const fissionKt = Math.max(0.01, yieldKt * fissionFraction);
+    const windFactor = Math.pow(Math.max(windSpeedKmh, 5) / 24, 0.65);
+    const scaleY = Math.pow(fissionKt, 0.45);
+
+    const defs = [
+      { id: 'rad1000', label: '1,000 rad/hr 极端致死沉降区', doseRate: 1000, lenCoeff: 0.95, widCoeff: 0.14, color: '#a855f7' },
+      { id: 'rad100', label: '100 rad/hr 重度辐射沉降区', doseRate: 100, lenCoeff: 2.35, widCoeff: 0.34, color: '#c084fc' },
+      { id: 'rad10', label: '10 rad/hr 中度辐射沉降区', doseRate: 10, lenCoeff: 4.80, widCoeff: 0.68, color: '#e9d5ff' }
+    ];
+
+    // Wind direction: meteorological convention (degrees FROM which wind blows)
+    // Plume travels downwind = (windDirDeg + 180) % 360
+    const downwindBearingDeg = (windDirDeg + 180) % 360;
+
+    const contours = defs.map((d) => {
+      const lengthKm = Math.max(0.5, d.lenCoeff * scaleY * windFactor);
+      const maxWidthKm = Math.max(0.18, d.widCoeff * Math.pow(fissionKt, 0.42) / Math.pow(windFactor, 0.25));
+      const areaKm2 = (Math.PI * lengthKm * maxWidthKm) / 4;
+      return {
+        id: d.id,
+        label: d.label,
+        doseRate: d.doseRate,
+        lengthKm,
+        maxWidthKm,
+        areaKm2,
+        downwindBearingDeg,
+        color: d.color
+      };
+    });
+
+    return {
+      significant: true,
+      downwindBearingDeg,
+      contours
+    };
+  }
+
+  /**
+   * Generate geographic polygon coordinates ([lat, lng]) for a teardrop/ellipse fallout plume.
+   */
+  function generatePlumePolygon(originLat, originLng, lengthKm, maxWidthKm, downwindBearingDeg, segments = 32) {
+    const pts = [];
+    const bearingRad = (downwindBearingDeg * Math.PI) / 180;
+    const semiMajor = lengthKm / 2;
+    const semiMinor = maxWidthKm / 2;
+
+    for (let i = 0; i < segments; i++) {
+      const theta = (2 * Math.PI * i) / segments;
+      // Local coordinates: x along downwind axis [0..lengthKm], y perpendicular
+      const x = semiMajor * (1 + Math.cos(theta));
+      // Slight teardrop tapering near ground zero
+      const taper = 0.78 + 0.22 * Math.sin((x / Math.max(lengthKm, 0.01)) * Math.PI);
+      const y = semiMinor * Math.sin(theta) * taper;
+
+      // Rotate by bearing (0 deg = North -> +lat, 90 deg = East -> +lng)
+      const northKm = x * Math.cos(bearingRad) - y * Math.sin(bearingRad);
+      const eastKm = x * Math.sin(bearingRad) + y * Math.cos(bearingRad);
+
+      const dLat = (northKm / EARTH_RADIUS_KM) * (180 / Math.PI);
+      const cosLat = Math.max(0.05, Math.cos((originLat * Math.PI) / 180));
+      const dLng = (eastKm / (EARTH_RADIUS_KM * cosLat)) * (180 / Math.PI);
+
+      pts.push([originLat + dLat, originLng + dLng]);
+    }
+    return pts;
+  }
+
+  /**
+   * Shockwave front radius (km) and phase metadata at time t (seconds after detonation).
+   */
+  function computeTimelineState(tSec, simResult) {
+    const t = Math.max(0, Number(tSec) || 0);
+    const y = simResult.params.yieldKt;
+    const rf = simResult.radii.fireballKm;
+
+    // Early supersonic phase transitions smoothly into acoustic speed (~0.343 km/s)
+    const supersonicBoost = Math.pow(y, 0.22) * 0.28 * Math.log1p(t * 2.5);
+    const shockRadiusKm = t === 0 ? 0 : rf * Math.min(1, t / 0.6) + SOUND_SPEED_KM_S * t + supersonicBoost;
+
+    // Fireball growth & cooling
+    const fireballGrowthTime = Math.max(0.4, 0.18 * Math.pow(y, 0.35));
+    const currentFireballKm = t === 0 ? 0 : rf * Math.min(1, Math.pow(t / fireballGrowthTime, 0.45));
+
+    // Stabilized mushroom cloud top altitude (km)
+    const maxCloudTopKm = Math.min(65, 2.2 * Math.pow(y, 0.32));
+    const cloudHeightKm = t === 0 ? 0 : maxCloudTopKm * (1 - Math.exp(-t / Math.max(25, 12 * Math.pow(y, 0.18))));
+
+    let phase = '起爆前待命';
+    if (t > 0 && t <= 1) phase = '双脉冲强闪光与火球形成';
+    else if (t > 1 && t <= 5) phase = '热辐射主脉冲与超音速冲击波分离';
+    else if (t <= 20) phase = '冲击波横扫城区与火球浮升';
+    else if (t <= 45) phase = '蘑菇云柱抬升与负压回吸风';
+    else phase = '云顶趋稳与放射性沉降扩散阶段';
+
+    return {
+      tSec: t,
+      shockRadiusKm,
+      currentFireballKm,
+      cloudHeightKm,
+      maxCloudTopKm,
+      phase
+    };
+  }
+
+  /**
+   * Main simulation entrypoint: computes all physical radii, areas, energy breakdown,
+   * fallout contours, and simplified homogeneous-density exposure estimates.
+   */
+  function simulate(rawParams) {
+    const params = sanitizeParams(rawParams);
+    const hobKm = params.hobMeters / 1000;
+
+    const fireballKm = computeFireballRadiusKm(params.yieldKt, params.burstType);
+    const touchesGround = params.burstType === 'surface' || hobKm <= fireballKm;
+
+    const psi20Km = computeBlastRadiusKm(params.yieldKt, 'psi20', params.burstType, hobKm);
+    const psi5Km = computeBlastRadiusKm(params.yieldKt, 'psi5', params.burstType, hobKm);
+    const psi1Km = computeBlastRadiusKm(params.yieldKt, 'psi1', params.burstType, hobKm);
+
+    const thermal = computeThermalRadiiKm(params.yieldKt, params.burstType, hobKm);
+    const radiation500RemKm = computeRadiationRadiusKm(params.yieldKt, 500, hobKm);
+
+    const area = (r) => Math.PI * r * r;
+    const areas = {
+      fireballKm2: area(fireballKm),
+      psi20Km2: area(psi20Km),
+      psi5Km2: area(psi5Km),
+      psi1Km2: area(psi1Km),
+      thermal3rdKm2: area(thermal.thirdDegreeKm),
+      radiation500RemKm2: area(radiation500RemKm)
+    };
+
+    // Simplified homogeneous population density impact estimate (for educational illustration)
+    const rho = params.popDensityPerKm2;
+    const rSevere = Math.max(fireballKm, psi20Km);
+    const rMod = Math.max(rSevere, psi5Km);
+    const rLight = Math.max(rMod, Math.max(psi1Km, thermal.thirdDegreeKm));
+
+    const popSevere = area(rSevere) * rho;
+    const popModRing = Math.max(0, area(rMod) - area(rSevere)) * rho;
+    const popLightRing = Math.max(0, area(rLight) - area(rMod)) * rho;
+
+    const estimatedFatalities = Math.round(popSevere * 0.9 + popModRing * 0.5 + popLightRing * 0.05);
+    const estimatedInjuries = Math.round(popSevere * 0.1 + popModRing * 0.4 + popLightRing * 0.35);
+
+    const totalEnergyTJ = params.yieldKt * TNT_TJ_PER_KT;
+    const energy = {
+      totalTJ: totalEnergyTJ,
+      blastTJ: totalEnergyTJ * 0.5,
+      thermalTJ: totalEnergyTJ * 0.35,
+      initialRadTJ: totalEnergyTJ * 0.05,
+      residualRadTJ: totalEnergyTJ * 0.1
+    };
+
+    const fallout = computeFalloutPlume(
+      params.yieldKt,
+      params.fissionFraction,
+      touchesGround,
+      params.windSpeedKmh,
+      params.windDirDeg
+    );
+
+    const blast = { psi20Km, psi5Km, psi1Km };
+
+    // Generate overpressure decay curve samples for Chart.js
+    const maxChartDistKm = Math.max(1.0, Math.ceil(psi1Km * 1.4 * 10) / 10);
+    const decayCurve = [];
+    const steps = 24;
+    for (let i = 1; i <= steps; i++) {
+      const distKm = (maxChartDistKm * i) / steps;
+      const psi = computeOverpressureAtDistancePsi(distKm, blast);
+      decayCurve.push({
+        distKm: Number(distKm.toFixed(2)),
+        psi: Number(Math.min(100, psi).toFixed(2)),
+        windKmh: Number(computeBlastWindKmh(psi).toFixed(1))
+      });
+    }
+
+    return {
+      params,
+      touchesGround,
+      energy,
+      radii: {
+        fireballKm,
+        psi20Km,
+        psi5Km,
+        psi1Km,
+        thermal3rdKm: thermal.thirdDegreeKm,
+        thermal2ndKm: thermal.secondDegreeKm,
+        thermal1stKm: thermal.firstDegreeKm,
+        radiation500RemKm
+      },
+      areas,
+      impactEstimate: {
+        modelNote: '基于均质人口密度假设的教学简化估算，未计入建筑遮蔽与地形起伏',
+        estimatedFatalities,
+        estimatedInjuries,
+        totalAffected: estimatedFatalities + estimatedInjuries
+      },
+      fallout,
+      decayCurve
+    };
+  }
+
+  return {
+    MIN_YIELD_KT,
+    MAX_YIELD_KT,
+    TNT_TJ_PER_KT,
+    sanitizeParams,
+    computeOptimumHobKm,
+    computeFireballRadiusKm,
+    computeBlastRadiusKm,
+    computeThermalRadiiKm,
+    computeRadiationRadiusKm,
+    computeOverpressureAtDistancePsi,
+    computeBlastWindKmh,
+    computeFalloutPlume,
+    generatePlumePolygon,
+    computeTimelineState,
+    simulate
+  };
+});
+
+  </script>
+  <script>
+(function (root, factory) {
+  if (typeof module === 'object' && module.exports) {
+    module.exports = factory();
+  } else {
+    root.NukePresets = factory();
+  }
+})(typeof globalThis !== 'undefined' ? globalThis : this, function () {
+  'use strict';
+
+  // Verified historical & reference nuclear weapon yields (Wikipedia: Nuclear weapon yield)
+  const WEAPON_PRESETS = [
+    {
+      id: 'davy-crockett',
+      name: 'Davy Crockett',
+      cnName: '戴维·克罗克特 (战术)',
+      yieldKt: 0.02,
+      defaultBurst: 'airburst',
+      era: '1961 (冷战战术)',
+      desc: '历史上最小的实用化战术核装置之一，当量 20 吨 TNT。'
+    },
+    {
+      id: 'little-boy',
+      name: 'Little Boy',
+      cnName: '“小男孩” (广岛)',
+      yieldKt: 15,
+      defaultBurst: 'airburst',
+      era: '1945 (铀-235 枪式)',
+      desc: '1945 年广岛空爆，估算当量约 15 千吨 TNT。'
+    },
+    {
+      id: 'fat-man',
+      name: 'Fat Man',
+      cnName: '“胖子” (长崎)',
+      yieldKt: 21,
+      defaultBurst: 'airburst',
+      era: '1945 (钚-239 内爆式)',
+      desc: '1945 年长崎空爆，估算当量约 21 千吨 TNT。'
+    },
+    {
+      id: 'w76',
+      name: 'W76 Warhead',
+      cnName: 'W76 潜射弹头',
+      yieldKt: 100,
+      defaultBurst: 'airburst',
+      era: '现代战略分导',
+      desc: '典型潜射洲际导弹分导核弹头，当量 100 千吨 TNT。'
+    },
+    {
+      id: 'w87',
+      name: 'W87 Warhead',
+      cnName: 'W87 洲际弹头',
+      yieldKt: 300,
+      defaultBurst: 'airburst',
+      era: '现代陆基战略',
+      desc: '陆基洲际弹道导弹分导热核弹头，当量 300 千吨 TNT。'
+    },
+    {
+      id: 'b83',
+      name: 'B83 Bomb',
+      cnName: 'B83 重型核航弹',
+      yieldKt: 1200,
+      defaultBurst: 'airburst',
+      era: '1983 (可变当量上限)',
+      desc: '美军现役最大当量自由落体热核航弹，最大 1.2 百万吨。'
+    },
+    {
+      id: 'castle-bravo',
+      name: 'Castle Bravo',
+      cnName: '城堡行动·布拉沃',
+      yieldKt: 15000,
+      defaultBurst: 'surface',
+      era: '1954 (美国最大核试验)',
+      desc: '比基尼环礁地爆试验，因锂-7 副反应实际当量达 15 百万吨。'
+    },
+    {
+      id: 'tsar-bomba',
+      name: 'Tsar Bomba',
+      cnName: '“沙皇炸弹” (AN602)',
+      yieldKt: 50000,
+      defaultBurst: 'airburst',
+      era: '1961 (人类历史最大)',
+      desc: '苏联新地岛高空试验，实测当量约 50 百万吨 TNT。'
+    }
+  ];
+
+  // Verified city coordinates (decimal degrees)
+  const CITY_PRESETS = [
+    { id: 'beijing', name: '北京 (Beijing)', lat: 39.9042, lng: 116.4074, zoom: 11, popDensity: 6500 },
+    { id: 'shanghai', name: '上海 (Shanghai)', lat: 31.2304, lng: 121.4737, zoom: 11, popDensity: 8200 },
+    { id: 'tokyo', name: '东京 (Tokyo)', lat: 35.6895, lng: 139.6917, zoom: 11, popDensity: 9500 },
+    { id: 'newyork', name: '纽约 (New York)', lat: 40.7517, lng: -73.9942, zoom: 11, popDensity: 10500 },
+    { id: 'sf', name: '旧金山 (San Francisco)', lat: 37.7775, lng: -122.4111, zoom: 12, popDensity: 7200 },
+    { id: 'london', name: '伦敦 (London)', lat: 51.5074, lng: -0.1278, zoom: 11, popDensity: 5700 }
+  ];
+
+  // Keyless ArcGIS MapServer raster tile layers (note {z}/{y}/{x} order)
+  const BASEMAPS = {
+    dark: {
+      name: '暗色战术底图',
+      url: 'https://services.arcgisonline.com/arcgis/rest/services/Canvas/World_Dark_Gray_Base/MapServer/tile/{z}/{y}/{x}',
+      refUrl: 'https://services.arcgisonline.com/arcgis/rest/services/Canvas/World_Dark_Gray_Reference/MapServer/tile/{z}/{y}/{x}',
+      attribution: 'Tiles &copy; Esri &mdash; World Dark Gray Canvas'
+    },
+    satellite: {
+      name: '卫星影像',
+      url: 'https://services.arcgisonline.com/arcgis/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}',
+      refUrl: null,
+      attribution: 'Tiles &copy; Esri &mdash; World Imagery'
+    },
+    street: {
+      name: '标准街道',
+      url: 'https://services.arcgisonline.com/arcgis/rest/services/World_Street_Map/MapServer/tile/{z}/{y}/{x}',
+      refUrl: null,
+      attribution: 'Tiles &copy; Esri &mdash; World Street Map'
+    },
+    grid: {
+      name: '离线雷达网格',
+      url: null,
+      refUrl: null,
+      attribution: 'NukeSim Offline Tactical Grid'
+    }
+  };
+
+  return {
+    WEAPON_PRESETS,
+    CITY_PRESETS,
+    BASEMAPS
+  };
+});
+
+  </script>
+  <script>
+(function () {
+  'use strict';
+
+  const Physics = window.NukePhysics;
+  const Presets = window.NukePresets;
+
+  // Application State
+  const state = {
+    lat: 39.9042,
+    lng: 116.4074,
+    cityId: 'beijing',
+    presetId: 'w76',
+    yieldKt: 100,
+    burstType: 'airburst',
+    autoHob: true,
+    hobMeters: 882,
+    windSpeedKmh: 24,
+    windDirDeg: 315, // NW wind blowing SE
+    fissionFraction: 0.5,
+    popDensityPerKm2: 6500,
+    basemap: 'dark',
+    soundEnabled: true,
+    activeTab: 'overview',
+    layers: {
+      fireball: true,
+      psi20: true,
+      psi5: true,
+      psi1: true,
+      thermal: true,
+      radiation: true,
+      fallout: true
+    },
+    pinnedDetonations: [],
+    timeline: {
+      playing: false,
+      tSec: 0,
+      maxSec: 60,
+      rafId: null,
+      lastFrameTs: 0
+    },
+    simResult: null
+  };
+
+  // Map & Chart handles
+  let map = null;
+  let baseLayer = null;
+  let refLayer = null;
+  let gzMarker = null;
+  let effectLayerGroup = null;
+  let falloutLayerGroup = null;
+  let pinnedLayerGroup = null;
+  let shockwaveCircle = null;
+  let radiiChart = null;
+  let decayChart = null;
+  let audioCtx = null;
+  let toastTimer = null;
+
+  const LAYER_STYLES = {
+    fireball: { color: '#fef08a', fillColor: '#facc15', fillOpacity: 0.55, weight: 2, label: '火球区 (汽化)' },
+    psi20: { color: '#ef4444', fillColor: '#ef4444', fillOpacity: 0.28, weight: 2, label: '20 psi 重度损毁' },
+    psi5: { color: '#f97316', fillColor: '#f97316', fillOpacity: 0.20, weight: 1.8, label: '5 psi 中度损毁' },
+    psi1: { color: '#94a3b8', fillColor: '#64748b', fillOpacity: 0.12, weight: 1.5, dashArray: '6 4', label: '1 psi 玻璃破碎' },
+    thermal: { color: '#fb923c', fillColor: '#fb923c', fillOpacity: 0.10, weight: 1.8, dashArray: '4 4', label: '热辐射三度烧伤' },
+    radiation: { color: '#22c55e', fillColor: '#22c55e', fillOpacity: 0.22, weight: 2, label: '500 rem 早期辐射' }
+  };
+
+  // --- Formatting Helpers ---
+  function fmtKm(km) {
+    if (!Number.isFinite(km) || km <= 0) return '0.00 km';
+    if (km < 1) return `${Math.round(km * 1000)} m`;
+    return `${km.toFixed(2)} km`;
+  }
+
+  function fmtArea(km2) {
+    if (!Number.isFinite(km2) || km2 <= 0) return '0 km²';
+    if (km2 < 1) return `${km2.toFixed(2)} km²`;
+    if (km2 < 100) return `${km2.toFixed(1)} km²`;
+    return `${Math.round(km2).toLocaleString()} km²`;
+  }
+
+  function fmtYield(kt) {
+    if (kt >= 1000) {
+      const mt = kt / 1000;
+      return `${mt >= 10 ? mt.toFixed(1) : mt.toFixed(2)} Mt`;
+    }
+    if (kt < 1) return `${Math.round(kt * 1000)} t`;
+    return `${kt >= 100 ? Math.round(kt) : Number(kt.toFixed(1))} kt`;
+  }
+
+  function fmtPop(n) {
+    if (!Number.isFinite(n) || n <= 0) return '0';
+    if (n >= 10000) return `${(n / 10000).toFixed(1)} 万`;
+    return Math.round(n).toLocaleString();
+  }
+
+  // Log slider mapping: 0..1000 -> 0.01 kt .. 100,000 kt
+  function sliderToYield(val) {
+    const minLog = Math.log10(Physics.MIN_YIELD_KT);
+    const maxLog = Math.log10(Physics.MAX_YIELD_KT);
+    const ratio = Number(val) / 1000;
+    const raw = Math.pow(10, minLog + ratio * (maxLog - minLog));
+    if (raw < 0.1) return Number(raw.toFixed(2));
+    if (raw < 10) return Number(raw.toFixed(1));
+    return Math.round(raw);
+  }
+
+  function yieldToSlider(kt) {
+    const minLog = Math.log10(Physics.MIN_YIELD_KT);
+    const maxLog = Math.log10(Physics.MAX_YIELD_KT);
+    const clamped = Math.min(Physics.MAX_YIELD_KT, Math.max(Physics.MIN_YIELD_KT, kt));
+    return Math.round(((Math.log10(clamped) - minLog) / (maxLog - minLog)) * 1000);
+  }
+
+  function showToast(msg) {
+    const el = document.getElementById('toast-banner');
+    if (!el) return;
+    el.textContent = msg;
+    el.classList.remove('opacity-0', 'translate-y-2', 'pointer-events-none');
+    el.classList.add('opacity-100', 'translate-y-0');
+    if (toastTimer) clearTimeout(toastTimer);
+    toastTimer = setTimeout(() => {
+      el.classList.add('opacity-0', 'translate-y-2', 'pointer-events-none');
+      el.classList.remove('opacity-100', 'translate-y-0');
+    }, 2600);
+  }
+
+  // --- Synthesized Web Audio Shockwave Sound ---
+  function playDetonationSound() {
+    if (!state.soundEnabled) return;
+    try {
+      const AudioCtx = window.AudioContext || window.webkitAudioContext;
+      if (!AudioCtx) return;
+      if (!audioCtx) audioCtx = new AudioCtx();
+      if (audioCtx.state === 'suspended') audioCtx.resume();
+
+      const now = audioCtx.currentTime;
+      // Low sub-bass rumble oscillator
+      const osc = audioCtx.createOscillator();
+      const oscGain = audioCtx.createGain();
+      osc.type = 'sawtooth';
+      osc.frequency.setValueAtTime(95, now);
+      osc.frequency.exponentialRampToValueAtTime(24, now + 1.8);
+      oscGain.gain.setValueAtTime(0.32, now);
+      oscGain.gain.exponentialRampToValueAtTime(0.001, now + 2.2);
+
+      const lpFilter = audioCtx.createBiquadFilter();
+      lpFilter.type = 'lowpass';
+      lpFilter.frequency.setValueAtTime(280, now);
+      lpFilter.frequency.exponentialRampToValueAtTime(60, now + 1.8);
+
+      osc.connect(lpFilter);
+      lpFilter.connect(oscGain);
+      oscGain.connect(audioCtx.destination);
+      osc.start(now);
+      osc.stop(now + 2.3);
+
+      // Filtered white noise blast crack
+      const bufferSize = audioCtx.sampleRate * 2;
+      const noiseBuffer = audioCtx.createBuffer(1, bufferSize, audioCtx.sampleRate);
+      const output = noiseBuffer.getChannelData(0);
+      for (let i = 0; i < bufferSize; i++) {
+        output[i] = (Math.random() * 2 - 1) * Math.exp(-i / (audioCtx.sampleRate * 0.65));
+      }
+      const whiteNoise = audioCtx.createBufferSource();
+      whiteNoise.buffer = noiseBuffer;
+
+      const noiseFilter = audioCtx.createBiquadFilter();
+      noiseFilter.type = 'lowpass';
+      noiseFilter.frequency.setValueAtTime(900, now);
+      noiseFilter.frequency.exponentialRampToValueAtTime(120, now + 1.9);
+
+      const noiseGain = audioCtx.createGain();
+      noiseGain.gain.setValueAtTime(0.35, now);
+      noiseGain.gain.exponentialRampToValueAtTime(0.001, now + 2.0);
+
+      whiteNoise.connect(noiseFilter);
+      noiseFilter.connect(noiseGain);
+      noiseGain.connect(audioCtx.destination);
+      whiteNoise.start(now);
+      whiteNoise.stop(now + 2.0);
+    } catch (_) {
+      // Ignore audio failures if blocked by browser policy
+    }
+  }
+
+  // --- Map Initialization & Rendering ---
+  function initMap() {
+    if (typeof window.L === 'undefined') {
+      showToast('地图库加载中或离线，已启用遥测数据模式');
+      return;
+    }
+
+    map = L.map('map-viewport', {
+      center: [state.lat, state.lng],
+      zoom: 11,
+      zoomControl: false,
+      preferCanvas: true
+    });
+
+    L.control.zoom({ position: 'topright' }).addTo(map);
+    L.control.scale({ imperial: false, position: 'bottomright' }).addTo(map);
+
+    effectLayerGroup = L.layerGroup().addTo(map);
+    falloutLayerGroup = L.layerGroup().addTo(map);
+    pinnedLayerGroup = L.layerGroup().addTo(map);
+
+    setBasemap(state.basemap);
+
+    const gzIcon = L.divIcon({
+      className: '',
+      html: '<div class="gz-marker" title="拖拽移动爆心"></div>',
+      iconSize: [18, 18],
+      iconAnchor: [9, 9]
+    });
+
+    gzMarker = L.marker([state.lat, state.lng], {
+      icon: gzIcon,
+      draggable: true,
+      zIndexOffset: 1000
+    }).addTo(map);
+
+    gzMarker.on('dragend', () => {
+      const pos = gzMarker.getLatLng();
+      state.lat = Number(pos.lat.toFixed(4));
+      state.lng = Number(pos.lng.toFixed(4));
+      runSimulation({ fitView: false });
+    });
+
+    map.on('click', (e) => {
+      state.lat = Number(e.latlng.lat.toFixed(4));
+      state.lng = Number(e.latlng.lng.toFixed(4));
+      gzMarker.setLatLng([state.lat, state.lng]);
+      runSimulation({ fitView: false });
+    });
+  }
+
+  function setBasemap(key) {
+    state.basemap = key;
+    const mapEl = document.getElementById('map-viewport');
+    if (!map) return;
+
+    if (baseLayer) { map.removeLayer(baseLayer); baseLayer = null; }
+    if (refLayer) { map.removeLayer(refLayer); refLayer = null; }
+
+    const cfg = Presets.BASEMAPS[key] || Presets.BASEMAPS.dark;
+    if (cfg.url) {
+      mapEl.classList.remove('tactical-grid-bg');
+      baseLayer = L.tileLayer(cfg.url, {
+        maxZoom: 18,
+        attribution: cfg.attribution
+      }).addTo(map);
+      if (cfg.refUrl) {
+        refLayer = L.tileLayer(cfg.refUrl, { maxZoom: 18, opacity: 0.85 }).addTo(map);
+      }
+    } else {
+      mapEl.classList.add('tactical-grid-bg');
+    }
+  }
+
+  function renderMapEffects(sim, fitView) {
+    if (!map || !effectLayerGroup) return;
+    effectLayerGroup.clearLayers();
+    falloutLayerGroup.clearLayers();
+
+    const center = [state.lat, state.lng];
+    const r = sim.radii;
+
+    // Draw outer rings first so inner tooltips remain accessible
+    const rings = [
+      { key: 'thermal', radiusKm: r.thermal3rdKm, style: LAYER_STYLES.thermal, desc: '暴露皮肤三度烧伤 (~8 cal/cm²)' },
+      { key: 'psi1', radiusKm: r.psi1Km, style: LAYER_STYLES.psi1, desc: '玻璃普遍破碎、轻型结构受损' },
+      { key: 'psi5', radiusKm: r.psi5Km, style: LAYER_STYLES.psi5, desc: '绝大多数住宅倒塌，墙面受压超180吨' },
+      { key: 'radiation', radiusKm: r.radiation500RemKm, style: LAYER_STYLES.radiation, desc: '500 rem (5 Sv) 急性致命核辐射' },
+      { key: 'psi20', radiusKm: r.psi20Km, style: LAYER_STYLES.psi20, desc: '钢筋混凝土建筑严重损毁' },
+      { key: 'fireball', radiusKm: r.fireballKm, style: LAYER_STYLES.fireball, desc: '核心汽化区，瞬时极高温度' }
+    ].sort((a, b) => b.radiusKm - a.radiusKm);
+
+    rings.forEach((item) => {
+      if (!state.layers[item.key] || item.radiusKm <= 0) return;
+      const circle = L.circle(center, {
+        radius: item.radiusKm * 1000,
+        color: item.style.color,
+        fillColor: item.style.fillColor,
+        fillOpacity: item.style.fillOpacity,
+        weight: item.style.weight,
+        dashArray: item.style.dashArray || null
+      });
+      circle.bindTooltip(
+        `<div style="font-size:12px;"><strong>${item.style.label}</strong><br/>半径: ${fmtKm(item.radiusKm)}<br/>${item.desc}</div>`,
+        { sticky: true, direction: 'top' }
+      );
+      circle.addTo(effectLayerGroup);
+    });
+
+    // Fallout Plume
+    if (state.layers.fallout && sim.fallout.significant) {
+      const contours = [...sim.fallout.contours].reverse(); // largest first
+      contours.forEach((c) => {
+        const polyPts = Physics.generatePlumePolygon(
+          state.lat,
+          state.lng,
+          c.lengthKm,
+          c.maxWidthKm,
+          c.downwindBearingDeg,
+          36
+        );
+        const poly = L.polygon(polyPts, {
+          color: c.color,
+          fillColor: c.color,
+          fillOpacity: c.doseRate === 1000 ? 0.35 : c.doseRate === 100 ? 0.22 : 0.12,
+          weight: 1.5
+        });
+        poly.bindTooltip(
+          `<div style="font-size:12px;"><strong>${c.label}</strong><br/>下风向长度: ${fmtKm(c.lengthKm)} | 最大宽度: ${fmtKm(c.maxWidthKm)}</div>`,
+          { sticky: true }
+        );
+        poly.addTo(falloutLayerGroup);
+      });
+    }
+
+    // Fit map view cleanly to the largest visible ring using analytic lat/lng bounds
+    if (fitView) {
+      const maxKm = Math.max(r.psi1Km, r.thermal3rdKm, r.fireballKm, 0.5) * 1.25;
+      const dLat = maxKm / 111.32;
+      const cosLat = Math.max(0.1, Math.cos((state.lat * Math.PI) / 180));
+      const dLng = maxKm / (111.32 * cosLat);
+      const padBounds = L.latLngBounds(
+        [state.lat - dLat, state.lng - dLng],
+        [state.lat + dLat, state.lng + dLng]
+      );
+      map.fitBounds(padBounds, { padding: [32, 32], maxZoom: 15 });
+    }
+  }
+
+  function renderPinnedDetonations() {
+    if (!map || !pinnedLayerGroup) return;
+    pinnedLayerGroup.clearLayers();
+
+    state.pinnedDetonations.forEach((pin, idx) => {
+      const center = [pin.lat, pin.lng];
+      L.circle(center, {
+        radius: pin.sim.radii.psi5Km * 1000,
+        color: '#38bdf8',
+        fillColor: '#38bdf8',
+        fillOpacity: 0.14,
+        weight: 1.5,
+        dashArray: '5 5'
+      }).bindTooltip(`对比爆点 #${idx + 1} (${fmtYield(pin.sim.params.yieldKt)}) — 5 psi: ${fmtKm(pin.sim.radii.psi5Km)}`)
+        .addTo(pinnedLayerGroup);
+
+      L.circle(center, {
+        radius: pin.sim.radii.fireballKm * 1000,
+        color: '#fde047',
+        fillColor: '#fde047',
+        fillOpacity: 0.45,
+        weight: 1.5
+      }).addTo(pinnedLayerGroup);
+
+      L.circleMarker(center, {
+        radius: 5,
+        color: '#ffffff',
+        fillColor: '#38bdf8',
+        fillOpacity: 1,
+        weight: 1.5
+      }).addTo(pinnedLayerGroup);
+    });
+
+    const badge = document.getElementById('pin-count-badge');
+    if (badge) {
+      badge.textContent = String(state.pinnedDetonations.length);
+      badge.classList.toggle('hidden', state.pinnedDetonations.length === 0);
+    }
+  }
+
+  // --- Timeline Shockwave Animation ---
+  function updateShockwaveGraphic(tSec) {
+    if (!state.simResult) return;
+    const tl = Physics.computeTimelineState(tSec, state.simResult);
+
+    const timeEl = document.getElementById('timeline-time-label');
+    const phaseEl = document.getElementById('timeline-phase-label');
+    const shockEl = document.getElementById('timeline-shock-label');
+    const cloudEl = document.getElementById('timeline-cloud-label');
+    const sliderEl = document.getElementById('timeline-slider');
+
+    if (timeEl) timeEl.textContent = `T+${tl.tSec.toFixed(1)} s`;
+    if (phaseEl) phaseEl.textContent = tl.phase;
+    if (shockEl) shockEl.textContent = fmtKm(tl.shockRadiusKm);
+    if (cloudEl) cloudEl.textContent = fmtKm(tl.cloudHeightKm);
+    if (sliderEl && !state.timeline.scrubbing) sliderEl.value = String(tl.tSec);
+
+    if (map) {
+      if (shockwaveCircle) {
+        map.removeLayer(shockwaveCircle);
+        shockwaveCircle = null;
+      }
+      if (tl.shockRadiusKm > 0.01) {
+        const opacity = Math.max(0.15, 0.95 - (tl.tSec / state.timeline.maxSec) * 0.75);
+        shockwaveCircle = L.circle([state.lat, state.lng], {
+          radius: tl.shockRadiusKm * 1000,
+          color: '#38bdf8',
+          weight: 2.5,
+          opacity,
+          fill: false,
+          interactive: false
+        }).addTo(map);
+      }
+    }
+  }
+
+  function stopTimeline() {
+    state.timeline.playing = false;
+    if (state.timeline.rafId) {
+      cancelAnimationFrame(state.timeline.rafId);
+      state.timeline.rafId = null;
+    }
+    const btn = document.getElementById('btn-play-timeline');
+    if (btn) btn.textContent = '▶ 播放';
+  }
+
+  function startTimeline(resetToZero) {
+    stopTimeline();
+    if (resetToZero) state.timeline.tSec = 0;
+    state.timeline.playing = true;
+    state.timeline.lastFrameTs = performance.now();
+    const btn = document.getElementById('btn-play-timeline');
+    if (btn) btn.textContent = '⏸ 暂停';
+
+    function tick(now) {
+      if (!state.timeline.playing) return;
+      const dt = Math.min(0.1, (now - state.timeline.lastFrameTs) / 1000);
+      state.timeline.lastFrameTs = now;
+      // 2.5x visual time speed so 60s completes in ~24s
+      state.timeline.tSec += dt * 2.5;
+      if (state.timeline.tSec >= state.timeline.maxSec) {
+        state.timeline.tSec = state.timeline.maxSec;
+        updateShockwaveGraphic(state.timeline.tSec);
+        stopTimeline();
+        return;
+      }
+      updateShockwaveGraphic(state.timeline.tSec);
+      state.timeline.rafId = requestAnimationFrame(tick);
+    }
+    state.timeline.rafId = requestAnimationFrame(tick);
+  }
+
+  function triggerDetonationSequence() {
+    const flash = document.getElementById('flash-overlay');
+    if (flash) {
+      flash.classList.add('flash-active');
+      setTimeout(() => flash.classList.remove('flash-active'), 110);
+    }
+    playDetonationSound();
+    runSimulation({ fitView: true });
+    startTimeline(true);
+    showToast(`已引爆模拟：${fmtYield(state.yieldKt)} (${state.burstType === 'airburst' ? '空爆' : '地爆'})`);
+  }
+
+  // --- Charts (Chart.js) ---
+  function updateCharts(sim) {
+    if (typeof window.Chart === 'undefined') return;
+
+    const r = sim.radii;
+    const barCanvas = document.getElementById('chart-radii');
+    const lineCanvas = document.getElementById('chart-decay');
+    if (!barCanvas || !lineCanvas) return;
+
+    const barData = [
+      Number(r.fireballKm.toFixed(2)),
+      Number(r.psi20Km.toFixed(2)),
+      Number(r.radiation500RemKm.toFixed(2)),
+      Number(r.psi5Km.toFixed(2)),
+      Number(r.psi1Km.toFixed(2)),
+      Number(r.thermal3rdKm.toFixed(2))
+    ];
+
+    if (!radiiChart) {
+      radiiChart = new Chart(barCanvas.getContext('2d'), {
+        type: 'bar',
+        data: {
+          labels: ['火球区', '20 psi', '500 rem辐射', '5 psi', '1 psi', '三度热烧伤'],
+          datasets: [{
+            label: '效应半径 (km)',
+            data: barData,
+            backgroundColor: ['#facc15', '#ef4444', '#22c55e', '#f97316', '#94a3b8', '#fb923c'],
+            borderRadius: 4
+          }]
+        },
+        options: {
+          indexAxis: 'y',
+          responsive: true,
+          maintainAspectRatio: false,
+          plugins: {
+            legend: { display: false },
+            tooltip: { callbacks: { label: (ctx) => `${ctx.raw} km` } }
+          },
+          scales: {
+            x: {
+              grid: { color: 'rgba(148, 163, 184, 0.12)' },
+              ticks: { color: '#94a3b8', font: { size: 11 } }
+            },
+            y: {
+              grid: { display: false },
+              ticks: { color: '#e2e8f0', font: { size: 11 } }
+            }
+          }
+        }
+      });
+    } else {
+      radiiChart.data.datasets[0].data = barData;
+      radiiChart.update('none');
+    }
+
+    const labels = sim.decayCurve.map((p) => `${p.distKm}`);
+    const psiSeries = sim.decayCurve.map((p) => p.psi);
+    const windSeries = sim.decayCurve.map((p) => p.windKmh);
+
+    if (!decayChart) {
+      decayChart = new Chart(lineCanvas.getContext('2d'), {
+        type: 'line',
+        data: {
+          labels,
+          datasets: [
+            {
+              label: '峰值超压 (psi)',
+              data: psiSeries,
+              borderColor: '#f59e0b',
+              backgroundColor: 'rgba(245, 158, 11, 0.15)',
+              fill: true,
+              tension: 0.3,
+              yAxisID: 'y',
+              pointRadius: 2
+            },
+            {
+              label: '冲击风速 (km/h)',
+              data: windSeries,
+              borderColor: '#38bdf8',
+              borderDash: [4, 3],
+              tension: 0.3,
+              yAxisID: 'y1',
+              pointRadius: 2
+            }
+          ]
+        },
+        options: {
+          responsive: true,
+          maintainAspectRatio: false,
+          interaction: { mode: 'index', intersect: false },
+          plugins: {
+            legend: { labels: { color: '#cbd5e1', font: { size: 11 }, boxWidth: 12 } }
+          },
+          scales: {
+            x: {
+              title: { display: true, text: '距爆心距离 (km)', color: '#94a3b8', font: { size: 11 } },
+              grid: { color: 'rgba(148, 163, 184, 0.1)' },
+              ticks: { color: '#94a3b8', maxTicksLimit: 6, font: { size: 10 } }
+            },
+            y: {
+              type: 'linear',
+              position: 'left',
+              title: { display: true, text: '超压 (psi)', color: '#f59e0b', font: { size: 10 } },
+              grid: { color: 'rgba(148, 163, 184, 0.1)' },
+              ticks: { color: '#f59e0b', font: { size: 10 } }
+            },
+            y1: {
+              type: 'linear',
+              position: 'right',
+              title: { display: true, text: '风速 (km/h)', color: '#38bdf8', font: { size: 10 } },
+              grid: { drawOnChartArea: false },
+              ticks: { color: '#38bdf8', font: { size: 10 } }
+            }
+          }
+        }
+      });
+    } else {
+      decayChart.data.labels = labels;
+      decayChart.data.datasets[0].data = psiSeries;
+      decayChart.data.datasets[1].data = windSeries;
+      decayChart.update('none');
+    }
+  }
+
+  // --- UI Readout Updates ---
+  function updateTelemetryUI(sim) {
+    const r = sim.radii;
+    const a = sim.areas;
+
+    const setText = (id, text) => {
+      const el = document.getElementById(id);
+      if (el) el.textContent = text;
+    };
+
+    setText('coord-readout', `${state.lat.toFixed(4)}°N, ${state.lng.toFixed(4)}°E`);
+    setText('yield-badge', fmtYield(sim.params.yieldKt));
+    setText('hob-display', sim.params.burstType === 'surface' ? '0 m (地爆)' : `${sim.params.hobMeters} m`);
+    setText('opt-hob-hint', `最优 5 psi 爆高: ${sim.params.optHobMeters} m`);
+    setText('wind-speed-val', `${sim.params.windSpeedKmh} km/h`);
+    setText('wind-dir-val', `${sim.params.windDirDeg}°`);
+
+    const windArrow = document.getElementById('wind-compass-arrow');
+    if (windArrow) {
+      // Downwind arrow points where fallout travels
+      const downwind = (sim.params.windDirDeg + 180) % 360;
+      windArrow.style.transform = `rotate(${downwind}deg)`;
+    }
+
+    // Effect cards
+    setText('val-fireball-r', fmtKm(r.fireballKm));
+    setText('val-fireball-a', fmtArea(a.fireballKm2));
+    setText('val-psi20-r', fmtKm(r.psi20Km));
+    setText('val-psi20-a', fmtArea(a.psi20Km2));
+    setText('val-psi5-r', fmtKm(r.psi5Km));
+    setText('val-psi5-a', fmtArea(a.psi5Km2));
+    setText('val-psi1-r', fmtKm(r.psi1Km));
+    setText('val-psi1-a', fmtArea(a.psi1Km2));
+    setText('val-thermal-r', fmtKm(r.thermal3rdKm));
+    setText('val-thermal-a', fmtArea(a.thermal3rdKm2));
+    setText('val-rad-r', fmtKm(r.radiation500RemKm));
+    setText('val-rad-a', fmtArea(a.radiation500RemKm2));
+
+    // Fallout status banner
+    const falloutStatusEl = document.getElementById('fallout-status-box');
+    if (falloutStatusEl) {
+      if (sim.fallout.significant) {
+        const outer = sim.fallout.contours[2];
+        falloutStatusEl.innerHTML = `<span class="text-purple-300 font-semibold">显著局部沉降（火球触地）</span>：10 rad/hr 羽流顺风延伸约 <strong>${fmtKm(outer.lengthKm)}</strong>，最大宽 <strong>${fmtKm(outer.maxWidthKm)}</strong>。`;
+        falloutStatusEl.className = 'p-2.5 rounded-lg bg-purple-950/50 border border-purple-500/40 text-xs text-slate-200';
+      } else {
+        falloutStatusEl.innerHTML = `<span class="text-emerald-300 font-semibold">低局部沉降（高空空爆）</span>：火球未触地，放射性尘埃随蘑菇云升入平流层扩散，近地重沉降显著减少。`;
+        falloutStatusEl.className = 'p-2.5 rounded-lg bg-emerald-950/40 border border-emerald-500/30 text-xs text-slate-300';
+      }
+    }
+
+    // Impact estimates
+    setText('est-fatalities', fmtPop(sim.impactEstimate.estimatedFatalities));
+    setText('est-injuries', fmtPop(sim.impactEstimate.estimatedInjuries));
+    setText('est-pop-density', `${sim.params.popDensityPerKm2.toLocaleString()} 人/km²`);
+
+    // Physics / Energy tab
+    setText('energy-total', `${sim.energy.totalTJ.toFixed(1)} TJ`);
+    setText('energy-blast', `${sim.energy.blastTJ.toFixed(1)} TJ (50%)`);
+    setText('energy-thermal', `${sim.energy.thermalTJ.toFixed(1)} TJ (35%)`);
+    setText('energy-initrad', `${sim.energy.initialRadTJ.toFixed(1)} TJ (5%)`);
+    setText('energy-resrad', `${sim.energy.residualRadTJ.toFixed(1)} TJ (10%)`);
+  }
+
+  function runSimulation({ fitView = false } = {}) {
+    state.simResult = Physics.simulate({
+      yieldKt: state.yieldKt,
+      burstType: state.burstType,
+      autoHob: state.autoHob,
+      hobMeters: state.hobMeters,
+      windSpeedKmh: state.windSpeedKmh,
+      windDirDeg: state.windDirDeg,
+      fissionFraction: state.fissionFraction,
+      popDensityPerKm2: state.popDensityPerKm2
+    });
+
+    if (state.autoHob && state.burstType === 'airburst') {
+      state.hobMeters = state.simResult.params.hobMeters;
+      const hobSlider = document.getElementById('hob-slider');
+      if (hobSlider) hobSlider.value = String(Math.min(15000, state.hobMeters));
+    }
+
+    updateTelemetryUI(state.simResult);
+    renderMapEffects(state.simResult, fitView);
+    updateCharts(state.simResult);
+    updateShockwaveGraphic(state.timeline.tSec);
+  }
+
+  // --- Controls & Event Listeners ---
+  function renderPresetButtons() {
+    const container = document.getElementById('weapon-presets-grid');
+    if (!container) return;
+    container.innerHTML = '';
+
+    Presets.WEAPON_PRESETS.forEach((p) => {
+      const btn = document.createElement('button');
+      btn.type = 'button';
+      btn.dataset.presetId = p.id;
+      btn.className = `preset-btn text-left p-2 rounded-lg border border-slate-700/80 bg-slate-800/60 hover:border-amber-500/60 transition text-xs ${state.presetId === p.id ? 'active' : ''}`;
+      btn.innerHTML = `<div class="font-semibold text-slate-100 truncate">${p.cnName}</div><div class="text-[11px] text-amber-400 font-mono mt-0.5">${fmtYield(p.yieldKt)}</div>`;
+      btn.title = `${p.name} (${p.era}) — ${p.desc}`;
+      btn.addEventListener('click', () => {
+        state.presetId = p.id;
+        state.yieldKt = p.yieldKt;
+        state.burstType = p.defaultBurst;
+        state.autoHob = true;
+        syncInputsFromState();
+        runSimulation({ fitView: true });
+        showToast(`已载入预设：${p.cnName} (${fmtYield(p.yieldKt)})`);
+      });
+      container.appendChild(btn);
+    });
+  }
+
+  function renderCityOptions() {
+    const select = document.getElementById('city-select');
+    if (!select) return;
+    select.innerHTML = '';
+    Presets.CITY_PRESETS.forEach((c) => {
+      const opt = document.createElement('option');
+      opt.value = c.id;
+      opt.textContent = c.name;
+      if (c.id === state.cityId) opt.selected = true;
+      select.appendChild(opt);
+    });
+  }
+
+  function syncInputsFromState() {
+    const yieldSlider = document.getElementById('yield-slider');
+    const yieldInput = document.getElementById('yield-input');
+    const hobSlider = document.getElementById('hob-slider');
+    const autoHobCb = document.getElementById('auto-hob-toggle');
+    const hobGroup = document.getElementById('hob-control-group');
+
+    if (yieldSlider) yieldSlider.value = String(yieldToSlider(state.yieldKt));
+    if (yieldInput) yieldInput.value = String(state.yieldKt);
+    if (autoHobCb) autoHobCb.checked = state.autoHob;
+    if (hobSlider) {
+      hobSlider.disabled = state.burstType === 'surface' || state.autoHob;
+      hobSlider.value = String(state.burstType === 'surface' ? 0 : state.hobMeters);
+    }
+    if (hobGroup) {
+      hobGroup.classList.toggle('opacity-50', state.burstType === 'surface');
+    }
+
+    document.querySelectorAll('.burst-type-btn').forEach((b) => {
+      const active = b.dataset.burst === state.burstType;
+      b.classList.toggle('bg-amber-500', active);
+      b.classList.toggle('text-slate-950', active);
+      b.classList.toggle('font-semibold', active);
+      b.classList.toggle('bg-slate-800', !active);
+      b.classList.toggle('text-slate-300', !active);
+    });
+
+    document.querySelectorAll('.preset-btn').forEach((b) => {
+      b.classList.toggle('active', b.dataset.presetId === state.presetId);
+    });
+  }
+
+  function bindEvents() {
+    const citySelect = document.getElementById('city-select');
+    if (citySelect) {
+      citySelect.addEventListener('change', (e) => {
+        const city = Presets.CITY_PRESETS.find((c) => c.id === e.target.value);
+        if (!city) return;
+        state.cityId = city.id;
+        state.lat = city.lat;
+        state.lng = city.lng;
+        state.popDensityPerKm2 = city.popDensity;
+        const popInput = document.getElementById('pop-density-input');
+        if (popInput) popInput.value = String(city.popDensity);
+        if (gzMarker) gzMarker.setLatLng([city.lat, city.lng]);
+        if (map) map.setView([city.lat, city.lng], city.zoom);
+        runSimulation({ fitView: true });
+        showToast(`目标已切换至 ${city.name}`);
+      });
+    }
+
+    const basemapSelect = document.getElementById('basemap-select');
+    if (basemapSelect) {
+      basemapSelect.addEventListener('change', (e) => setBasemap(e.target.value));
+    }
+
+    const soundBtn = document.getElementById('btn-toggle-sound');
+    if (soundBtn) {
+      soundBtn.addEventListener('click', () => {
+        state.soundEnabled = !state.soundEnabled;
+        soundBtn.textContent = state.soundEnabled ? '🔊 音效开' : '🔇 静音';
+      });
+    }
+
+    const yieldSlider = document.getElementById('yield-slider');
+    const yieldInput = document.getElementById('yield-input');
+    if (yieldSlider) {
+      yieldSlider.addEventListener('input', (e) => {
+        state.presetId = '';
+        state.yieldKt = sliderToYield(e.target.value);
+        if (yieldInput) yieldInput.value = String(state.yieldKt);
+        syncInputsFromState();
+        runSimulation({ fitView: false });
+      });
+    }
+    if (yieldInput) {
+      yieldInput.addEventListener('change', (e) => {
+        state.presetId = '';
+        const val = Math.min(Physics.MAX_YIELD_KT, Math.max(Physics.MIN_YIELD_KT, Number(e.target.value) || 15));
+        state.yieldKt = val;
+        syncInputsFromState();
+        runSimulation({ fitView: true });
+      });
+    }
+
+    document.querySelectorAll('.burst-type-btn').forEach((btn) => {
+      btn.addEventListener('click', () => {
+        state.burstType = btn.dataset.burst;
+        syncInputsFromState();
+        runSimulation({ fitView: false });
+      });
+    });
+
+    const autoHobCb = document.getElementById('auto-hob-toggle');
+    if (autoHobCb) {
+      autoHobCb.addEventListener('change', (e) => {
+        state.autoHob = e.target.checked;
+        syncInputsFromState();
+        runSimulation({ fitView: false });
+      });
+    }
+
+    const hobSlider = document.getElementById('hob-slider');
+    if (hobSlider) {
+      hobSlider.addEventListener('input', (e) => {
+        state.autoHob = false;
+        state.hobMeters = Number(e.target.value);
+        if (autoHobCb) autoHobCb.checked = false;
+        runSimulation({ fitView: false });
+      });
+    }
+
+    const windSpeedSlider = document.getElementById('wind-speed-slider');
+    if (windSpeedSlider) {
+      windSpeedSlider.addEventListener('input', (e) => {
+        state.windSpeedKmh = Number(e.target.value);
+        runSimulation({ fitView: false });
+      });
+    }
+
+    const windDirSlider = document.getElementById('wind-dir-slider');
+    if (windDirSlider) {
+      windDirSlider.addEventListener('input', (e) => {
+        state.windDirDeg = Number(e.target.value);
+        runSimulation({ fitView: false });
+      });
+    }
+
+    const popInput = document.getElementById('pop-density-input');
+    if (popInput) {
+      popInput.addEventListener('input', (e) => {
+        state.popDensityPerKm2 = Math.max(0, Number(e.target.value) || 0);
+        runSimulation({ fitView: false });
+      });
+    }
+
+    document.querySelectorAll('.layer-toggle').forEach((cb) => {
+      cb.addEventListener('change', (e) => {
+        state.layers[e.target.dataset.layer] = e.target.checked;
+        renderMapEffects(state.simResult, false);
+      });
+    });
+
+    const detonateBtn = document.getElementById('btn-detonate');
+    if (detonateBtn) {
+      detonateBtn.addEventListener('click', triggerDetonationSequence);
+    }
+
+    const pinBtn = document.getElementById('btn-pin-compare');
+    if (pinBtn) {
+      pinBtn.addEventListener('click', () => {
+        if (!state.simResult) return;
+        state.pinnedDetonations.push({
+          lat: state.lat,
+          lng: state.lng,
+          sim: state.simResult
+        });
+        renderPinnedDetonations();
+        showToast(`已锁定对比爆点 #${state.pinnedDetonations.length}，可移动爆心继续对比`);
+      });
+    }
+
+    const clearPinBtn = document.getElementById('btn-clear-pins');
+    if (clearPinBtn) {
+      clearPinBtn.addEventListener('click', () => {
+        state.pinnedDetonations = [];
+        renderPinnedDetonations();
+        showToast('已清除所有对比爆点');
+      });
+    }
+
+    const exportBtn = document.getElementById('btn-export-json');
+    if (exportBtn) {
+      exportBtn.addEventListener('click', () => {
+        if (!state.simResult) return;
+        const payload = {
+          exportedAt: new Date().toISOString(),
+          target: { lat: state.lat, lng: state.lng, cityId: state.cityId },
+          simulation: state.simResult
+        };
+        const blob = new Blob([JSON.stringify(payload, null, 2)], { type: 'application/json' });
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = `nukesim_${state.yieldKt}kt_${state.burstType}.json`;
+        document.body.appendChild(a);
+        a.click();
+        document.body.removeChild(a);
+        URL.revokeObjectURL(url);
+        showToast('已导出当前模拟 JSON 报告');
+      });
+    }
+
+    // Timeline controls
+    const playBtn = document.getElementById('btn-play-timeline');
+    if (playBtn) {
+      playBtn.addEventListener('click', () => {
+        if (state.timeline.playing) {
+          stopTimeline();
+        } else {
+          startTimeline(state.timeline.tSec >= state.timeline.maxSec);
+        }
+      });
+    }
+
+    const resetTlBtn = document.getElementById('btn-reset-timeline');
+    if (resetTlBtn) {
+      resetTlBtn.addEventListener('click', () => {
+        stopTimeline();
+        state.timeline.tSec = 0;
+        updateShockwaveGraphic(0);
+      });
+    }
+
+    const tlSlider = document.getElementById('timeline-slider');
+    if (tlSlider) {
+      tlSlider.addEventListener('input', (e) => {
+        stopTimeline();
+        state.timeline.scrubbing = true;
+        state.timeline.tSec = Number(e.target.value);
+        updateShockwaveGraphic(state.timeline.tSec);
+        state.timeline.scrubbing = false;
+      });
+    }
+
+    // Right panel tabs
+    document.querySelectorAll('.tab-btn').forEach((btn) => {
+      btn.addEventListener('click', () => {
+        const target = btn.dataset.tab;
+        state.activeTab = target;
+        document.querySelectorAll('.tab-btn').forEach((b) => b.classList.toggle('active', b.dataset.tab === target));
+        document.querySelectorAll('.tab-pane').forEach((p) => {
+          p.classList.toggle('hidden', p.id !== `tab-${target}`);
+        });
+        if (target === 'charts' && radiiChart && decayChart) {
+          radiiChart.resize();
+          decayChart.resize();
+        }
+      });
+    });
+
+    // Mobile sidebar toggle
+    const toggleControlsBtn = document.getElementById('btn-toggle-sidebar');
+    const sidebar = document.getElementById('control-sidebar');
+    if (toggleControlsBtn && sidebar) {
+      toggleControlsBtn.addEventListener('click', () => {
+        sidebar.classList.toggle('hidden');
+        setTimeout(() => { if (map) map.invalidateSize(); }, 180);
+      });
+    }
+  }
+
+  function init() {
+    renderPresetButtons();
+    renderCityOptions();
+    syncInputsFromState();
+    initMap();
+    bindEvents();
+    runSimulation({ fitView: true });
+    updateShockwaveGraphic(0);
+  }
+
+  if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', init);
+  } else {
+    init();
+  }
+})();
+
+  </script>
+</body>
+</html>

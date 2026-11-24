@@ -1,0 +1,85 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
+  <title>RimWeb · 边缘世界网页版</title>
+  <link rel="stylesheet" href="./styles.css" />
+</head>
+<body>
+  <div id="app">
+    <canvas id="game-canvas"></canvas>
+
+    <!-- Top Colonist Bar & Clock/Speed Controls -->
+    <div id="top-bar">
+      <div id="colonist-bar"></div>
+      <div id="status-cluster">
+        <div id="clock-panel" class="hud-panel">
+          <div class="clock-meta">
+            <span id="clock-time" class="clock-time">第 1 天 · 08:00</span>
+            <span id="clock-sub" class="clock-sub">晴朗 · 18°C</span>
+          </div>
+          <div class="speed-btns">
+            <button id="btn-pause" class="btn" title="暂停/继续 (Space)">⏸</button>
+            <button id="btn-s1" class="btn active" title="1倍速 (1)">1×</button>
+            <button id="btn-s2" class="btn" title="2倍速 (2)">2×</button>
+            <button id="btn-s3" class="btn" title="3倍速 (3)">3×</button>
+            <button id="btn-mute" class="btn" title="音效开关">🔊</button>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Left Resource Panel -->
+    <div id="resource-panel" class="hud-panel">
+      <div class="panel-title"><span>殖民地物资</span><span id="pop-count">4人</span></div>
+      <div id="resource-list"></div>
+      <div id="power-status" class="power-row">
+        <span>⚡ 电力</span>
+        <span id="power-val">0W</span>
+      </div>
+    </div>
+
+    <!-- Right Alerts Stack -->
+    <div id="alerts-panel"></div>
+
+    <!-- Bottom-Left Inspector -->
+    <div id="inspector-panel" class="hud-panel"></div>
+
+    <!-- Bottom-Right Event Log -->
+    <div id="log-panel" class="hud-panel">
+      <div class="panel-title"><span>事件日志</span></div>
+      <div id="log-list"></div>
+    </div>
+
+    <!-- Bottom Command Dock -->
+    <div id="bottom-dock">
+      <div id="sub-toolbar" class="hud-panel"></div>
+      <div id="main-toolbar" class="hud-panel">
+        <button class="btn active" data-menu="select">🖱 选择</button>
+        <button class="btn" data-menu="orders">🪓 指令</button>
+        <button class="btn" data-menu="zones">🌾 区域</button>
+        <button class="btn" data-menu="build">🏗 建造</button>
+        <button class="btn" id="btn-open-work">📋 工作优先级</button>
+        <button class="btn" id="btn-open-tech">🔬 科技树</button>
+        <button class="btn" id="btn-open-story">🎲 叙事者</button>
+        <button class="btn" id="btn-open-save">💾 存档</button>
+        <button class="btn" id="btn-open-help">❓ 指南</button>
+      </div>
+    </div>
+
+    <!-- Modal Overlay -->
+    <div id="modal-backdrop">
+      <div id="modal-box" class="hud-panel">
+        <div class="modal-header">
+          <span id="modal-title" class="modal-title">面板</span>
+          <button id="modal-close" class="btn">关闭</button>
+        </div>
+        <div id="modal-body"></div>
+      </div>
+    </div>
+  </div>
+
+  <script type="module" src="./src/main.js"></script>
+</body>
+</html>

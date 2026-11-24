@@ -1,0 +1,79 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
+  <title>FC 坦克大战 · Battle City Web</title>
+  <link rel="stylesheet" href="css/style.css" />
+</head>
+<body>
+  <main class="app-shell">
+    <header class="top-bar">
+      <div class="brand">
+        <span class="brand-badge">FC 1985</span>
+        <span class="brand-title">坦克大战 · Battle City</span>
+      </div>
+      <div class="score-strip">
+        <div class="score-item">
+          <span class="score-label">当前关卡</span>
+          <span id="hud-stage" class="score-val">STAGE 1</span>
+        </div>
+        <div class="score-item">
+          <span class="score-label">得分</span>
+          <span id="hud-score" class="score-val">000000</span>
+        </div>
+        <div class="score-item">
+          <span class="score-label">最高分</span>
+          <span id="hud-highscore" class="score-val">020000</span>
+        </div>
+      </div>
+    </header>
+
+    <section class="toolbar" aria-label="游戏控制栏">
+      <div class="control-group">
+        <button id="btn-start" class="btn btn-primary" type="button">开始 / 重开</button>
+        <button id="btn-1p" class="btn btn-active" type="button">1P 单人</button>
+        <button id="btn-2p" class="btn" type="button">2P 双人</button>
+        <select id="stage-select" class="select-stage" aria-label="选择关卡"></select>
+      </div>
+      <div class="control-group">
+        <button id="btn-pause" class="btn" type="button">暂停 (P)</button>
+        <button id="btn-mute" class="btn btn-active" type="button">音效: 开</button>
+        <button id="btn-menu" class="btn" type="button">主菜单</button>
+      </div>
+    </section>
+
+    <section class="stage-wrap" aria-label="战场画布">
+      <canvas id="game-canvas" width="512" height="416"></canvas>
+    </section>
+
+    <section class="touch-panel" aria-label="虚拟手柄控制">
+      <div class="dpad">
+        <div class="dpad-empty"></div>
+        <button class="dpad-btn" type="button" data-action="up" aria-label="向上">▲</button>
+        <div class="dpad-empty"></div>
+        <button class="dpad-btn" type="button" data-action="left" aria-label="向左">◀</button>
+        <div class="dpad-empty"></div>
+        <button class="dpad-btn" type="button" data-action="right" aria-label="向右">▶</button>
+        <div class="dpad-empty"></div>
+        <button class="dpad-btn" type="button" data-action="down" aria-label="向下">▼</button>
+        <div class="dpad-empty"></div>
+      </div>
+      <div class="fire-pad">
+        <button class="fire-btn" type="button" data-action="fire" aria-label="开火">FIRE</button>
+      </div>
+    </section>
+
+    <footer class="legend-grid">
+      <div>
+        <strong>键盘操作：</strong>1P 用 WASD（单人亦可用方向键）移动，空格 / J / Z 开火；2P 用方向键移动，Enter / K 开火；P 暂停，M 静音。
+      </div>
+      <div>
+        <strong>经典道具：</strong>★ 火力升级（满级3星破钢墙）、盾 10秒无敌、时 冻结敌军、铁 基地钢甲、雷 全屏清敌、+1 额外生命。
+      </div>
+    </footer>
+  </main>
+
+  <script type="module" src="src/main.js"></script>
+</body>
+</html>

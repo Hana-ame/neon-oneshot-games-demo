@@ -1,0 +1,178 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
+  <title>CS: Web Strike — Dust2 Tactical FPS</title>
+  <link rel="stylesheet" href="src/styles.css" />
+</head>
+<body>
+  <div id="game-shell">
+    <canvas id="fps-canvas"></canvas>
+
+    <!-- HUD Layer -->
+    <div id="hud-layer">
+      <div class="hud-top">
+        <div class="radar-wrap">
+          <canvas id="radar-canvas" width="160" height="160"></canvas>
+          <div class="radar-label">DE_DUST2 RADAR</div>
+        </div>
+
+        <div class="scoreboard-pill">
+          <div class="team-score ct">
+            <span class="label">CT</span>
+            <span class="val" id="ct-score">0</span>
+            <span class="alive-dots" id="ct-alive">4 ALIVE</span>
+          </div>
+          <div class="round-clock">
+            <span class="phase-tag" id="phase-tag">BUY</span>
+            <span class="time-val" id="clock-val">0:10</span>
+          </div>
+          <div class="team-score t">
+            <span class="label">T</span>
+            <span class="val" id="t-score">0</span>
+            <span class="alive-dots" id="t-alive">4 ALIVE</span>
+          </div>
+        </div>
+
+        <div class="hud-top-right">
+          <div class="top-controls">
+            <button class="ctrl-btn" id="btn-buy">BUY [B]</button>
+            <button class="ctrl-btn" id="btn-pad">PAD: OFF</button>
+            <button class="ctrl-btn" id="btn-mute">SOUND: ON</button>
+          </div>
+          <div class="kill-feed" id="kill-feed"></div>
+        </div>
+      </div>
+
+      <div class="hud-center">
+        <div class="announce-box hidden" id="announce-box">
+          <div class="announce-title" id="announce-title">ROUND 1</div>
+          <div class="announce-sub" id="announce-sub">BUY PHASE</div>
+        </div>
+        <div class="action-progress hidden" id="action-progress">
+          <div class="action-progress-label" id="action-progress-label">PLANTING C4...</div>
+          <div class="action-progress-track">
+            <div class="action-progress-fill" id="action-progress-fill"></div>
+          </div>
+        </div>
+      </div>
+
+      <div class="hud-bottom">
+        <div class="hud-card">
+          <div class="stat-block">
+            <span class="stat-label">HEALTH</span>
+            <span class="stat-value" id="hud-hp">100</span>
+          </div>
+          <div class="stat-block">
+            <span class="stat-label">ARMOR</span>
+            <span class="stat-value" id="hud-armor">0</span>
+          </div>
+          <div class="stat-block">
+            <span class="stat-label">CASH</span>
+            <span class="stat-value money" id="hud-money">$800</span>
+          </div>
+        </div>
+
+        <div class="key-hints" id="hud-bomb-hint">
+          WASD Move · Mouse/Drag/Arrows Aim · Click Fire · R Reload · B Buy · E Plant/Defuse · F/RMB Scope · Tab Score
+        </div>
+
+        <div class="hud-card" style="flex-direction:column;align-items:flex-end;gap:2px">
+          <div style="display:flex;align-items:baseline;gap:12px">
+            <span class="stat-label" id="hud-weapon-name">USP-S</span>
+            <span class="stat-value" id="hud-ammo">12 / 36</span>
+          </div>
+          <div class="weapon-slots" id="hud-slots"></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- On-screen Touch / Click Pad -->
+    <div id="touch-controls">
+      <div class="pad-grid">
+        <div></div>
+        <button class="pad-btn" id="pad-up">W</button>
+        <div></div>
+        <button class="pad-btn" id="pad-left">◀</button>
+        <button class="pad-btn" id="pad-down">S</button>
+        <button class="pad-btn" id="pad-right">▶</button>
+      </div>
+      <div class="action-pad">
+        <button class="pad-btn" id="pad-reload">R</button>
+        <button class="pad-btn" id="pad-use">C4</button>
+        <button class="pad-btn fire" id="pad-fire">FIRE</button>
+      </div>
+    </div>
+
+    <!-- Main Menu Overlay -->
+    <div class="overlay" id="menu-overlay">
+      <div class="modal-card">
+        <h1 class="brand-title">CS: <span>WEB STRIKE</span></h1>
+        <p class="brand-sub">Classic 4v4 Tactical FPS on Dust2 — Raycast 3D Engine, Weapon Recoil, Economy, C4 Bomb &amp; Bot AI</p>
+
+        <div style="font-size:12px;font-weight:700;color:#94a3b8;margin-bottom:6px">SELECT FACTION</div>
+        <div class="option-row">
+          <button class="select-btn active-ct" id="pick-ct">COUNTER-TERRORISTS (CT)<br><span style="font-size:11px;font-weight:500;color:#94a3b8">Defend A/B Sites &amp; Defuse C4</span></button>
+          <button class="select-btn" id="pick-t">TERRORISTS (T)<br><span style="font-size:11px;font-weight:500;color:#94a3b8">Plant C4 at A/B or Eliminate CT</span></button>
+        </div>
+
+        <div style="font-size:12px;font-weight:700;color:#94a3b8;margin-bottom:6px">BOT DIFFICULTY</div>
+        <div class="option-row three">
+          <button class="select-btn" id="diff-easy">EASY</button>
+          <button class="select-btn active-diff" id="diff-normal">NORMAL</button>
+          <button class="select-btn" id="diff-hard">HARD</button>
+        </div>
+
+        <div style="font-size:12px;color:#94a3b8;background:rgba(255,255,255,0.04);padding:10px 12px;border-radius:8px;margin-bottom:12px;line-height:1.5">
+          <strong>Controls:</strong> <b>WASD</b> Move · <b>Mouse Click / Drag / Arrow Keys</b> Aim &amp; Shoot · <b>1/2/3</b> Weapons · <b>R</b> Reload · <b>B</b> Buy Menu · <b>E</b> Plant/Defuse C4 · <b>F / Right-Click</b> AWP Scope · <b>Shift</b> Walk · <b>C/Ctrl</b> Crouch · <b>Tab</b> Scoreboard
+        </div>
+
+        <button class="primary-btn" id="btn-start">DEPLOY TO DE_DUST2</button>
+      </div>
+    </div>
+
+    <!-- Buy Menu Overlay -->
+    <div class="overlay hidden" id="buy-overlay">
+      <div class="modal-card">
+        <div style="display:flex;justify-content:space-between;align-items:center">
+          <h2 style="margin:0;font-size:20px;font-weight:800">BUY MENU <span style="color:#4ade80" id="buy-money">$800</span></h2>
+          <div style="display:flex;gap:8px">
+            <button class="ctrl-btn" id="btn-skip-buy">START LIVE</button>
+            <button class="ctrl-btn" id="btn-close-buy">CLOSE [B]</button>
+          </div>
+        </div>
+        <div id="buy-msg" style="font-size:12px;color:#facc15;margin-top:6px;min-height:16px"></div>
+        <div class="buy-grid" id="buy-grid"></div>
+      </div>
+    </div>
+
+    <!-- Scoreboard Overlay -->
+    <div class="overlay hidden" id="score-overlay">
+      <div class="modal-card">
+        <h2 style="margin:0;font-size:18px;font-weight:800">MATCH SCOREBOARD — DE_DUST2 (FIRST TO 5)</h2>
+        <table class="score-table">
+          <thead>
+            <tr><th>TEAM</th><th>PLAYER</th><th>STATUS</th><th>K</th><th>D</th><th>CASH</th></tr>
+          </thead>
+          <tbody id="score-tbody"></tbody>
+        </table>
+      </div>
+    </div>
+
+    <!-- Match Over Overlay -->
+    <div class="overlay hidden" id="matchover-overlay">
+      <div class="modal-card" style="text-align:center">
+        <h2 id="matchover-title" style="margin:0;font-size:30px;font-weight:900;color:#f59e0b">CT VICTORY</h2>
+        <p id="matchover-score" style="font-size:15px;color:#cbd5e1;margin:10px 0 20px"></p>
+        <div class="option-row">
+          <button class="primary-btn" id="btn-rematch">PLAY AGAIN</button>
+          <button class="select-btn" id="btn-back-menu" style="margin-top:8px">MAIN MENU</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <script type="module" src="src/main.js"></script>
+</body>
+</html>

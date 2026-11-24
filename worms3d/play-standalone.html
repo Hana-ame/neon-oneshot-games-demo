@@ -1,0 +1,3348 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
+  <title>百战天虫 3D — Worms 3D Web</title>
+  <script src="https://cdn.tailwindcss.com/3.4.17"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+  <style>
+    html, body {
+      margin: 0;
+      padding: 0;
+      width: 100%;
+      height: 100%;
+      overflow: hidden;
+      background: #0f172a;
+      font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'PingFang SC', 'Microsoft YaHei', sans-serif;
+      touch-action: none;
+      user-select: none;
+    }
+    #game-canvas {
+      display: block;
+      width: 100%;
+      height: 100%;
+      cursor: grab;
+    }
+    #game-canvas:active {
+      cursor: grabbing;
+    }
+    .glass-panel {
+      background: rgba(15, 23, 42, 0.78);
+      backdrop-filter: blur(8px);
+      -webkit-backdrop-filter: blur(8px);
+    }
+  </style>
+</head>
+<body class="text-slate-100">
+  <div id="app-root" class="relative w-full h-full overflow-hidden">
+    <!-- 3D WebGL 画布 -->
+    <canvas id="game-canvas"></canvas>
+
+    <!-- 3D 投影虫子头顶血条层 -->
+    <div id="worm-labels-layer" class="absolute inset-0 pointer-events-none overflow-hidden"></div>
+
+    <!-- 顶部状态栏：队伍总血量 + 回合计时 + 风向 + 快捷按钮 -->
+    <header class="absolute top-2 left-2 right-2 flex flex-wrap items-start justify-between gap-2 pointer-events-none z-20">
+      <!-- 左侧：队伍血条与风向 -->
+      <div class="glass-panel pointer-events-auto rounded-xl border border-slate-700/70 px-3 py-2 flex items-center gap-3 shadow-lg">
+        <div class="flex flex-col gap-1 min-w-[110px] sm:min-w-[140px]">
+          <div class="flex items-center justify-between text-[11px] font-bold">
+            <span class="text-rose-400">红队先锋</span>
+            <span id="team0-hp-text" class="font-mono text-rose-300">300</span>
+          </div>
+          <div class="w-full h-2 bg-slate-800 rounded-full overflow-hidden">
+            <div id="team0-hp-bar" class="h-full bg-gradient-to-r from-rose-600 to-rose-400 transition-all duration-300" style="width:100%"></div>
+          </div>
+          <div class="flex items-center justify-between text-[11px] font-bold mt-0.5">
+            <span class="text-sky-400">蓝队特攻</span>
+            <span id="team1-hp-text" class="font-mono text-sky-300">300</span>
+          </div>
+          <div class="w-full h-2 bg-slate-800 rounded-full overflow-hidden">
+            <div id="team1-hp-bar" class="h-full bg-gradient-to-r from-sky-600 to-sky-400 transition-all duration-300" style="width:100%"></div>
+          </div>
+        </div>
+
+        <div class="h-10 w-px bg-slate-700/80"></div>
+
+        <!-- 风向罗盘 -->
+        <div class="flex flex-col items-center">
+          <span class="text-[10px] text-slate-400">风向</span>
+          <div class="w-8 h-8 rounded-full border border-slate-600 bg-slate-900/90 flex items-center justify-center my-0.5">
+            <span id="wind-arrow" class="text-amber-400 text-sm font-bold inline-block transition-transform duration-300">▲</span>
+          </div>
+          <span id="wind-value" class="text-[10px] font-mono text-amber-300">0.0 m/s</span>
+        </div>
+      </div>
+
+      <!-- 中央：当前回合与倒计时 -->
+      <div class="glass-panel pointer-events-auto rounded-xl border border-slate-700/70 px-3.5 py-1.5 flex items-center gap-3 shadow-lg">
+        <span id="round-badge" class="px-1.5 py-0.5 rounded bg-slate-800 text-[11px] font-mono text-slate-300">R1</span>
+        <div class="flex flex-col">
+          <span id="turn-badge" class="text-xs sm:text-sm font-bold text-rose-400 whitespace-nowrap">红队先锋 · 赤焰虫</span>
+          <span class="text-[10px] text-slate-400 hidden sm:inline">拖拽调整瞄准 · 空格蓄力发射</span>
+        </div>
+        <div class="pl-2 border-l border-slate-700">
+          <span id="turn-timer" class="text-lg font-black font-mono text-amber-300">30s</span>
+        </div>
+      </div>
+
+      <!-- 右侧：视角、音效、新对局、帮助 -->
+      <div class="glass-panel pointer-events-auto rounded-xl border border-slate-700/70 p-1.5 flex items-center gap-1.5 shadow-lg">
+        <button id="btn-camera" type="button" class="px-2.5 py-1.5 rounded-lg bg-slate-800 hover:bg-slate-700 text-xs font-medium transition">🎯 追尾视角</button>
+        <button id="btn-mute" type="button" class="px-2.5 py-1.5 rounded-lg bg-slate-800 hover:bg-slate-700 text-xs font-medium transition">🔊 音效</button>
+        <button id="btn-settings" type="button" class="px-2.5 py-1.5 rounded-lg bg-indigo-600 hover:bg-indigo-500 text-xs font-medium transition">⚙️ 新对局</button>
+        <button id="btn-help" type="button" class="px-2.5 py-1.5 rounded-lg bg-slate-800 hover:bg-slate-700 text-xs font-medium transition">❓ 操作</button>
+      </div>
+    </header>
+
+    <!-- 右侧战报提示 -->
+    <div id="kill-feed" class="absolute top-20 right-2 flex flex-col items-end gap-1 pointer-events-none z-20 max-w-[260px]"></div>
+
+    <!-- 中央动态事件横幅 -->
+    <div id="event-banner" class="absolute top-20 left-1/2 -translate-x-1/2 px-4 py-2 rounded-full glass-panel border border-amber-400/50 text-amber-200 text-xs sm:text-sm font-bold shadow-xl pointer-events-none transition-all duration-300 opacity-0 scale-95 z-20 whitespace-nowrap">
+      第 1 轮 · 红队先锋行动
+    </div>
+
+    <!-- 蓄力槽 -->
+    <div id="power-wrap" class="absolute bottom-36 sm:bottom-28 left-1/2 -translate-x-1/2 w-56 sm:w-64 glass-panel rounded-full p-1.5 border border-amber-400/70 shadow-xl pointer-events-none transition-opacity duration-150 opacity-0 z-20">
+      <div class="w-full h-3 bg-slate-900 rounded-full overflow-hidden">
+        <div id="power-fill" class="h-full bg-gradient-to-r from-emerald-400 via-amber-400 to-rose-500" style="width:0%"></div>
+      </div>
+    </div>
+
+    <!-- 底部：武器栏 + 触控/鼠标快捷操作 -->
+    <footer class="absolute bottom-2 left-2 right-2 flex flex-col sm:flex-row items-center justify-between gap-2 pointer-events-none z-20">
+      <!-- 左侧虚拟方向与仰角控制（适配触屏及窄屏） -->
+      <div class="glass-panel pointer-events-auto rounded-xl border border-slate-700/70 p-1.5 flex items-center gap-1.5 shadow-lg">
+        <div class="grid grid-cols-3 gap-1">
+          <div></div>
+          <button id="ctrl-fwd" type="button" class="w-8 h-8 rounded bg-slate-800 active:bg-amber-500 text-xs font-bold">W</button>
+          <div></div>
+          <button id="ctrl-left" type="button" class="w-8 h-8 rounded bg-slate-800 active:bg-amber-500 text-xs font-bold">A</button>
+          <button id="ctrl-back" type="button" class="w-8 h-8 rounded bg-slate-800 active:bg-amber-500 text-xs font-bold">S</button>
+          <button id="ctrl-right" type="button" class="w-8 h-8 rounded bg-slate-800 active:bg-amber-500 text-xs font-bold">D</button>
+        </div>
+        <div class="flex flex-col gap-1">
+          <button id="ctrl-up" type="button" class="px-2 h-8 rounded bg-slate-800 active:bg-amber-500 text-[11px] font-bold">仰角+</button>
+          <button id="ctrl-down" type="button" class="px-2 h-8 rounded bg-slate-800 active:bg-amber-500 text-[11px] font-bold">仰角-</button>
+        </div>
+        <button id="ctrl-jump" type="button" class="px-2.5 h-16 rounded-lg bg-emerald-600/90 hover:bg-emerald-500 active:scale-95 text-xs font-bold">跳跃<br/>[J]</button>
+      </div>
+
+      <!-- 中央武器栏 -->
+      <div class="glass-panel pointer-events-auto rounded-xl border border-slate-700/70 px-2.5 py-2 flex flex-col items-center gap-1 shadow-lg max-w-full overflow-x-auto">
+        <div id="weapon-bar" class="flex items-center gap-1.5"></div>
+        <div id="weapon-desc" class="text-[11px] text-slate-300 text-center truncate max-w-[90vw] sm:max-w-[460px]">
+          🚀 火箭筒：经典抛物线火箭，受风力影响，蓄力控制射程。
+        </div>
+      </div>
+
+      <!-- 右侧按住蓄力发射按钮 -->
+      <div class="glass-panel pointer-events-auto rounded-xl border border-slate-700/70 p-1.5 shadow-lg">
+        <button id="ctrl-fire" type="button" class="px-5 h-16 rounded-lg bg-gradient-to-b from-orange-500 to-rose-600 hover:from-orange-400 hover:to-rose-500 active:scale-95 text-sm font-black tracking-wide shadow-md">
+          🔥 按住蓄力<br/><span class="text-[10px] font-normal opacity-90">松开发射 [Space]</span>
+        </button>
+      </div>
+    </footer>
+
+    <!-- 对局设置弹窗 -->
+    <div id="settings-modal" class="hidden absolute inset-0 bg-slate-950/75 backdrop-blur-sm flex items-center justify-center p-4 z-40">
+      <div class="w-full max-w-md rounded-2xl bg-slate-900 border border-slate-700 p-5 shadow-2xl">
+        <div class="flex items-center justify-between mb-4">
+          <h2 class="text-lg font-bold text-white">⚙️ 开启新对局</h2>
+          <button id="btn-close-settings" type="button" class="text-slate-400 hover:text-white text-lg">✕</button>
+        </div>
+        <div class="space-y-3 text-sm">
+          <div>
+            <label for="opt-mode" class="block text-slate-300 mb-1">对战模式</label>
+            <select id="opt-mode" class="w-full rounded-lg bg-slate-800 border border-slate-700 px-3 py-2 text-white">
+              <option value="ai" selected>单人对战智能 AI（红队 vs 蓝队AI）</option>
+              <option value="hotseat">本地双人热座（红队 vs 蓝队）</option>
+            </select>
+          </div>
+          <div>
+            <label for="opt-theme" class="block text-slate-300 mb-1">3D 岛屿地图主题</label>
+            <select id="opt-theme" class="w-full rounded-lg bg-slate-800 border border-slate-700 px-3 py-2 text-white">
+              <option value="tropical" selected>🏝️ 热带火山岛</option>
+              <option value="arctic">❄️ 冰川要塞</option>
+              <option value="volcano">🌋 熔岩峡谷</option>
+            </select>
+          </div>
+          <div>
+            <label for="opt-worms" class="block text-slate-300 mb-1">每队虫子数量</label>
+            <select id="opt-worms" class="w-full rounded-lg bg-slate-800 border border-slate-700 px-3 py-2 text-white">
+              <option value="2">每队 2 只（快节奏）</option>
+              <option value="3" selected>每队 3 只（经典标准）</option>
+              <option value="4">每队 4 只（持久战）</option>
+            </select>
+          </div>
+        </div>
+        <button id="btn-apply-match" type="button" class="mt-5 w-full py-2.5 rounded-xl bg-gradient-to-r from-orange-500 to-rose-600 hover:from-orange-400 hover:to-rose-500 font-bold text-white shadow-lg">
+          🚀 生成 3D 战场并开始
+        </button>
+      </div>
+    </div>
+
+    <!-- 操作说明弹窗 -->
+    <div id="help-modal" class="hidden absolute inset-0 bg-slate-950/75 backdrop-blur-sm flex items-center justify-center p-4 z-40">
+      <div class="w-full max-w-md rounded-2xl bg-slate-900 border border-slate-700 p-5 shadow-2xl">
+        <div class="flex items-center justify-between mb-3">
+          <h2 class="text-lg font-bold text-white">📖 百战天虫 3D 操作指南</h2>
+          <button id="btn-close-help" type="button" class="text-slate-400 hover:text-white text-lg">✕</button>
+        </div>
+        <ul class="space-y-2 text-xs sm:text-sm text-slate-300">
+          <li><strong class="text-amber-300">W / S 或 ↑ / ↓</strong>：前进 / 后退移动虫子</li>
+          <li><strong class="text-amber-300">A / D 或 ← / →</strong>：左右旋转瞄准方向</li>
+          <li><strong class="text-amber-300">鼠标拖拽 或 R / F</strong>：微调 3D 瞄准方向与俯仰角</li>
+          <li><strong class="text-amber-300">J 或 Enter</strong>：向前跳跃跨过弹坑与坡道</li>
+          <li><strong class="text-amber-300">按住 Space（或右下角按钮）</strong>：蓄力并松开发射武器</li>
+          <li><strong class="text-amber-300">数字键 1 ~ 6</strong>：快速切换 6 种经典武器</li>
+          <li><strong class="text-amber-300">C 键</strong>：切换追尾视角 / 战术上帝视角（支持拖拽与滚轮缩放）</li>
+          <li><strong class="text-amber-300">M 键</strong>：开启 / 关闭程序化音效</li>
+        </ul>
+      </div>
+    </div>
+
+    <!-- 胜负结算弹窗 -->
+    <div id="gameover-modal" class="hidden absolute inset-0 bg-slate-950/80 backdrop-blur-sm flex items-center justify-center p-4 z-50">
+      <div class="w-full max-w-sm rounded-2xl bg-slate-900 border border-amber-400/60 p-6 text-center shadow-2xl">
+        <div class="text-4xl mb-2">🏆</div>
+        <h2 id="gameover-title" class="text-2xl font-black text-amber-300">红队先锋 获胜！</h2>
+        <p id="gameover-sub" class="text-sm text-slate-300 mt-2">激战结束</p>
+        <button id="btn-restart" type="button" class="mt-5 w-full py-2.5 rounded-xl bg-gradient-to-r from-emerald-500 to-teal-600 hover:from-emerald-400 hover:to-teal-500 font-bold text-white shadow-lg">
+          🔄 再来一局
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <script>
+(function() {
+"use strict";
+
+// === src/core/constants.js ===
+/**
+ * 百战天虫 3D (Worms 3D Web) - 核心常量与武器配置
+ */
+const WORLD_CONFIG = {
+  GRID_SIZE: 96,          // 高度场网格分辨率 (96x96 顶点，弹坑边缘更锐利)
+  WORLD_SIZE: 80,         // 世界物理尺寸 (-40 ~ +40)
+  WATER_LEVEL: 0.0,       // 初始海平面高度
+  MAX_HEIGHT: 18.0,       // 最高山峰参考高度
+  GRAVITY: 22.0,          // 重力加速度 (m/s^2)
+  WIND_MAX: 9.0,          // 最大风速加速度
+  TURN_DURATION: 30,      // 每回合行动时间 (秒)
+  RETREAT_DURATION: 3.0,  // 开火后撤离时间 (秒)
+  SUDDEN_DEATH_ROUND: 8,  // 第8轮后触发海平面上升
+  WATER_RISE_STEP: 0.9,   // 突然死亡每轮海平面上升高度
+  WORM_RADIUS: 0.95,      // 虫子碰撞半径
+  WORM_HEIGHT: 2.0,       // 虫子高度
+  WORM_MAX_HP: 100,       // 初始生命值
+  WORM_MOVE_SPEED: 6.2,   // 行走速度
+  WORM_JUMP_VY: 9.5,      // 跳跃垂直初速度
+  WORM_JUMP_VH: 5.5,      // 跳跃水平初速度
+  MAX_SLOPE: 1.35,        // 最大可攀爬坡度 (dy/dx)
+  FALL_DAMAGE_THRESHOLD: 11.5, // 触发摔落伤害的下落速度阈值
+  FALL_DAMAGE_SCALE: 2.2, // 摔落伤害系数
+};
+const MAP_THEMES = {
+  tropical: {
+    id: 'tropical',
+    name: '热带火山岛',
+    skyTop: 0x38bdf8,
+    skyBottom: 0xe0f2fe,
+    fogColor: 0xbae6fd,
+    waterColor: 0x0284c7,
+    waterOpacity: 0.82,
+    sandColor: [0.92, 0.84, 0.58],
+    grassColor: [0.24, 0.68, 0.28],
+    rockColor: [0.46, 0.44, 0.42],
+    peakColor: [0.68, 0.72, 0.62],
+    scorchColor: [0.11, 0.09, 0.08],
+    seedOffset: 101,
+  },
+  arctic: {
+    id: 'arctic',
+    name: '冰川要塞',
+    skyTop: 0x1e3a8a,
+    skyBottom: 0xcffafe,
+    fogColor: 0xdbeafe,
+    waterColor: 0x0369a1,
+    waterOpacity: 0.86,
+    sandColor: [0.68, 0.82, 0.92],
+    grassColor: [0.88, 0.94, 0.99],
+    rockColor: [0.38, 0.48, 0.58],
+    peakColor: [0.97, 0.99, 1.0],
+    scorchColor: [0.14, 0.18, 0.24],
+    seedOffset: 202,
+  },
+  volcano: {
+    id: 'volcano',
+    name: '熔岩峡谷',
+    skyTop: 0x450a0a,
+    skyBottom: 0xfb923c,
+    fogColor: 0x7c2d12,
+    waterColor: 0xea580c,
+    waterOpacity: 0.92,
+    sandColor: [0.35, 0.22, 0.18],
+    grassColor: [0.28, 0.25, 0.26],
+    rockColor: [0.18, 0.16, 0.17],
+    peakColor: [0.58, 0.24, 0.16],
+    scorchColor: [0.05, 0.04, 0.04],
+    seedOffset: 303,
+  },
+};
+const WEAPONS = {
+  bazooka: {
+    id: 'bazooka',
+    key: '1',
+    name: '火箭筒',
+    icon: '🚀',
+    type: 'projectile',
+    ammo: Infinity,
+    minSpeed: 10,
+    maxSpeed: 38,
+    chargeable: true,
+    windFactor: 1.0,
+    bounces: 0,
+    fuseTime: 0,
+    blastRadius: 6.2,
+    craterDepth: 5.4,
+    maxDamage: 45,
+    knockback: 18,
+    projectileRadius: 0.35,
+    color: 0xf97316,
+    description: '经典抛物线火箭，受风力影响，蓄力控制射程。',
+  },
+  grenade: {
+    id: 'grenade',
+    key: '2',
+    name: '手榴弹',
+    icon: '💣',
+    type: 'projectile',
+    ammo: Infinity,
+    minSpeed: 8,
+    maxSpeed: 30,
+    chargeable: true,
+    windFactor: 0.0,
+    bounces: 5,
+    restitution: 0.52,
+    fuseTime: 3.0,
+    blastRadius: 5.8,
+    craterDepth: 5.0,
+    maxDamage: 48,
+    knockback: 17,
+    projectileRadius: 0.32,
+    color: 0x22c55e,
+    description: '不受风力影响，落地反弹，3秒引信后引爆。',
+  },
+  cluster: {
+    id: 'cluster',
+    key: '3',
+    name: '集束炸弹',
+    icon: '💥',
+    type: 'cluster',
+    ammo: 3,
+    minSpeed: 8,
+    maxSpeed: 28,
+    chargeable: true,
+    windFactor: 0.0,
+    bounces: 4,
+    restitution: 0.48,
+    fuseTime: 2.8,
+    blastRadius: 4.8,
+    craterDepth: 4.0,
+    maxDamage: 30,
+    knockback: 13,
+    clusterCount: 5,
+    subBlastRadius: 3.8,
+    subCraterDepth: 3.2,
+    subMaxDamage: 24,
+    projectileRadius: 0.35,
+    color: 0xeab308,
+    description: '引爆后分裂出5枚子炸弹，覆盖大片区域。',
+  },
+  shotgun: {
+    id: 'shotgun',
+    key: '4',
+    name: '霰弹枪',
+    icon: '🔫',
+    type: 'hitscan',
+    ammo: 4,
+    range: 42,
+    chargeable: false,
+    windFactor: 0.0,
+    blastRadius: 2.8,
+    craterDepth: 2.2,
+    maxDamage: 34,
+    knockback: 16,
+    color: 0x94a3b8,
+    description: '瞬发精准直线射击，不受风力影响，击退强。',
+  },
+  airstrike: {
+    id: 'airstrike',
+    key: '5',
+    name: '空中打击',
+    icon: '✈️',
+    type: 'airstrike',
+    ammo: 2,
+    chargeable: true,
+    minRange: 10,
+    maxRange: 38,
+    missileCount: 5,
+    missileSpread: 3.2,
+    windFactor: 0.45,
+    blastRadius: 5.0,
+    craterDepth: 4.4,
+    maxDamage: 32,
+    knockback: 14,
+    color: 0xef4444,
+    description: '呼叫5枚高空导弹沿瞄准方向地毯式轰炸。',
+  },
+  bat: {
+    id: 'bat',
+    key: '6',
+    name: '棒球棍',
+    icon: '🏏',
+    type: 'melee',
+    ammo: Infinity,
+    chargeable: false,
+    meleeRange: 4.2,
+    maxDamage: 25,
+    knockback: 26,
+    color: 0xd97706,
+    description: '近战全垒打！将附近敌虫直接击飞落海。',
+  },
+};
+const WEAPON_LIST = Object.values(WEAPONS);
+const TEAM_PRESETS = [
+  {
+    id: 0,
+    name: '红队先锋',
+    colorHex: '#ef4444',
+    colorNum: 0xef4444,
+    names: ['赤焰虫', '爆破手', '炮兵长', '钢铁虫'],
+  },
+  {
+    id: 1,
+    name: '蓝队特攻',
+    colorHex: '#3b82f6',
+    colorNum: 0x3b82f6,
+    names: ['蓝鲨虫', '狙击手', '风暴虫', '极光虫'],
+  },
+];
+const TURN_PHASE = {
+  AIM: 'AIM',
+  CHARGING: 'CHARGING',
+  PROJECTILE: 'PROJECTILE',
+  SETTLE: 'SETTLE',
+  RETREAT: 'RETREAT',
+  GAME_OVER: 'GAME_OVER',
+};
+
+// === src/core/terrain.js ===
+/**
+ * 百战天虫 3D - 可破坏 3D 高度场地形引擎
+ * 支持确定性程序化岛屿生成、双线性插值高度查询、表面法线计算与实时球形弹坑挖掘。
+ */
+
+/** 确定性伪随机数生成器 (Mulberry32) */
+function createRNG(seed = 42) {
+  let a = seed >>> 0;
+  return function next() {
+    a |= 0;
+    a = (a + 0x6d2b79f5) | 0;
+    let t = Math.imul(a ^ (a >>> 15), 1 | a);
+    t = (t + Math.imul(t ^ (t >>> 7), 61 | t)) ^ t;
+    return ((t ^ (t >>> 14)) >>> 0) / 4294967296;
+  };
+}
+
+/** 2D 梯度/值噪声 */
+function createValueNoise2D(seed) {
+  const rng = createRNG(seed);
+  const perm = new Uint8Array(512);
+  const vals = new Float32Array(256);
+  for (let i = 0; i < 256; i++) {
+    vals[i] = rng();
+    perm[i] = i;
+  }
+  for (let i = 255; i > 0; i--) {
+    const j = Math.floor(rng() * (i + 1));
+    const tmp = perm[i];
+    perm[i] = perm[j];
+    perm[j] = tmp;
+  }
+  for (let i = 0; i < 256; i++) {
+    perm[i + 256] = perm[i];
+  }
+
+  function fade(t) {
+    return t * t * t * (t * (t * 6 - 15) + 10);
+  }
+  function lerp(a, b, t) {
+    return a + (b - a) * t;
+  }
+
+  return function noise(x, y) {
+    const xi = Math.floor(x) & 255;
+    const yi = Math.floor(y) & 255;
+    const xf = x - Math.floor(x);
+    const yf = y - Math.floor(y);
+    const u = fade(xf);
+    const v = fade(yf);
+
+    const aa = vals[perm[perm[xi] + yi]];
+    const ab = vals[perm[perm[xi] + yi + 1]];
+    const ba = vals[perm[perm[xi + 1] + yi]];
+    const bb = vals[perm[perm[xi + 1] + yi + 1]];
+
+    return lerp(lerp(aa, ba, u), lerp(ab, bb, u), v);
+  };
+}
+class Terrain3D {
+  constructor(options = {}) {
+    this.gridSize = options.gridSize || WORLD_CONFIG.GRID_SIZE;
+    this.worldSize = options.worldSize || WORLD_CONFIG.WORLD_SIZE;
+    this.halfSize = this.worldSize * 0.5;
+    this.cellSize = this.worldSize / (this.gridSize - 1);
+    this.themeId = options.themeId || 'tropical';
+    this.theme = MAP_THEMES[this.themeId] || MAP_THEMES.tropical;
+    this.seed = options.seed !== undefined ? options.seed : 1337;
+
+    const total = this.gridSize * this.gridSize;
+    this.heights = new Float32Array(total);
+    this.scorch = new Float32Array(total); // 0 = 原生植被/岩石, 1 = 焦黑弹坑
+    this.dirty = true;
+    this.craters = [];
+
+    this.generate(this.seed, this.themeId);
+  }
+
+  /** 生成多峰 3D 岛屿地形 */
+  generate(seed = this.seed, themeId = this.themeId) {
+    this.seed = seed;
+    this.themeId = themeId;
+    this.theme = MAP_THEMES[themeId] || MAP_THEMES.tropical;
+    this.craters = [];
+    this.scorch.fill(0);
+
+    const noise = createValueNoise2D(seed + this.theme.seedOffset);
+    const rng = createRNG(seed + 999);
+
+    // 随机生成 4 个岛屿主山峰/高地，增强百战天虫 3D 的高低差战术性
+    const peaks = [];
+    const peakCount = 4;
+    for (let i = 0; i < peakCount; i++) {
+      const angle = (i / peakCount) * Math.PI * 2 + rng() * 0.8;
+      const dist = 10 + rng() * 14;
+      peaks.push({
+        x: Math.cos(angle) * dist,
+        z: Math.sin(angle) * dist,
+        radius: 10 + rng() * 8,
+        height: 7 + rng() * 8,
+      });
+    }
+
+    for (let gz = 0; gz < this.gridSize; gz++) {
+      for (let gx = 0; gx < this.gridSize; gx++) {
+        const wx = this.gridToWorld(gx);
+        const wz = this.gridToWorld(gz);
+        const distNorm = Math.hypot(wx, wz) / (this.halfSize * 0.92);
+
+        // 多八度 FBM 噪声
+        const n1 = noise(wx * 0.055 + 10, wz * 0.055 + 10);
+        const n2 = noise(wx * 0.12 + 30, wz * 0.12 + 30) * 0.45;
+        const n3 = noise(wx * 0.25 + 60, wz * 0.25 + 60) * 0.18;
+        const fbm = (n1 + n2 + n3) / 1.63;
+
+        // 岛屿边缘平滑衰减到海底
+        const falloff = Math.max(0, 1 - Math.pow(distNorm, 2.35));
+        let h = -3.8 + falloff * (11.5 + fbm * 8.5);
+
+        // 叠加战术高地山峰
+        for (const p of peaks) {
+          const d = Math.hypot(wx - p.x, wz - p.z);
+          if (d < p.radius) {
+            const t = Math.cos((d / p.radius) * Math.PI * 0.5);
+            h += t * t * p.height * Math.min(1, falloff * 1.4);
+          }
+        }
+
+        // 火山主题中央留出战斗盆地
+        if (this.themeId === 'volcano') {
+          const centerDist = Math.hypot(wx, wz);
+          if (centerDist < 9) {
+            h -= (1 - centerDist / 9) * 3.5;
+          }
+        }
+
+        this.heights[gz * this.gridSize + gx] = Math.max(-5.5, Math.min(WORLD_CONFIG.MAX_HEIGHT, h));
+      }
+    }
+
+    this.dirty = true;
+  }
+
+  gridToWorld(g) {
+    return -this.halfSize + g * this.cellSize;
+  }
+
+  worldToGridFloat(w) {
+    return (w + this.halfSize) / this.cellSize;
+  }
+
+  isInsideWorld(x, z) {
+    return Math.abs(x) <= this.halfSize && Math.abs(z) <= this.halfSize;
+  }
+
+  /** 双线性插值获取任意 (x, z) 处的精确地形高度 */
+  getHeightAt(x, z) {
+    const fx = this.worldToGridFloat(x);
+    const fz = this.worldToGridFloat(z);
+
+    if (fx < 0 || fz < 0 || fx > this.gridSize - 1 || fz > this.gridSize - 1) {
+      return -5.5;
+    }
+
+    const x0 = Math.floor(fx);
+    const z0 = Math.floor(fz);
+    const x1 = Math.min(this.gridSize - 1, x0 + 1);
+    const z1 = Math.min(this.gridSize - 1, z0 + 1);
+
+    const tx = fx - x0;
+    const tz = fz - z0;
+
+    const h00 = this.heights[z0 * this.gridSize + x0];
+    const h10 = this.heights[z0 * this.gridSize + x1];
+    const h01 = this.heights[z1 * this.gridSize + x0];
+    const h11 = this.heights[z1 * this.gridSize + x1];
+
+    const h0 = h00 + (h10 - h00) * tx;
+    const h1 = h01 + (h11 - h01) * tx;
+    return h0 + (h1 - h0) * tz;
+  }
+
+  /** 使用中心差分计算 (x, z) 处的单位表面法向量 */
+  getNormalAt(x, z) {
+    const eps = this.cellSize * 0.5;
+    const hL = this.getHeightAt(x - eps, z);
+    const hR = this.getHeightAt(x + eps, z);
+    const hD = this.getHeightAt(x, z - eps);
+    const hU = this.getHeightAt(x, z + eps);
+
+    const nx = hL - hR;
+    const ny = 2.0 * eps;
+    const nz = hD - hU;
+    const len = Math.hypot(nx, ny, nz) || 1;
+    return { x: nx / len, y: ny / len, z: nz / len };
+  }
+
+  /**
+   * 在 (cx, cy, cz) 处挖掘真实三维球形弹坑并写入焦黑着色权重
+   * 返回受影响的顶点数量
+   */
+  carveCrater(cx, cy, cz, radius, depth = radius * 0.85) {
+    const scorchRadius = radius * 1.25;
+    const minGx = Math.max(0, Math.floor(this.worldToGridFloat(cx - scorchRadius - 1.5)));
+    const maxGx = Math.min(this.gridSize - 1, Math.ceil(this.worldToGridFloat(cx + scorchRadius + 1.5)));
+    const minGz = Math.max(0, Math.floor(this.worldToGridFloat(cz - scorchRadius - 1.5)));
+    const maxGz = Math.min(this.gridSize - 1, Math.ceil(this.worldToGridFloat(cz + scorchRadius + 1.5)));
+
+    let modifiedVertices = 0;
+
+    for (let gz = minGz; gz <= maxGz; gz++) {
+      const wz = this.gridToWorld(gz);
+      const dz = wz - cz;
+      for (let gx = minGx; gx <= maxGx; gx++) {
+        const wx = this.gridToWorld(gx);
+        const dx = wx - cx;
+        const dist2D = Math.hypot(dx, dz);
+
+        if (dist2D <= scorchRadius) {
+          const idx = gz * this.gridSize + gx;
+          const curH = this.heights[idx];
+
+          // 仅当爆炸球体在垂直方向上触及地表时才产生挖掘与焦黑
+          if (cy - Math.max(radius, depth) * 1.15 <= curH) {
+            const scorchStrength = Math.max(0, 1 - dist2D / scorchRadius);
+            this.scorch[idx] = Math.min(1, this.scorch[idx] + Math.pow(scorchStrength, 0.7) * 0.95);
+
+            if (dist2D < radius) {
+              const norm = dist2D / radius;
+              const profile = Math.sqrt(Math.max(0, 1 - norm * norm));
+              const sphereBottom = cy - profile * depth;
+              const surfaceCarve = curH - profile * depth * 0.85;
+              const targetH = cy <= curH + radius * 0.65
+                ? Math.min(sphereBottom, surfaceCarve)
+                : sphereBottom;
+              const newH = Math.max(-5.5, Math.min(curH, targetH));
+
+              if (newH < curH - 1e-4) {
+                this.heights[idx] = newH;
+                modifiedVertices++;
+              }
+            }
+          }
+        }
+      }
+    }
+
+    if (modifiedVertices > 0) {
+      this.craters.push({ x: cx, y: cy, z: cz, radius, depth });
+      this.dirty = true;
+    }
+    return modifiedVertices;
+  }
+
+  /** 根据高度、坡度与焦黑程度计算顶点 RGB 颜色 */
+  getVertexColor(gx, gz) {
+    const idx = gz * this.gridSize + gx;
+    const h = this.heights[idx];
+    const scorch = this.scorch[idx];
+    const wx = this.gridToWorld(gx);
+    const wz = this.gridToWorld(gz);
+    const normal = this.getNormalAt(wx, wz);
+
+    let r, g, b;
+    const t = this.theme;
+
+    if (h < 1.2) {
+      [r, g, b] = t.sandColor;
+    } else if (normal.y < 0.72) {
+      [r, g, b] = t.rockColor;
+    } else if (h > 11.5) {
+      const k = Math.min(1, (h - 11.5) / 4.5);
+      r = t.grassColor[0] + (t.peakColor[0] - t.grassColor[0]) * k;
+      g = t.grassColor[1] + (t.peakColor[1] - t.grassColor[1]) * k;
+      b = t.grassColor[2] + (t.peakColor[2] - t.grassColor[2]) * k;
+    } else {
+      [r, g, b] = t.grassColor;
+    }
+
+    // 混合爆炸焦黑效果（弹坑内部深焦黑，边缘略带泥土焦痕）
+    if (scorch > 0) {
+      const s = Math.min(1, scorch * 1.05);
+      r = r * (1 - s) + t.scorchColor[0] * s;
+      g = g * (1 - s) + t.scorchColor[1] * s;
+      b = b * (1 - s) + t.scorchColor[2] * s;
+    }
+
+    return [r, g, b];
+  }
+
+  /** 寻找高于海平面且相对平坦的出生点 */
+  findSpawnPoints(count, waterLevel = WORLD_CONFIG.WATER_LEVEL, seed = this.seed + 77) {
+    const rng = createRNG(seed);
+    const points = [];
+    const minSeparation = 9.0;
+    let attempts = 0;
+
+    while (points.length < count && attempts < 800) {
+      attempts++;
+      const x = (rng() * 2 - 1) * (this.halfSize * 0.68);
+      const z = (rng() * 2 - 1) * (this.halfSize * 0.68);
+      const y = this.getHeightAt(x, z);
+      const normal = this.getNormalAt(x, z);
+
+      if (y > waterLevel + 1.8 && normal.y > 0.78) {
+        const tooClose = points.some((p) => Math.hypot(p.x - x, p.z - z) < minSeparation);
+        if (!tooClose) {
+          points.push({ x, y, z });
+        }
+      }
+    }
+
+    // 保底策略：若地形极端陡峭，放宽间距与坡度限制
+    while (points.length < count) {
+      const angle = (points.length / count) * Math.PI * 2;
+      const x = Math.cos(angle) * 8;
+      const z = Math.sin(angle) * 8;
+      const y = Math.max(waterLevel + 2.0, this.getHeightAt(x, z));
+      points.push({ x, y, z });
+    }
+
+    return points;
+  }
+}
+
+// === src/core/physics.js ===
+/**
+ * 百战天虫 3D - 物理与弹道碰撞引擎
+ * 负责弹丸抛物线运动、风力偏移、手榴弹3D地形反弹、射线检测、爆炸冲击波伤害与击退、虫子重力与摔落伤害。
+ */
+
+/** 计算瞄准方向单位向量 (yaw 绕 Y 轴, pitch 仰角) */
+function aimToDirection(yaw, pitch) {
+  const cosP = Math.cos(pitch);
+  return {
+    x: Math.sin(yaw) * cosP,
+    y: Math.sin(pitch),
+    z: Math.cos(yaw) * cosP,
+  };
+}
+
+/** 预测抛物线轨迹采样点（用于 3D 瞄准虚线预览） */
+function sampleTrajectory(origin, velocity, wind, windFactor = 1.0, steps = 22, dt = 0.08) {
+  const points = [];
+  let x = origin.x;
+  let y = origin.y;
+  let z = origin.z;
+  let vx = velocity.x;
+  let vy = velocity.y;
+  let vz = velocity.z;
+
+  for (let i = 0; i < steps; i++) {
+    points.push({ x, y, z });
+    vx += wind.x * windFactor * dt;
+    vz += wind.z * windFactor * dt;
+    vy -= WORLD_CONFIG.GRAVITY * dt;
+    x += vx * dt;
+    y += vy * dt;
+    z += vz * dt;
+  }
+  return points;
+}
+
+/**
+ * 步进单个弹丸物理状态
+ * 返回事件对象: null | { type: 'explode', x, y, z, reason } | { type: 'splash', x, y, z } | { type: 'bounce', x, y, z }
+ */
+function stepProjectile(proj, dt, terrain, worms, wind, waterLevel) {
+  if (!proj.alive) return null;
+
+  proj.age += dt;
+  // 引信倒计时（手榴弹、集束炸弹）
+  if (proj.fuseTime > 0 && proj.age >= proj.fuseTime) {
+    proj.alive = false;
+    return { type: 'explode', x: proj.x, y: proj.y, z: proj.z, reason: 'fuse' };
+  }
+
+  // 风力与重力
+  proj.vx += wind.x * proj.windFactor * dt;
+  proj.vz += wind.z * proj.windFactor * dt;
+  proj.vy -= WORLD_CONFIG.GRAVITY * dt;
+
+  // 子步防穿透
+  const speed = Math.hypot(proj.vx, proj.vy, proj.vz);
+  const subSteps = Math.max(1, Math.ceil((speed * dt) / 0.45));
+  const subDt = dt / subSteps;
+  let bounced = false;
+
+  for (let s = 0; s < subSteps; s++) {
+    proj.x += proj.vx * subDt;
+    proj.y += proj.vy * subDt;
+    proj.z += proj.vz * subDt;
+
+    // 落水检测
+    if (proj.y <= waterLevel) {
+      proj.alive = false;
+      return { type: 'splash', x: proj.x, y: waterLevel, z: proj.z };
+    }
+
+    // 越界检测
+    if (Math.abs(proj.x) > terrain.halfSize + 15 || Math.abs(proj.z) > terrain.halfSize + 15 || proj.y < -15) {
+      proj.alive = false;
+      return { type: 'oob', x: proj.x, y: proj.y, z: proj.z };
+    }
+
+    // 虫子直接命中检测（发射 0.12 秒后忽略自身，避免炸脸）
+    for (const worm of worms) {
+      if (!worm.alive) continue;
+      if (worm.id === proj.ownerId && proj.age < 0.18) continue;
+      const dx = proj.x - worm.x;
+      const dy = proj.y - (worm.y + WORLD_CONFIG.WORM_HEIGHT * 0.5);
+      const dz = proj.z - worm.z;
+      const hitDist = WORLD_CONFIG.WORM_RADIUS + proj.radius;
+      if (dx * dx + dy * dy + dz * dz <= hitDist * hitDist) {
+        if (proj.bounces === 0) {
+          proj.alive = false;
+          return { type: 'explode', x: proj.x, y: proj.y, z: proj.z, reason: 'worm_hit' };
+        }
+      }
+    }
+
+    // 地形碰撞检测
+    const groundY = terrain.getHeightAt(proj.x, proj.z);
+    if (proj.y - proj.radius <= groundY) {
+      if (proj.bounces > 0 && proj.bounceCount < proj.bounces) {
+        const n = terrain.getNormalAt(proj.x, proj.z);
+        proj.y = groundY + proj.radius + 0.02;
+        const dot = proj.vx * n.x + proj.vy * n.y + proj.vz * n.z;
+        if (dot < 0) {
+          const rest = proj.restitution || 0.5;
+          proj.vx = (proj.vx - 2 * dot * n.x) * rest;
+          proj.vy = (proj.vy - 2 * dot * n.y) * rest;
+          proj.vz = (proj.vz - 2 * dot * n.z) * rest;
+          // 切向摩擦
+          proj.vx *= 0.86;
+          proj.vz *= 0.86;
+          proj.bounceCount++;
+          bounced = true;
+        }
+      } else if (proj.fuseTime > 0) {
+        // 引信武器停在地面滚动等待引爆
+        proj.y = groundY + proj.radius;
+        proj.vx *= 0.78;
+        proj.vy = 0;
+        proj.vz *= 0.78;
+      } else {
+        proj.y = groundY;
+        proj.alive = false;
+        return { type: 'explode', x: proj.x, y: proj.y, z: proj.z, reason: 'terrain_hit' };
+      }
+    }
+  }
+
+  return bounced ? { type: 'bounce', x: proj.x, y: proj.y, z: proj.z } : null;
+}
+
+/** 霰弹枪瞬发射线检测 */
+function castHitscanRay(origin, dir, maxRange, terrain, worms, ownerId) {
+  const stepSize = 0.35;
+  const steps = Math.ceil(maxRange / stepSize);
+  let x = origin.x;
+  let y = origin.y;
+  let z = origin.z;
+
+  for (let i = 1; i <= steps; i++) {
+    x = origin.x + dir.x * stepSize * i;
+    y = origin.y + dir.y * stepSize * i;
+    z = origin.z + dir.z * stepSize * i;
+
+    for (const worm of worms) {
+      if (!worm.alive || worm.id === ownerId) continue;
+      const dx = x - worm.x;
+      const dy = y - (worm.y + WORLD_CONFIG.WORM_HEIGHT * 0.5);
+      const dz = z - worm.z;
+      const r = WORLD_CONFIG.WORM_RADIUS + 0.25;
+      if (dx * dx + dy * dy + dz * dz <= r * r) {
+        return { hit: true, type: 'worm', wormId: worm.id, x, y, z };
+      }
+    }
+
+    const groundY = terrain.getHeightAt(x, z);
+    if (y <= groundY) {
+      return { hit: true, type: 'terrain', x, y: groundY, z };
+    }
+  }
+
+  return { hit: false, type: 'miss', x, y, z };
+}
+
+/**
+ * 计算爆炸对所有存活虫子的伤害与三维击退冲量
+ * 返回受损虫子明细数组
+ */
+function applyExplosionToWorms(cx, cy, cz, blastRadius, maxDamage, knockback, worms) {
+  const impacts = [];
+
+  for (const worm of worms) {
+    if (!worm.alive) continue;
+    const wy = worm.y + WORLD_CONFIG.WORM_HEIGHT * 0.45;
+    const dx = worm.x - cx;
+    const dy = wy - cy;
+    const dz = worm.z - cz;
+    const dist = Math.hypot(dx, dy, dz);
+
+    if (dist <= blastRadius) {
+      const falloff = Math.max(0.15, 1 - dist / blastRadius);
+      const damage = Math.round(maxDamage * falloff);
+
+      // 计算三维击退方向（保证带一定向上挑飞分量）
+      const inv = dist > 0.01 ? 1 / dist : 0;
+      const dirX = dist > 0.01 ? dx * inv : 0;
+      const dirZ = dist > 0.01 ? dz * inv : 0;
+      const impulse = knockback * falloff;
+
+      worm.vx += dirX * impulse;
+      worm.vz += dirZ * impulse;
+      worm.vy += Math.max(4.5, (dy * inv + 0.65) * impulse * 0.72);
+      worm.grounded = false;
+
+      worm.hp = Math.max(0, worm.hp - damage);
+      if (worm.hp <= 0) {
+        worm.alive = false;
+      }
+
+      impacts.push({ wormId: worm.id, damage, remainingHp: worm.hp, killed: !worm.alive });
+    }
+  }
+
+  return impacts;
+}
+
+/**
+ * 步进单个虫子物理状态（重力、坡面贴合、空气阻力、摔落伤害、落水淹死）
+ */
+function stepWormPhysics(worm, dt, terrain, waterLevel) {
+  if (!worm.alive) return null;
+
+  const events = [];
+
+  // 如果处于浮空状态或速度较大，执行弹道运动
+  const groundY = terrain.getHeightAt(worm.x, worm.z);
+  if (worm.y > groundY + 0.08 || Math.abs(worm.vy) > 0.05 || !worm.grounded) {
+    worm.grounded = false;
+    worm.vy -= WORLD_CONFIG.GRAVITY * dt;
+    worm.x += worm.vx * dt;
+    worm.y += worm.vy * dt;
+    worm.z += worm.vz * dt;
+
+    // 轻微空气阻力
+    worm.vx *= Math.pow(0.92, dt * 10);
+    worm.vz *= Math.pow(0.92, dt * 10);
+
+    const newGroundY = terrain.getHeightAt(worm.x, worm.z);
+    if (worm.y <= newGroundY) {
+      const impactSpeed = -worm.vy;
+      worm.y = newGroundY;
+      worm.vy = 0;
+      worm.vx *= 0.35;
+      worm.vz *= 0.35;
+      worm.grounded = true;
+
+      if (impactSpeed > WORLD_CONFIG.FALL_DAMAGE_THRESHOLD) {
+        const dmg = Math.round((impactSpeed - WORLD_CONFIG.FALL_DAMAGE_THRESHOLD) * WORLD_CONFIG.FALL_DAMAGE_SCALE);
+        if (dmg > 0) {
+          worm.hp = Math.max(0, worm.hp - dmg);
+          if (worm.hp <= 0) worm.alive = false;
+          events.push({ type: 'fall_damage', wormId: worm.id, damage: dmg, killed: !worm.alive });
+        }
+      }
+    }
+  } else {
+    // 地面摩擦阻尼
+    worm.y = groundY;
+    worm.vx *= Math.pow(0.25, dt * 10);
+    worm.vz *= Math.pow(0.25, dt * 10);
+    if (Math.hypot(worm.vx, worm.vz) < 0.08) {
+      worm.vx = 0;
+      worm.vz = 0;
+    } else {
+      worm.x += worm.vx * dt;
+      worm.z += worm.vz * dt;
+      worm.y = terrain.getHeightAt(worm.x, worm.z);
+    }
+  }
+
+  // 落水或越界淹死判定
+  if (
+    worm.y <= waterLevel - 0.15 ||
+    Math.abs(worm.x) > terrain.halfSize + 2 ||
+    Math.abs(worm.z) > terrain.halfSize + 2
+  ) {
+    worm.hp = 0;
+    worm.alive = false;
+    events.push({ type: 'drown', wormId: worm.id, x: worm.x, y: waterLevel, z: worm.z });
+  }
+
+  return events;
+}
+
+// === src/core/gameEngine.js ===
+/**
+ * 百战天虫 3D - 回合制核心游戏状态机 (GameEngine)
+ * 与渲染层完全解耦，可在浏览器与 Node.js 测试环境中直接运行。
+ */
+class GameEngine {
+  constructor(options = {}) {
+    this.listeners = new Map();
+    this.nextProjId = 1;
+    this.nextCrateId = 1;
+    this.initMatch(options);
+  }
+
+  on(event, handler) {
+    if (!this.listeners.has(event)) this.listeners.set(event, new Set());
+    this.listeners.get(event).add(handler);
+    return () => this.listeners.get(event)?.delete(handler);
+  }
+
+  emit(event, payload) {
+    const set = this.listeners.get(event);
+    if (!set) return;
+    for (const fn of set) fn(payload);
+  }
+
+  /** 初始化或重置一场新比赛 */
+  initMatch(options = {}) {
+    this.mode = options.mode || 'ai'; // 'ai' (单人对战AI) | 'hotseat' (本地双人热座)
+    this.wormsPerTeam = Math.max(1, Math.min(4, options.wormsPerTeam || 3));
+    this.themeId = options.themeId || 'tropical';
+    this.seed = options.seed !== undefined ? options.seed : Math.floor(Math.random() * 100000);
+    this.rng = createRNG(this.seed + 2026);
+
+    this.terrain = new Terrain3D({
+      seed: this.seed,
+      themeId: this.themeId,
+    });
+
+    this.waterLevel = WORLD_CONFIG.WATER_LEVEL;
+    this.round = 1;
+    this.turnNumber = 1;
+    this.phase = TURN_PHASE.AIM;
+    this.turnTimer = WORLD_CONFIG.TURN_DURATION;
+    this.retreatTimer = 0;
+    this.settleTimer = 0;
+    this.chargePower = 0;
+    this.chargeDir = 1;
+    this.winnerTeamId = null; // null = 进行中, -1 = 平局, 0/1 = 获胜队伍
+
+    this.projectiles = [];
+    this.crates = [];
+    this.killFeed = [];
+    this.wind = { x: 0, z: 0 };
+
+    // 初始化两支队伍与弹药库
+    this.teams = TEAM_PRESETS.map((preset) => {
+      const ammo = {};
+      for (const [wid, w] of Object.entries(WEAPONS)) {
+        ammo[wid] = w.ammo;
+      }
+      return {
+        id: preset.id,
+        name: preset.name,
+        colorHex: preset.colorHex,
+        colorNum: preset.colorNum,
+        isAI: this.mode === 'ai' && preset.id === 1,
+        ammo,
+        wormCursor: 0,
+      };
+    });
+
+    // 生成虫子并分配出生点
+    const spawnPoints = this.terrain.findSpawnPoints(this.wormsPerTeam * 2, this.waterLevel, this.seed + 55);
+    this.worms = [];
+    let spIdx = 0;
+    for (let t = 0; t < 2; t++) {
+      for (let i = 0; i < this.wormsPerTeam; i++) {
+        const sp = spawnPoints[spIdx++];
+        // 初始朝向岛屿中心
+        const yawToCenter = Math.atan2(-sp.x, -sp.z);
+        this.worms.push({
+          id: `t${t}_w${i}`,
+          teamId: t,
+          name: TEAM_PRESETS[t].names[i % TEAM_PRESETS[t].names.length],
+          x: sp.x,
+          y: sp.y,
+          z: sp.z,
+          vx: 0,
+          vy: 0,
+          vz: 0,
+          yaw: yawToCenter,
+          pitch: 0.35,
+          hp: WORLD_CONFIG.WORM_MAX_HP,
+          maxHp: WORLD_CONFIG.WORM_MAX_HP,
+          alive: true,
+          grounded: true,
+          walkCycle: 0,
+        });
+      }
+    }
+
+    this.activeTeamId = 0;
+    this.activeWormId = this.worms[0].id;
+    this.selectedWeaponId = 'bazooka';
+    this.rollWind();
+
+    this.emit('match_reset', {
+      themeId: this.themeId,
+      mode: this.mode,
+      seed: this.seed,
+    });
+    this.emit('turn_change', this.getTurnSnapshot());
+  }
+
+  getActiveWorm() {
+    return this.worms.find((w) => w.id === this.activeWormId) || null;
+  }
+
+  getActiveTeam() {
+    return this.teams[this.activeTeamId];
+  }
+
+  getTeamWorms(teamId, onlyAlive = false) {
+    return this.worms.filter((w) => w.teamId === teamId && (!onlyAlive || w.alive));
+  }
+
+  getTeamTotalHp(teamId) {
+    return this.worms
+      .filter((w) => w.teamId === teamId && w.alive)
+      .reduce((sum, w) => sum + w.hp, 0);
+  }
+
+  getTurnSnapshot() {
+    const worm = this.getActiveWorm();
+    const team = this.getActiveTeam();
+    return {
+      round: this.round,
+      turnNumber: this.turnNumber,
+      teamId: this.activeTeamId,
+      teamName: team.name,
+      isAI: team.isAI,
+      wormId: worm ? worm.id : null,
+      wormName: worm ? worm.name : '',
+      wind: { ...this.wind },
+      waterLevel: this.waterLevel,
+    };
+  }
+
+  rollWind() {
+    const angle = this.rng() * Math.PI * 2;
+    const mag = this.rng() * WORLD_CONFIG.WIND_MAX;
+    this.wind = {
+      x: Math.cos(angle) * mag,
+      z: Math.sin(angle) * mag,
+    };
+  }
+
+  selectWeapon(weaponId) {
+    if (this.phase !== TURN_PHASE.AIM) return false;
+    const weapon = WEAPONS[weaponId];
+    if (!weapon) return false;
+    const team = this.getActiveTeam();
+    if (team.ammo[weaponId] <= 0) return false;
+    this.selectedWeaponId = weaponId;
+    this.emit('weapon_change', { weaponId });
+    return true;
+  }
+
+  /** 控制当前虫子移动与转向 */
+  moveActiveWorm(forwardInput, turnInput, pitchInput, dt) {
+    if (this.phase !== TURN_PHASE.AIM && this.phase !== TURN_PHASE.RETREAT) return;
+    const worm = this.getActiveWorm();
+    if (!worm || !worm.alive) return;
+
+    if (turnInput !== 0) {
+      worm.yaw += turnInput * 2.1 * dt;
+    }
+    if (pitchInput !== 0) {
+      worm.pitch = Math.max(-0.55, Math.min(1.25, worm.pitch + pitchInput * 1.45 * dt));
+    }
+
+    if (forwardInput !== 0 && worm.grounded) {
+      const stepDist = forwardInput * WORLD_CONFIG.WORM_MOVE_SPEED * dt;
+      const nx = worm.x + Math.sin(worm.yaw) * stepDist;
+      const nz = worm.z + Math.cos(worm.yaw) * stepDist;
+
+      if (this.terrain.isInsideWorld(nx, nz)) {
+        const curH = this.terrain.getHeightAt(worm.x, worm.z);
+        const nextH = this.terrain.getHeightAt(nx, nz);
+        const slope = (nextH - curH) / Math.max(0.05, Math.abs(stepDist));
+
+        if (slope <= WORLD_CONFIG.MAX_SLOPE && nextH > this.waterLevel + 0.05) {
+          worm.x = nx;
+          worm.z = nz;
+          worm.y = nextH;
+          worm.walkCycle += Math.abs(stepDist) * 3.5;
+          this.checkCratePickup(worm);
+        }
+      }
+    }
+  }
+
+  /** 当前虫子向前跳跃 */
+  jumpActiveWorm() {
+    if (this.phase !== TURN_PHASE.AIM && this.phase !== TURN_PHASE.RETREAT) return false;
+    const worm = this.getActiveWorm();
+    if (!worm || !worm.alive || !worm.grounded) return false;
+
+    worm.vy = WORLD_CONFIG.WORM_JUMP_VY;
+    worm.vx = Math.sin(worm.yaw) * WORLD_CONFIG.WORM_JUMP_VH;
+    worm.vz = Math.cos(worm.yaw) * WORLD_CONFIG.WORM_JUMP_VH;
+    worm.grounded = false;
+    this.emit('jump', { wormId: worm.id, x: worm.x, y: worm.y, z: worm.z });
+    return true;
+  }
+
+  /** 开始蓄力或立即开火（非蓄力武器） */
+  startCharge() {
+    if (this.phase !== TURN_PHASE.AIM) return false;
+    const weapon = WEAPONS[this.selectedWeaponId];
+    const team = this.getActiveTeam();
+    if (!weapon || team.ammo[weapon.id] <= 0) return false;
+
+    if (!weapon.chargeable) {
+      return this.fireWeapon(1.0);
+    }
+
+    this.phase = TURN_PHASE.CHARGING;
+    this.chargePower = 0.05;
+    this.chargeDir = 1;
+    return true;
+  }
+
+  /** 松开蓄力并发射 */
+  releaseCharge() {
+    if (this.phase !== TURN_PHASE.CHARGING) return false;
+    const power = Math.max(0.08, Math.min(1.0, this.chargePower));
+    this.chargePower = 0;
+    return this.fireWeapon(power);
+  }
+
+  /** 使用指定力度 (0~1) 发射当前选中武器 */
+  fireWeapon(power = 0.7) {
+    if (this.phase !== TURN_PHASE.AIM && this.phase !== TURN_PHASE.CHARGING) return false;
+    const worm = this.getActiveWorm();
+    const team = this.getActiveTeam();
+    const weapon = WEAPONS[this.selectedWeaponId];
+    if (!worm || !worm.alive || !weapon) return false;
+    if (team.ammo[weapon.id] <= 0) return false;
+
+    // 消耗弹药
+    if (Number.isFinite(team.ammo[weapon.id])) {
+      team.ammo[weapon.id] = Math.max(0, team.ammo[weapon.id] - 1);
+    }
+
+    const dir = aimToDirection(worm.yaw, worm.pitch);
+    const muzzle = {
+      x: worm.x + dir.x * 1.15,
+      y: worm.y + WORLD_CONFIG.WORM_HEIGHT * 0.68 + dir.y * 0.8,
+      z: worm.z + dir.z * 1.15,
+    };
+
+    this.emit('fire', {
+      weaponId: weapon.id,
+      wormId: worm.id,
+      origin: muzzle,
+      dir,
+      power,
+    });
+
+    if (weapon.type === 'projectile' || weapon.type === 'cluster') {
+      const speed = weapon.minSpeed + (weapon.maxSpeed - weapon.minSpeed) * power;
+      this.projectiles.push({
+        id: this.nextProjId++,
+        weaponId: weapon.id,
+        ownerId: worm.id,
+        x: muzzle.x,
+        y: muzzle.y,
+        z: muzzle.z,
+        vx: dir.x * speed,
+        vy: dir.y * speed,
+        vz: dir.z * speed,
+        radius: weapon.projectileRadius,
+        windFactor: weapon.windFactor,
+        bounces: weapon.bounces,
+        restitution: weapon.restitution || 0.5,
+        bounceCount: 0,
+        fuseTime: weapon.fuseTime,
+        age: 0,
+        blastRadius: weapon.blastRadius,
+        craterDepth: weapon.craterDepth,
+        maxDamage: weapon.maxDamage,
+        knockback: weapon.knockback,
+        isCluster: weapon.type === 'cluster',
+        color: weapon.color,
+        alive: true,
+      });
+      this.phase = TURN_PHASE.PROJECTILE;
+    } else if (weapon.type === 'hitscan') {
+      const hit = castHitscanRay(muzzle, dir, weapon.range, this.terrain, this.worms, worm.id);
+      this.emit('shotgun_tracer', { from: muzzle, to: { x: hit.x, y: hit.y, z: hit.z }, hit: hit.hit });
+      if (hit.hit) {
+        this.detonateAt(hit.x, hit.y, hit.z, weapon.blastRadius, weapon.craterDepth, weapon.maxDamage, weapon.knockback, weapon.id);
+      }
+      this.phase = TURN_PHASE.SETTLE;
+      this.settleTimer = 1.2;
+    } else if (weapon.type === 'airstrike') {
+      // 沿虫子水平瞄准方向投下 5 枚高空导弹
+      const targetDist = weapon.minRange + (weapon.maxRange - weapon.minRange) * power;
+      const fwdX = Math.sin(worm.yaw);
+      const fwdZ = Math.cos(worm.yaw);
+      const cx = worm.x + fwdX * targetDist;
+      const cz = worm.z + fwdZ * targetDist;
+
+      for (let i = 0; i < weapon.missileCount; i++) {
+        const offset = (i - (weapon.missileCount - 1) / 2) * weapon.missileSpread;
+        this.projectiles.push({
+          id: this.nextProjId++,
+          weaponId: weapon.id,
+          ownerId: worm.id,
+          x: cx + fwdX * offset - fwdX * 8,
+          y: 34 + i * 3.5,
+          z: cz + fwdZ * offset - fwdZ * 8,
+          vx: fwdX * 6.5,
+          vy: -14.0,
+          vz: fwdZ * 6.5,
+          radius: 0.35,
+          windFactor: weapon.windFactor,
+          bounces: 0,
+          bounceCount: 0,
+          fuseTime: 0,
+          age: 0,
+          blastRadius: weapon.blastRadius,
+          craterDepth: weapon.craterDepth,
+          maxDamage: weapon.maxDamage,
+          knockback: weapon.knockback,
+          isCluster: false,
+          color: weapon.color,
+          alive: true,
+        });
+      }
+      this.phase = TURN_PHASE.PROJECTILE;
+    } else if (weapon.type === 'melee') {
+      const hitWorms = [];
+      for (const target of this.worms) {
+        if (!target.alive || target.id === worm.id) continue;
+        const dist = Math.hypot(target.x - worm.x, target.y - worm.y, target.z - worm.z);
+        if (dist <= weapon.meleeRange) {
+          const knockX = Math.sin(worm.yaw);
+          const knockZ = Math.cos(worm.yaw);
+          target.vx += knockX * weapon.knockback;
+          target.vz += knockZ * weapon.knockback;
+          target.vy += 12.5;
+          target.grounded = false;
+          target.hp = Math.max(0, target.hp - weapon.maxDamage);
+          if (target.hp <= 0) target.alive = false;
+          hitWorms.push({ wormId: target.id, damage: weapon.maxDamage, killed: !target.alive });
+        }
+      }
+      this.emit('melee_hit', { wormId: worm.id, hits: hitWorms, x: muzzle.x, y: muzzle.y, z: muzzle.z });
+      this.phase = TURN_PHASE.SETTLE;
+      this.settleTimer = 1.6;
+    }
+
+    // 若当前武器弹药耗尽，自动切回无限火箭筒
+    if (team.ammo[weapon.id] <= 0) {
+      this.selectedWeaponId = 'bazooka';
+    }
+    return true;
+  }
+
+  /** 执行三维爆炸：地形挖掘 + 虫子伤害与击退 + 集束分裂 */
+  detonateAt(x, y, z, blastRadius, craterDepth, maxDamage, knockback, weaponId = 'bazooka', isCluster = false, ownerId = null) {
+    const modified = this.terrain.carveCrater(x, y, z, blastRadius, craterDepth);
+    // 地形被炸毁后，检查所有虫子脚下是否悬空，使其自然跌入弹坑或落海
+    for (const w of this.worms) {
+      if (w.alive && w.y > this.terrain.getHeightAt(w.x, w.z) + 0.05) {
+        w.grounded = false;
+      }
+    }
+    const impacts = applyExplosionToWorms(x, y, z, blastRadius, maxDamage, knockback, this.worms);
+
+    for (const imp of impacts) {
+      if (imp.killed) {
+        const dead = this.worms.find((w) => w.id === imp.wormId);
+        if (dead) this.pushKillFeed(`${dead.name} 被炸飞淘汰！`);
+      }
+    }
+
+    this.emit('explosion', {
+      x,
+      y,
+      z,
+      radius: blastRadius,
+      weaponId,
+      modifiedVertices: modified,
+      impacts,
+    });
+
+    // 集束炸弹分裂出子炸弹
+    if (isCluster) {
+      const cw = WEAPONS.cluster;
+      for (let i = 0; i < cw.clusterCount; i++) {
+        const ang = (i / cw.clusterCount) * Math.PI * 2 + this.rng() * 0.5;
+        const spd = 6.5 + this.rng() * 4.5;
+        this.projectiles.push({
+          id: this.nextProjId++,
+          weaponId: 'cluster_sub',
+          ownerId,
+          x,
+          y: y + 0.8,
+          z,
+          vx: Math.cos(ang) * spd,
+          vy: 9.5 + this.rng() * 4.5,
+          vz: Math.sin(ang) * spd,
+          radius: 0.24,
+          windFactor: 0.2,
+          bounces: 0,
+          bounceCount: 0,
+          fuseTime: 0,
+          age: 0,
+          blastRadius: cw.subBlastRadius,
+          craterDepth: cw.subCraterDepth,
+          maxDamage: cw.subMaxDamage,
+          knockback: 11,
+          isCluster: false,
+          color: 0xfacc15,
+          alive: true,
+        });
+      }
+    }
+
+    return impacts;
+  }
+
+  /** 定期空投补给箱 */
+  spawnSupplyCrate() {
+    if (this.crates.length >= 3) return null;
+    const pts = this.terrain.findSpawnPoints(1, this.waterLevel + 1.0, Math.floor(this.rng() * 100000));
+    const p = pts[0];
+    const kind = this.rng() < 0.55 ? 'health' : 'weapon';
+    const crate = {
+      id: this.nextCrateId++,
+      kind, // 'health' (+25 HP) | 'weapon' (+1 集束炸弹 & 空袭)
+      x: p.x,
+      y: p.y + 18,
+      z: p.z,
+      grounded: false,
+      collected: false,
+    };
+    this.crates.push(crate);
+    this.emit('crate_spawn', crate);
+    return crate;
+  }
+
+  checkCratePickup(worm) {
+    if (!worm || !worm.alive) return;
+    for (const crate of this.crates) {
+      if (crate.collected) continue;
+      const dist = Math.hypot(worm.x - crate.x, worm.y - crate.y, worm.z - crate.z);
+      if (dist <= 2.2) {
+        crate.collected = true;
+        const team = this.teams[worm.teamId];
+        let msg = '';
+        if (crate.kind === 'health') {
+          worm.hp = Math.min(worm.maxHp, worm.hp + 25);
+          msg = `${worm.name} 拾取医疗箱 (+25 HP)`;
+        } else {
+          team.ammo.cluster += 1;
+          team.ammo.airstrike += 1;
+          msg = `${worm.name} 拾取军火箱 (+1 集束炸弹 / +1 空袭)`;
+        }
+        this.pushKillFeed(msg);
+        this.emit('crate_pickup', { crate, wormId: worm.id, message: msg });
+      }
+    }
+    this.crates = this.crates.filter((c) => !c.collected);
+  }
+
+  pushKillFeed(message) {
+    this.killFeed.unshift({ time: Date.now(), message });
+    if (this.killFeed.length > 6) this.killFeed.pop();
+    this.emit('feed', { message });
+  }
+
+  /** 检查胜负条件 */
+  checkVictory() {
+    const alive0 = this.getTeamWorms(0, true).length;
+    const alive1 = this.getTeamWorms(1, true).length;
+    if (alive0 === 0 && alive1 === 0) {
+      this.winnerTeamId = -1;
+      this.phase = TURN_PHASE.GAME_OVER;
+      this.emit('game_over', { winnerTeamId: -1, label: '平局！全员阵亡' });
+      return true;
+    }
+    if (alive0 === 0) {
+      this.winnerTeamId = 1;
+      this.phase = TURN_PHASE.GAME_OVER;
+      this.emit('game_over', { winnerTeamId: 1, label: `${this.teams[1].name} 获胜！` });
+      return true;
+    }
+    if (alive1 === 0) {
+      this.winnerTeamId = 0;
+      this.phase = TURN_PHASE.GAME_OVER;
+      this.emit('game_over', { winnerTeamId: 0, label: `${this.teams[0].name} 获胜！` });
+      return true;
+    }
+    return false;
+  }
+
+  /** 切换至下一回合 */
+  nextTurn() {
+    if (this.checkVictory()) return;
+
+    this.turnNumber++;
+    this.activeTeamId = 1 - this.activeTeamId;
+
+    // 每完成双人各一回合，轮次 +1
+    if (this.activeTeamId === 0) {
+      this.round++;
+      // 突然死亡：第 8 轮后每轮海平面上升
+      if (this.round >= WORLD_CONFIG.SUDDEN_DEATH_ROUND) {
+        this.waterLevel += WORLD_CONFIG.WATER_RISE_STEP;
+        this.pushKillFeed(`⚠️ 突然死亡！海平面上升至 ${this.waterLevel.toFixed(1)}m`);
+        this.emit('sudden_death', { round: this.round, waterLevel: this.waterLevel });
+      }
+      // 每 2 轮空投一个补给箱
+      if (this.round % 2 === 0) {
+        this.spawnSupplyCrate();
+      }
+    }
+
+    // 轮换当前队伍中下一条存活虫子
+    const team = this.getActiveTeam();
+    const aliveWorms = this.getTeamWorms(this.activeTeamId, true);
+    if (aliveWorms.length === 0) {
+      this.checkVictory();
+      return;
+    }
+
+    team.wormCursor = (team.wormCursor + 1) % aliveWorms.length;
+    this.activeWormId = aliveWorms[team.wormCursor].id;
+    this.selectedWeaponId = 'bazooka';
+    this.phase = TURN_PHASE.AIM;
+    this.turnTimer = WORLD_CONFIG.TURN_DURATION;
+    this.chargePower = 0;
+    this.rollWind();
+
+    this.emit('turn_change', this.getTurnSnapshot());
+  }
+
+  /** 主固定步长更新循环 (dt 单位: 秒) */
+  update(dt) {
+    if (this.phase === TURN_PHASE.GAME_OVER) return;
+    const clampedDt = Math.min(0.05, Math.max(0.001, dt));
+
+    // 1. 更新所有虫子物理（重力、跌落伤害、落水淹死）
+    let anyWormMoving = false;
+    for (const worm of this.worms) {
+      if (!worm.alive) continue;
+      const events = stepWormPhysics(worm, clampedDt, this.terrain, this.waterLevel);
+      if (events && events.length > 0) {
+        for (const ev of events) {
+          if (ev.type === 'drown') {
+            this.pushKillFeed(`🌊 ${worm.name} 掉入深海淹死了！`);
+            this.emit('drown', ev);
+          } else if (ev.type === 'fall_damage') {
+            this.pushKillFeed(`💥 ${worm.name} 摔落受伤 -${ev.damage} HP`);
+            this.emit('damage', ev);
+          }
+        }
+      }
+      if (!worm.grounded || Math.hypot(worm.vx, worm.vy, worm.vz) > 0.35) {
+        anyWormMoving = true;
+      }
+      this.checkCratePickup(worm);
+    }
+
+    // 2. 更新空投补给箱下落
+    for (const crate of this.crates) {
+      if (crate.collected) continue;
+      const gy = this.terrain.getHeightAt(crate.x, crate.z);
+      if (crate.y > gy + 0.5) {
+        crate.y = Math.max(gy + 0.5, crate.y - 4.2 * clampedDt);
+      } else {
+        crate.y = gy + 0.5;
+        crate.grounded = true;
+      }
+      if (crate.y <= this.waterLevel) {
+        crate.collected = true;
+      }
+    }
+    this.crates = this.crates.filter((c) => !c.collected);
+
+    // 3. 更新所有飞行弹丸
+    if (this.projectiles.length > 0) {
+      const toSpawn = [];
+      for (const proj of this.projectiles) {
+        if (!proj.alive) continue;
+        const ev = stepProjectile(proj, clampedDt, this.terrain, this.worms, this.wind, this.waterLevel);
+        if (!ev) continue;
+        if (ev.type === 'explode') {
+          toSpawn.push({ proj, ev });
+        } else if (ev.type === 'splash') {
+          this.emit('splash', ev);
+        } else if (ev.type === 'bounce') {
+          this.emit('bounce', ev);
+        }
+      }
+
+      for (const { proj, ev } of toSpawn) {
+        this.detonateAt(
+          ev.x,
+          ev.y,
+          ev.z,
+          proj.blastRadius,
+          proj.craterDepth,
+          proj.maxDamage,
+          proj.knockback,
+          proj.weaponId,
+          proj.isCluster,
+          proj.ownerId
+        );
+      }
+
+      this.projectiles = this.projectiles.filter((p) => p.alive);
+    }
+
+    // 4. 回合状态机推进
+    if (this.phase === TURN_PHASE.AIM) {
+      const activeWorm = this.getActiveWorm();
+      if (!activeWorm || !activeWorm.alive) {
+        this.phase = TURN_PHASE.SETTLE;
+        this.settleTimer = 1.0;
+      } else {
+        this.turnTimer -= clampedDt;
+        if (this.turnTimer <= 0) {
+          this.turnTimer = 0;
+          this.pushKillFeed(`⏱️ ${activeWorm.name} 回合超时！`);
+          this.nextTurn();
+        }
+      }
+    } else if (this.phase === TURN_PHASE.CHARGING) {
+      this.chargePower += this.chargeDir * 0.92 * clampedDt;
+      if (this.chargePower >= 1.0) {
+        this.chargePower = 1.0;
+        this.releaseCharge();
+      }
+    } else if (this.phase === TURN_PHASE.PROJECTILE) {
+      if (this.projectiles.length === 0) {
+        this.phase = TURN_PHASE.SETTLE;
+        this.settleTimer = 1.4;
+      }
+    } else if (this.phase === TURN_PHASE.SETTLE) {
+      if (!anyWormMoving) {
+        this.settleTimer -= clampedDt;
+      } else {
+        this.settleTimer = Math.max(this.settleTimer, 0.6);
+      }
+
+      if (this.settleTimer <= 0) {
+        if (this.checkVictory()) return;
+        const activeWorm = this.getActiveWorm();
+        // 开火后若己方虫子仍存活且为人类操作，给予 3 秒撤离时间
+        if (activeWorm && activeWorm.alive && !this.getActiveTeam().isAI) {
+          this.phase = TURN_PHASE.RETREAT;
+          this.retreatTimer = WORLD_CONFIG.RETREAT_DURATION;
+        } else {
+          this.nextTurn();
+        }
+      }
+    } else if (this.phase === TURN_PHASE.RETREAT) {
+      this.retreatTimer -= clampedDt;
+      if (this.retreatTimer <= 0) {
+        this.nextTurn();
+      }
+    }
+  }
+}
+
+// === src/core/ai.js ===
+/**
+ * 百战天虫 3D - 智能 AI 决策与弹道求解器
+ * 支持目标优先级评估、武器选择、考虑风力补偿的弹道仰角/力度网格搜索。
+ */
+
+
+/**
+ * 为指定射手和目标求解最优 (yaw, pitch, power)
+ * 通过前向物理积分模拟 + 风力补偿误差最小化
+ */
+function solveBallisticShot(shooter, target, weapon, wind, terrain) {
+  const dx = target.x - shooter.x;
+  const dz = target.z - shooter.z;
+  const baseYaw = Math.atan2(dx, dz);
+
+  // 近战棒球棍直接朝向目标
+  if (weapon.type === 'melee') {
+    return { yaw: baseYaw, pitch: 0.2, power: 1.0, error: Math.hypot(dx, dz) };
+  }
+
+  // 霰弹枪直接直线瞄准目标中心
+  if (weapon.type === 'hitscan') {
+    const dy = (target.y + 0.9) - (shooter.y + WORLD_CONFIG.WORM_HEIGHT * 0.68);
+    const horiz = Math.max(0.1, Math.hypot(dx, dz));
+    const pitch = Math.max(-0.5, Math.min(1.2, Math.atan2(dy, horiz)));
+    return { yaw: baseYaw, pitch, power: 1.0, error: 0.5 };
+  }
+
+  // 空中打击按距离比例计算蓄力值
+  if (weapon.type === 'airstrike') {
+    const horiz = Math.hypot(dx, dz);
+    const power = Math.max(0.1, Math.min(1.0, (horiz - weapon.minRange) / (weapon.maxRange - weapon.minRange)));
+    return { yaw: baseYaw, pitch: 0.45, power, error: 1.0 };
+  }
+
+  // 抛物线武器（火箭筒/手榴弹/集束炸弹）：候选仰角 × 力度 × 风力偏航修正搜索
+  let best = { yaw: baseYaw, pitch: 0.65, power: 0.65, error: Infinity };
+  const pitchCandidates = [0.35, 0.55, 0.78, 1.0];
+  const powerCandidates = [0.25, 0.4, 0.55, 0.7, 0.85, 0.98];
+  const yawOffsets = weapon.windFactor > 0 ? [-0.36, -0.24, -0.14, -0.06, 0, 0.06, 0.14, 0.24, 0.36] : [0];
+
+  const originY = shooter.y + WORLD_CONFIG.WORM_HEIGHT * 0.68;
+
+  for (const pitch of pitchCandidates) {
+    for (const power of powerCandidates) {
+      for (const yOff of yawOffsets) {
+        const yaw = baseYaw + yOff;
+        const dir = aimToDirection(yaw, pitch);
+        const speed = weapon.minSpeed + (weapon.maxSpeed - weapon.minSpeed) * power;
+
+        let x = shooter.x + dir.x * 1.15;
+        let y = originY + dir.y * 0.8;
+        let z = shooter.z + dir.z * 1.15;
+        let vx = dir.x * speed;
+        let vy = dir.y * speed;
+        let vz = dir.z * speed;
+
+        const dt = 0.06;
+        let minErr = Infinity;
+
+        for (let step = 0; step < 65; step++) {
+          vx += wind.x * weapon.windFactor * dt;
+          vz += wind.z * weapon.windFactor * dt;
+          vy -= WORLD_CONFIG.GRAVITY * dt;
+          x += vx * dt;
+          y += vy * dt;
+          z += vz * dt;
+
+          const err = Math.hypot(x - target.x, y - (target.y + 0.8), z - target.z);
+          if (err < minErr) minErr = err;
+
+          const gy = terrain.getHeightAt(x, z);
+          if (y <= gy || y <= WORLD_CONFIG.WATER_LEVEL) {
+            break;
+          }
+        }
+
+        if (minErr < best.error) {
+          best = { yaw, pitch, power, error: minErr };
+        }
+      }
+    }
+  }
+
+  return best;
+}
+class AIController {
+  constructor(engine, options = {}) {
+    this.engine = engine;
+    this.jitter = options.jitter !== undefined ? options.jitter : 0.04; // 模拟人类轻微瞄准误差
+    this.thinkTimer = 0;
+    this.plan = null;
+  }
+
+  resetPlan() {
+    this.plan = null;
+    this.thinkTimer = 0.85;
+  }
+
+  /** 为当前 AI 虫子制定战术计划 */
+  computePlan() {
+    const worm = this.engine.getActiveWorm();
+    const team = this.engine.getActiveTeam();
+    if (!worm || !worm.alive) return null;
+
+    const enemies = this.engine.getTeamWorms(1 - worm.teamId, true);
+    if (enemies.length === 0) return null;
+
+    // 目标优先级：优先攻击距离较近、血量较低或靠近海边的敌虫
+    let bestTarget = enemies[0];
+    let bestScore = -Infinity;
+    for (const e of enemies) {
+      const dist = Math.hypot(e.x - worm.x, e.z - worm.z);
+      const lowHpBonus = (100 - e.hp) * 0.35;
+      const edgeBonus = e.y < this.engine.waterLevel + 3.0 ? 18 : 0;
+      const score = 60 - dist + lowHpBonus + edgeBonus;
+      if (score > bestScore) {
+        bestScore = score;
+        bestTarget = e;
+      }
+    }
+
+    const dist = Math.hypot(bestTarget.x - worm.x, bestTarget.z - worm.z);
+
+    // 武器选择策略
+    let weaponId = 'bazooka';
+    if (dist <= WEAPONS.bat.meleeRange - 0.3) {
+      weaponId = 'bat';
+    } else if (dist <= 22 && team.ammo.shotgun > 0 && Math.abs(bestTarget.y - worm.y) < 5) {
+      weaponId = 'shotgun';
+    } else if (dist >= 16 && dist <= 34 && team.ammo.airstrike > 0 && this.engine.round >= 2) {
+      weaponId = 'airstrike';
+    } else if (dist <= 26 && team.ammo.cluster > 0) {
+      weaponId = 'cluster';
+    } else if (Math.hypot(this.engine.wind.x, this.engine.wind.z) > 5.5) {
+      // 大风天气优先用手榴弹规避风力偏移
+      weaponId = 'grenade';
+    }
+
+    const weapon = WEAPONS[weaponId];
+    const solution = solveBallisticShot(worm, bestTarget, weapon, this.engine.wind, this.engine.terrain);
+
+    // 注入适度拟人误差，保证对战有趣而非100%自瞄
+    const jitterYaw = (this.engine.rng() * 2 - 1) * this.jitter;
+    const jitterPow = (this.engine.rng() * 2 - 1) * this.jitter;
+
+    return {
+      weaponId,
+      targetYaw: solution.yaw + jitterYaw,
+      targetPitch: solution.pitch,
+      targetPower: Math.max(0.15, Math.min(0.98, solution.power + jitterPow)),
+      fired: false,
+    };
+  }
+
+  /** 每帧由主循环调用，驱动 AI 平滑瞄准并开火 */
+  update(dt) {
+    if (this.engine.phase !== TURN_PHASE.AIM) {
+      this.plan = null;
+      return;
+    }
+    const team = this.engine.getActiveTeam();
+    if (!team || !team.isAI) {
+      this.plan = null;
+      return;
+    }
+
+    if (!this.plan) {
+      this.thinkTimer -= dt;
+      if (this.thinkTimer <= 0) {
+        this.plan = this.computePlan();
+        if (this.plan) {
+          this.engine.selectWeapon(this.plan.weaponId);
+        }
+      }
+      return;
+    }
+
+    const worm = this.engine.getActiveWorm();
+    if (!worm || !worm.alive) return;
+
+    // 平滑插值转向与仰角
+    let diffYaw = this.plan.targetYaw - worm.yaw;
+    while (diffYaw > Math.PI) diffYaw -= Math.PI * 2;
+    while (diffYaw < -Math.PI) diffYaw += Math.PI * 2;
+
+    const diffPitch = this.plan.targetPitch - worm.pitch;
+
+    const yawStep = Math.sign(diffYaw) * Math.min(Math.abs(diffYaw), 2.8 * dt);
+    const pitchStep = Math.sign(diffPitch) * Math.min(Math.abs(diffPitch), 1.8 * dt);
+    worm.yaw += yawStep;
+    worm.pitch += pitchStep;
+
+    if (Math.abs(diffYaw) < 0.04 && Math.abs(diffPitch) < 0.04 && !this.plan.fired) {
+      this.plan.fired = true;
+      this.engine.fireWeapon(this.plan.targetPower);
+      this.plan = null;
+    }
+  }
+}
+
+// === src/audio/soundEngine.js ===
+/**
+ * 百战天虫 3D - 程序化 Web Audio API 音效合成器
+ * 零外部音频资源依赖，实时合成火箭发射、手榴弹弹跳、爆炸轰鸣、落水飞溅、跳跃、补给与胜利号角。
+ */
+class SoundEngine {
+  constructor() {
+    this.ctx = null;
+    this.muted = false;
+  }
+
+  unlock() {
+    if (this.muted) return;
+    if (!this.ctx && typeof window !== 'undefined') {
+      const AudioCtx = window.AudioContext || window.webkitAudioContext;
+      if (AudioCtx) {
+        this.ctx = new AudioCtx();
+      }
+    }
+    if (this.ctx && this.ctx.state === 'suspended') {
+      this.ctx.resume().catch(() => {});
+    }
+  }
+
+  setMuted(muted) {
+    this.muted = muted;
+  }
+
+  toggleMute() {
+    this.muted = !this.muted;
+    return this.muted;
+  }
+
+  /** 生成白噪声缓冲区 */
+  createNoiseBuffer(duration = 0.6) {
+    const sampleRate = this.ctx.sampleRate;
+    const len = Math.floor(sampleRate * duration);
+    const buffer = this.ctx.createBuffer(1, len, sampleRate);
+    const data = buffer.getChannelData(0);
+    for (let i = 0; i < len; i++) {
+      data[i] = Math.random() * 2 - 1;
+    }
+    return buffer;
+  }
+
+  playLaunch(weaponId = 'bazooka') {
+    if (this.muted || !this.ctx) return;
+    const now = this.ctx.currentTime;
+
+    if (weaponId === 'shotgun') {
+      const noise = this.ctx.createBufferSource();
+      noise.buffer = this.createNoiseBuffer(0.22);
+      const filter = this.ctx.createBiquadFilter();
+      filter.type = 'bandpass';
+      filter.frequency.setValueAtTime(1100, now);
+      const gain = this.ctx.createGain();
+      gain.gain.setValueAtTime(0.45, now);
+      gain.gain.exponentialRampToValueAtTime(0.01, now + 0.22);
+      noise.connect(filter).connect(gain).connect(this.ctx.destination);
+      noise.start(now);
+      return;
+    }
+
+    if (weaponId === 'bat') {
+      const osc = this.ctx.createOscillator();
+      const gain = this.ctx.createGain();
+      osc.type = 'triangle';
+      osc.frequency.setValueAtTime(340, now);
+      osc.frequency.exponentialRampToValueAtTime(95, now + 0.16);
+      gain.gain.setValueAtTime(0.35, now);
+      gain.gain.exponentialRampToValueAtTime(0.01, now + 0.16);
+      osc.connect(gain).connect(this.ctx.destination);
+      osc.start(now);
+      osc.stop(now + 0.17);
+      return;
+    }
+
+    // 火箭/榴弹发射音
+    const osc = this.ctx.createOscillator();
+    const gain = this.ctx.createGain();
+    osc.type = 'sawtooth';
+    osc.frequency.setValueAtTime(weaponId === 'airstrike' ? 620 : 180, now);
+    osc.frequency.exponentialRampToValueAtTime(weaponId === 'airstrike' ? 140 : 480, now + 0.25);
+    gain.gain.setValueAtTime(0.22, now);
+    gain.gain.exponentialRampToValueAtTime(0.01, now + 0.28);
+    osc.connect(gain).connect(this.ctx.destination);
+    osc.start(now);
+    osc.stop(now + 0.3);
+  }
+
+  playExplosion(radius = 5.0) {
+    if (this.muted || !this.ctx) return;
+    const now = this.ctx.currentTime;
+    const dur = Math.min(1.1, 0.45 + radius * 0.08);
+
+    // 低频冲击波
+    const osc = this.ctx.createOscillator();
+    const oscGain = this.ctx.createGain();
+    osc.type = 'sine';
+    osc.frequency.setValueAtTime(125, now);
+    osc.frequency.exponentialRampToValueAtTime(28, now + dur * 0.7);
+    oscGain.gain.setValueAtTime(0.45, now);
+    oscGain.gain.exponentialRampToValueAtTime(0.005, now + dur * 0.75);
+    osc.connect(oscGain).connect(this.ctx.destination);
+    osc.start(now);
+    osc.stop(now + dur * 0.78);
+
+    // 过滤白噪声轰鸣
+    const noise = this.ctx.createBufferSource();
+    noise.buffer = this.createNoiseBuffer(dur);
+    const filter = this.ctx.createBiquadFilter();
+    filter.type = 'lowpass';
+    filter.frequency.setValueAtTime(900, now);
+    filter.frequency.exponentialRampToValueAtTime(120, now + dur);
+    const nGain = this.ctx.createGain();
+    nGain.gain.setValueAtTime(0.42, now);
+    nGain.gain.exponentialRampToValueAtTime(0.005, now + dur);
+    noise.connect(filter).connect(nGain).connect(this.ctx.destination);
+    noise.start(now);
+  }
+
+  playBounce() {
+    if (this.muted || !this.ctx) return;
+    const now = this.ctx.currentTime;
+    const osc = this.ctx.createOscillator();
+    const gain = this.ctx.createGain();
+    osc.type = 'triangle';
+    osc.frequency.setValueAtTime(260, now);
+    osc.frequency.exponentialRampToValueAtTime(110, now + 0.09);
+    gain.gain.setValueAtTime(0.24, now);
+    gain.gain.exponentialRampToValueAtTime(0.01, now + 0.1);
+    osc.connect(gain).connect(this.ctx.destination);
+    osc.start(now);
+    osc.stop(now + 0.1);
+  }
+
+  playSplash() {
+    if (this.muted || !this.ctx) return;
+    const now = this.ctx.currentTime;
+    const noise = this.ctx.createBufferSource();
+    noise.buffer = this.createNoiseBuffer(0.45);
+    const filter = this.ctx.createBiquadFilter();
+    filter.type = 'bandpass';
+    filter.frequency.setValueAtTime(1500, now);
+    filter.frequency.exponentialRampToValueAtTime(360, now + 0.42);
+    const gain = this.ctx.createGain();
+    gain.gain.setValueAtTime(0.28, now);
+    gain.gain.exponentialRampToValueAtTime(0.01, now + 0.45);
+    noise.connect(filter).connect(gain).connect(this.ctx.destination);
+    noise.start(now);
+  }
+
+  playJump() {
+    if (this.muted || !this.ctx) return;
+    const now = this.ctx.currentTime;
+    const osc = this.ctx.createOscillator();
+    const gain = this.ctx.createGain();
+    osc.type = 'sine';
+    osc.frequency.setValueAtTime(220, now);
+    osc.frequency.exponentialRampToValueAtTime(520, now + 0.14);
+    gain.gain.setValueAtTime(0.18, now);
+    gain.gain.exponentialRampToValueAtTime(0.01, now + 0.16);
+    osc.connect(gain).connect(this.ctx.destination);
+    osc.start(now);
+    osc.stop(now + 0.17);
+  }
+
+  playPickup() {
+    if (this.muted || !this.ctx) return;
+    const now = this.ctx.currentTime;
+    const notes = [523.25, 659.25, 783.99];
+    notes.forEach((freq, idx) => {
+      const osc = this.ctx.createOscillator();
+      const gain = this.ctx.createGain();
+      osc.type = 'sine';
+      osc.frequency.setValueAtTime(freq, now + idx * 0.07);
+      gain.gain.setValueAtTime(0.18, now + idx * 0.07);
+      gain.gain.exponentialRampToValueAtTime(0.01, now + idx * 0.07 + 0.15);
+      osc.connect(gain).connect(this.ctx.destination);
+      osc.start(now + idx * 0.07);
+      osc.stop(now + idx * 0.07 + 0.16);
+    });
+  }
+
+  playVictory() {
+    if (this.muted || !this.ctx) return;
+    const now = this.ctx.currentTime;
+    const melody = [523.25, 659.25, 783.99, 1046.5];
+    melody.forEach((freq, i) => {
+      const osc = this.ctx.createOscillator();
+      const gain = this.ctx.createGain();
+      osc.type = 'triangle';
+      const t = now + i * 0.12;
+      osc.frequency.setValueAtTime(freq, t);
+      gain.gain.setValueAtTime(0.24, t);
+      gain.gain.exponentialRampToValueAtTime(0.01, t + 0.35);
+      osc.connect(gain).connect(this.ctx.destination);
+      osc.start(t);
+      osc.stop(t + 0.36);
+    });
+  }
+}
+
+// === src/render/renderer3d.js ===
+/**
+ * 百战天虫 3D - Three.js r128 3D 渲染与粒子特效引擎
+ * 依赖全局 THREE (Three.js r128)。
+ */
+class Renderer3D {
+  constructor(canvas, engine) {
+    this.canvas = canvas;
+    this.engine = engine;
+    this.cameraMode = 'follow'; // 'follow' | 'tactical'
+    this.tacticalYaw = 0.6;
+    this.tacticalPitch = 0.72;
+    this.tacticalDist = 66;
+    this.cameraShake = 0;
+    this.camPos = new THREE.Vector3(0, 24, 42);
+    this.camLook = new THREE.Vector3(0, 4, 0);
+    this.time = 0;
+
+    this.wormMeshes = new Map();
+    this.projMeshes = new Map();
+    this.crateMeshes = new Map();
+    this.particles = [];
+    this.tracers = [];
+
+    this.initScene();
+    this.buildTerrainMesh();
+    this.buildWaterMesh();
+    this.buildAimHelpers();
+    this.syncWorms();
+    this.bindEngineEvents();
+  }
+
+  initScene() {
+    this.renderer = new THREE.WebGLRenderer({
+      canvas: this.canvas,
+      antialias: true,
+      powerPreference: 'high-performance',
+    });
+    this.renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, 2));
+    this.renderer.shadowMap.enabled = true;
+    this.renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+
+    this.scene = new THREE.Scene();
+    this.camera = new THREE.PerspectiveCamera(54, 16 / 9, 0.5, 320);
+
+    // 灯光系统：半球天光 + 方向主光 + 补光
+    this.hemiLight = new THREE.HemisphereLight(0xffffff, 0x334155, 0.72);
+    this.scene.add(this.hemiLight);
+
+    this.sunLight = new THREE.DirectionalLight(0xfffbeb, 1.05);
+    this.sunLight.position.set(42, 62, 34);
+    this.sunLight.castShadow = true;
+    this.sunLight.shadow.mapSize.width = 1024;
+    this.sunLight.shadow.mapSize.height = 1024;
+    this.sunLight.shadow.camera.near = 10;
+    this.sunLight.shadow.camera.far = 160;
+    const d = 52;
+    this.sunLight.shadow.camera.left = -d;
+    this.sunLight.shadow.camera.right = d;
+    this.sunLight.shadow.camera.top = d;
+    this.sunLight.shadow.camera.bottom = -d;
+    this.scene.add(this.sunLight);
+
+    // 装饰云朵群
+    this.cloudGroup = new THREE.Group();
+    const cloudMat = new THREE.MeshLambertMaterial({ color: 0xffffff, transparent: true, opacity: 0.78 });
+    for (let i = 0; i < 10; i++) {
+      const c = new THREE.Group();
+      const ang = (i / 10) * Math.PI * 2;
+      const rad = 52 + (i % 3) * 14;
+      c.position.set(Math.cos(ang) * rad, 28 + (i % 4) * 4, Math.sin(ang) * rad);
+      for (let k = 0; k < 3; k++) {
+        const puff = new THREE.Mesh(new THREE.SphereGeometry(2.6 + k * 0.5, 8, 8), cloudMat);
+        puff.position.set((k - 1) * 2.5, (k % 2) * 0.8, 0);
+        puff.scale.set(1.4, 0.75, 1.0);
+        c.add(puff);
+      }
+      this.cloudGroup.add(c);
+    }
+    this.scene.add(this.cloudGroup);
+
+    this.applyThemeColors();
+    this.resize();
+  }
+
+  applyThemeColors() {
+    const theme = MAP_THEMES[this.engine.themeId] || MAP_THEMES.tropical;
+    this.scene.background = new THREE.Color(theme.skyTop);
+    this.scene.fog = new THREE.FogExp2(theme.fogColor, 0.0052);
+    if (this.waterMat) {
+      this.waterMat.color.setHex(theme.waterColor);
+      this.waterMat.opacity = theme.waterOpacity;
+      this.waterMat.emissive.setHex(theme.id === 'volcano' ? 0x7c2d12 : 0x000000);
+    }
+  }
+
+  resize() {
+    const parent = this.canvas.parentElement;
+    const width = Math.max(320, parent ? parent.clientWidth : window.innerWidth);
+    const height = Math.max(240, parent ? parent.clientHeight : window.innerHeight);
+    this.camera.aspect = width / height;
+    this.camera.updateProjectionMatrix();
+    this.renderer.setSize(width, height, false);
+  }
+
+  /** 构建可动态更新的 3D 地形网格 */
+  buildTerrainMesh() {
+    if (this.terrainMesh) {
+      this.scene.remove(this.terrainMesh);
+      this.terrainMesh.geometry.dispose();
+    }
+
+    const t = this.engine.terrain;
+    const gs = t.gridSize;
+    const vertCount = gs * gs;
+    const positions = new Float32Array(vertCount * 3);
+    const colors = new Float32Array(vertCount * 3);
+    const indices = [];
+
+    for (let gz = 0; gz < gs; gz++) {
+      for (let gx = 0; gx < gs; gx++) {
+        const idx = gz * gs + gx;
+        positions[idx * 3] = t.gridToWorld(gx);
+        positions[idx * 3 + 1] = t.heights[idx];
+        positions[idx * 3 + 2] = t.gridToWorld(gz);
+      }
+    }
+
+    for (let gz = 0; gz < gs - 1; gz++) {
+      for (let gx = 0; gx < gs - 1; gx++) {
+        const a = gz * gs + gx;
+        const b = a + 1;
+        const c = a + gs;
+        const d = c + 1;
+        indices.push(a, c, b);
+        indices.push(b, c, d);
+      }
+    }
+
+    const geo = new THREE.BufferGeometry();
+    geo.setAttribute('position', new THREE.BufferAttribute(positions, 3));
+    geo.setAttribute('color', new THREE.BufferAttribute(colors, 3));
+    geo.setIndex(indices);
+
+    const mat = new THREE.MeshStandardMaterial({
+      vertexColors: true,
+      roughness: 0.88,
+      metalness: 0.04,
+      flatShading: false,
+    });
+
+    this.terrainMesh = new THREE.Mesh(geo, mat);
+    this.terrainMesh.receiveShadow = true;
+    this.terrainMesh.castShadow = true;
+    this.scene.add(this.terrainMesh);
+    this.updateTerrainGeometry();
+  }
+
+  /** 当地形被炸毁或重新生成时，实时刷新顶点高度、颜色与法线 */
+  updateTerrainGeometry() {
+    const t = this.engine.terrain;
+    const gs = t.gridSize;
+    const posAttr = this.terrainMesh.geometry.attributes.position;
+    const colAttr = this.terrainMesh.geometry.attributes.color;
+
+    for (let gz = 0; gz < gs; gz++) {
+      for (let gx = 0; gx < gs; gx++) {
+        const idx = gz * gs + gx;
+        posAttr.setY(idx, t.heights[idx]);
+        const [r, g, b] = t.getVertexColor(gx, gz);
+        colAttr.setXYZ(idx, r, g, b);
+      }
+    }
+
+    posAttr.needsUpdate = true;
+    colAttr.needsUpdate = true;
+    this.terrainMesh.geometry.computeVertexNormals();
+    this.terrainMesh.geometry.computeBoundingSphere();
+    this.terrainMesh.geometry.computeBoundingBox();
+    t.dirty = false;
+  }
+
+  buildWaterMesh() {
+    const geo = new THREE.PlaneGeometry(340, 340, 36, 36);
+    geo.rotateX(-Math.PI / 2);
+    const theme = MAP_THEMES[this.engine.themeId] || MAP_THEMES.tropical;
+    this.waterMat = new THREE.MeshPhongMaterial({
+      color: theme.waterColor,
+      transparent: true,
+      opacity: theme.waterOpacity,
+      shininess: 90,
+      specular: 0x93c5fd,
+      emissive: theme.id === 'volcano' ? 0x7c2d12 : 0x000000,
+    });
+    this.waterMesh = new THREE.Mesh(geo, this.waterMat);
+    this.waterMesh.position.y = this.engine.waterLevel;
+    this.scene.add(this.waterMesh);
+  }
+
+  /** 3D 瞄准准星与抛物线预览点 */
+  buildAimHelpers() {
+    this.aimGroup = new THREE.Group();
+    const dotGeo = new THREE.SphereGeometry(0.16, 8, 8);
+    this.aimDots = [];
+    for (let i = 0; i < 20; i++) {
+      const mat = new THREE.MeshBasicMaterial({
+        color: 0xfef08a,
+        transparent: true,
+        opacity: Math.max(0.18, 1 - i / 22),
+      });
+      const dot = new THREE.Mesh(dotGeo, mat);
+      this.aimDots.push(dot);
+      this.aimGroup.add(dot);
+    }
+
+    // 3D 准星环
+    const ringGeo = new THREE.RingGeometry(0.32, 0.48, 20);
+    const ringMat = new THREE.MeshBasicMaterial({ color: 0xfef08a, side: THREE.DoubleSide });
+    this.reticleMesh = new THREE.Mesh(ringGeo, ringMat);
+    this.aimGroup.add(this.reticleMesh);
+
+    this.scene.add(this.aimGroup);
+
+    // 当前行动虫子头顶的旋转金色指示箭头
+    const arrowGeo = new THREE.ConeGeometry(0.42, 0.9, 6);
+    arrowGeo.rotateX(Math.PI);
+    const arrowMat = new THREE.MeshStandardMaterial({
+      color: 0xfacc15,
+      emissive: 0xca8a04,
+      roughness: 0.3,
+    });
+    this.activeIndicator = new THREE.Mesh(arrowGeo, arrowMat);
+    this.scene.add(this.activeIndicator);
+  }
+
+  /** 创建一只卡通 3D 虫子模型 */
+  createWormMesh(worm) {
+    const group = new THREE.Group();
+    const skinMat = new THREE.MeshStandardMaterial({ color: 0xfda4af, roughness: 0.55 });
+    const teamColor = this.engine.teams[worm.teamId].colorNum;
+    const teamMat = new THREE.MeshStandardMaterial({ color: teamColor, roughness: 0.4 });
+    const whiteMat = new THREE.MeshBasicMaterial({ color: 0xffffff });
+    const pupilMat = new THREE.MeshBasicMaterial({ color: 0x0f172a });
+
+    // 尾部与下身段
+    const tail = new THREE.Mesh(new THREE.SphereGeometry(0.42, 12, 12), skinMat);
+    tail.position.set(0, 0.42, -0.42);
+    tail.castShadow = true;
+    group.add(tail);
+
+    const body = new THREE.Mesh(new THREE.SphereGeometry(0.55, 14, 14), skinMat);
+    body.position.set(0, 0.72, 0);
+    body.scale.set(0.92, 1.25, 0.95);
+    body.castShadow = true;
+    group.add(body);
+
+    const head = new THREE.Mesh(new THREE.SphereGeometry(0.48, 14, 14), skinMat);
+    head.position.set(0, 1.48, 0.08);
+    head.castShadow = true;
+    group.add(head);
+
+    // 队伍头盔/头带
+    const helmet = new THREE.Mesh(
+      new THREE.SphereGeometry(0.51, 14, 10, 0, Math.PI * 2, 0, Math.PI * 0.55),
+      teamMat
+    );
+    helmet.position.set(0, 1.54, 0.06);
+    helmet.castShadow = true;
+    group.add(helmet);
+
+    // 卡通大眼睛
+    const eyeL = new THREE.Mesh(new THREE.SphereGeometry(0.16, 10, 10), whiteMat);
+    eyeL.position.set(-0.17, 1.54, 0.46);
+    const eyeR = eyeL.clone();
+    eyeR.position.x = 0.17;
+    group.add(eyeL, eyeR);
+
+    const pupilL = new THREE.Mesh(new THREE.SphereGeometry(0.075, 8, 8), pupilMat);
+    pupilL.position.set(-0.17, 1.54, 0.59);
+    const pupilR = pupilL.clone();
+    pupilR.position.x = 0.17;
+    group.add(pupilL, pupilR);
+
+    // 武器挂载节点（随仰角俯仰）
+    const weaponPivot = new THREE.Group();
+    weaponPivot.position.set(0.42, 1.05, 0.15);
+    const barrel = new THREE.Mesh(
+      new THREE.CylinderGeometry(0.12, 0.15, 1.35, 10),
+      new THREE.MeshStandardMaterial({ color: 0x334155, metalness: 0.45, roughness: 0.4 })
+    );
+    barrel.rotation.x = Math.PI / 2;
+    barrel.position.z = 0.4;
+    weaponPivot.add(barrel);
+    group.add(weaponPivot);
+
+    group.userData = { weaponPivot, body, head };
+    return group;
+  }
+
+  syncWorms() {
+    for (const mesh of this.wormMeshes.values()) {
+      this.scene.remove(mesh);
+    }
+    this.wormMeshes.clear();
+
+    for (const worm of this.engine.worms) {
+      const mesh = this.createWormMesh(worm);
+      mesh.position.set(worm.x, worm.y, worm.z);
+      this.scene.add(mesh);
+      this.wormMeshes.set(worm.id, mesh);
+    }
+  }
+
+  bindEngineEvents() {
+    this.engine.on('match_reset', () => {
+      this.applyThemeColors();
+      this.updateTerrainGeometry();
+      this.syncWorms();
+      this.clearDynamicMeshes();
+    });
+
+    this.engine.on('explosion', (ev) => {
+      if (this.engine.terrain.dirty) {
+        this.updateTerrainGeometry();
+      }
+      this.spawnExplosionFX(ev.x, ev.y, ev.z, ev.radius);
+      this.cameraShake = Math.min(1.8, 0.55 + ev.radius * 0.16);
+    });
+
+    this.engine.on('splash', (ev) => {
+      this.spawnSplashFX(ev.x, ev.y, ev.z);
+    });
+
+    this.engine.on('drown', (ev) => {
+      this.spawnSplashFX(ev.x, ev.y, ev.z, 1.6);
+    });
+
+    this.engine.on('shotgun_tracer', (ev) => {
+      const geo = new THREE.BufferGeometry().setFromPoints([
+        new THREE.Vector3(ev.from.x, ev.from.y, ev.from.z),
+        new THREE.Vector3(ev.to.x, ev.to.y, ev.to.z),
+      ]);
+      const mat = new THREE.LineBasicMaterial({ color: 0xfef08a, transparent: true, opacity: 1 });
+      const line = new THREE.Line(geo, mat);
+      this.scene.add(line);
+      this.tracers.push({ mesh: line, life: 0.28, maxLife: 0.28 });
+    });
+  }
+
+  clearDynamicMeshes() {
+    for (const m of this.projMeshes.values()) this.scene.remove(m);
+    this.projMeshes.clear();
+    for (const m of this.crateMeshes.values()) this.scene.remove(m);
+    this.crateMeshes.clear();
+    for (const p of this.particles) this.scene.remove(p.mesh);
+    this.particles = [];
+  }
+
+  spawnExplosionFX(x, y, z, radius) {
+    // 中心膨胀火球
+    const fireball = new THREE.Mesh(
+      new THREE.SphereGeometry(radius * 0.45, 14, 14),
+      new THREE.MeshBasicMaterial({ color: 0xf97316, transparent: true, opacity: 0.92 })
+    );
+    fireball.position.set(x, y + 0.3, z);
+    this.scene.add(fireball);
+    this.particles.push({
+      mesh: fireball,
+      vx: 0,
+      vy: 0.5,
+      vz: 0,
+      life: 0.42,
+      maxLife: 0.42,
+      grow: 3.4,
+      gravity: 0,
+    });
+
+    // 飞溅碎石、火星与烟雾粒子
+    const count = Math.min(34, Math.floor(14 + radius * 3.5));
+    const colors = [0xfef08a, 0xf97316, 0xef4444, 0x475569, 0x1e293b];
+    for (let i = 0; i < count; i++) {
+      const col = colors[i % colors.length];
+      const isSmoke = i % 3 === 0;
+      const geo = new THREE.SphereGeometry(isSmoke ? 0.45 : 0.22, 6, 6);
+      const mat = new THREE.MeshBasicMaterial({ color: col, transparent: true, opacity: 0.95 });
+      const mesh = new THREE.Mesh(geo, mat);
+      mesh.position.set(x, y + 0.3, z);
+      this.scene.add(mesh);
+
+      const ang = Math.random() * Math.PI * 2;
+      const spd = (isSmoke ? 2.5 : 6.0) + Math.random() * radius * 1.9;
+      this.particles.push({
+        mesh,
+        vx: Math.cos(ang) * spd,
+        vy: 3.5 + Math.random() * radius * 1.6,
+        vz: Math.sin(ang) * spd,
+        life: 0.55 + Math.random() * 0.65,
+        maxLife: 1.2,
+        grow: isSmoke ? 1.8 : 0,
+        gravity: isSmoke ? -2.2 : 16.0,
+      });
+    }
+  }
+
+  spawnSplashFX(x, y, z, scale = 1.0) {
+    for (let i = 0; i < 14; i++) {
+      const mesh = new THREE.Mesh(
+        new THREE.SphereGeometry(0.22 * scale, 6, 6),
+        new THREE.MeshBasicMaterial({ color: 0xe0f2fe, transparent: true, opacity: 0.9 })
+      );
+      mesh.position.set(x, y + 0.2, z);
+      this.scene.add(mesh);
+      const ang = Math.random() * Math.PI * 2;
+      const spd = (2 + Math.random() * 4) * scale;
+      this.particles.push({
+        mesh,
+        vx: Math.cos(ang) * spd,
+        vy: (5 + Math.random() * 5) * scale,
+        vz: Math.sin(ang) * spd,
+        life: 0.55 + Math.random() * 0.35,
+        maxLife: 0.9,
+        grow: 0.4,
+        gravity: 14.0,
+      });
+    }
+  }
+
+  toggleCameraMode() {
+    this.cameraMode = this.cameraMode === 'follow' ? 'tactical' : 'follow';
+    return this.cameraMode;
+  }
+
+  orbitTacticalCamera(dx, dy) {
+    this.tacticalYaw -= dx * 0.008;
+    this.tacticalPitch = Math.max(0.22, Math.min(1.38, this.tacticalPitch + dy * 0.006));
+  }
+
+  zoomTacticalCamera(delta) {
+    this.tacticalDist = Math.max(26, Math.min(105, this.tacticalDist + delta * 0.05));
+  }
+
+  /** 将 3D 世界坐标投影到 2D 屏幕坐标（用于虫子头顶血条） */
+  projectToScreen(x, y, z) {
+    const v = new THREE.Vector3(x, y, z);
+    v.project(this.camera);
+    const w = this.canvas.clientWidth;
+    const h = this.canvas.clientHeight;
+    return {
+      x: (v.x * 0.5 + 0.5) * w,
+      y: (-v.y * 0.5 + 0.5) * h,
+      visible: v.z < 1.0,
+    };
+  }
+
+  update(dt) {
+    this.time += dt;
+
+    // 1. 地形若被炸毁则即时更新网格
+    if (this.engine.terrain.dirty) {
+      this.updateTerrainGeometry();
+    }
+
+    // 2. 海平面高度与缓慢波浪动画
+    this.waterMesh.position.y = this.engine.waterLevel + Math.sin(this.time * 1.6) * 0.12;
+    this.cloudGroup.rotation.y += dt * 0.015;
+
+    // 3. 同步所有虫子位置与姿态
+    for (const worm of this.engine.worms) {
+      const mesh = this.wormMeshes.get(worm.id);
+      if (!mesh) continue;
+      mesh.visible = worm.alive;
+      if (!worm.alive) continue;
+
+      const bob = worm.grounded ? Math.abs(Math.sin(worm.walkCycle)) * 0.14 : 0;
+      mesh.position.set(worm.x, worm.y + bob, worm.z);
+      mesh.rotation.y = worm.yaw;
+      if (mesh.userData.weaponPivot) {
+        mesh.userData.weaponPivot.rotation.x = -worm.pitch;
+      }
+    }
+
+    // 4. 当前虫子头顶指示箭头与瞄准辅助线
+    const activeWorm = this.engine.getActiveWorm();
+    const showAim =
+      activeWorm &&
+      activeWorm.alive &&
+      !this.engine.getActiveTeam().isAI &&
+      (this.engine.phase === TURN_PHASE.AIM || this.engine.phase === TURN_PHASE.CHARGING);
+
+    if (activeWorm && activeWorm.alive) {
+      this.activeIndicator.visible = true;
+      this.activeIndicator.position.set(
+        activeWorm.x,
+        activeWorm.y + 3.0 + Math.sin(this.time * 5.2) * 0.25,
+        activeWorm.z
+      );
+      this.activeIndicator.rotation.y = this.time * 2.5;
+    } else {
+      this.activeIndicator.visible = false;
+    }
+
+    this.aimGroup.visible = !!showAim;
+    if (showAim) {
+      const weapon = WEAPONS[this.engine.selectedWeaponId];
+      const dir = aimToDirection(activeWorm.yaw, activeWorm.pitch);
+      const origin = {
+        x: activeWorm.x + dir.x * 1.15,
+        y: activeWorm.y + WORLD_CONFIG.WORM_HEIGHT * 0.68 + dir.y * 0.8,
+        z: activeWorm.z + dir.z * 1.15,
+      };
+      this.reticleMesh.position.set(origin.x + dir.x * 3.8, origin.y + dir.y * 3.8, origin.z + dir.z * 3.8);
+      this.reticleMesh.lookAt(this.camera.position);
+
+      const previewPower = this.engine.phase === TURN_PHASE.CHARGING ? this.engine.chargePower : 0.65;
+      if (weapon.type === 'projectile' || weapon.type === 'cluster') {
+        const spd = weapon.minSpeed + (weapon.maxSpeed - weapon.minSpeed) * previewPower;
+        const pts = sampleTrajectory(
+          origin,
+          { x: dir.x * spd, y: dir.y * spd, z: dir.z * spd },
+          this.engine.wind,
+          weapon.windFactor,
+          this.aimDots.length,
+          0.075
+        );
+        this.aimDots.forEach((dot, i) => {
+          dot.visible = true;
+          dot.position.set(pts[i].x, pts[i].y, pts[i].z);
+          dot.material.color.setHex(this.engine.phase === TURN_PHASE.CHARGING ? 0xf97316 : 0xfef08a);
+        });
+      } else if (weapon.type === 'hitscan' || weapon.type === 'airstrike') {
+        const dist = weapon.type === 'hitscan' ? 24 : weapon.minRange + (weapon.maxRange - weapon.minRange) * previewPower;
+        this.aimDots.forEach((dot, i) => {
+          const t = (i + 1) / this.aimDots.length;
+          dot.visible = true;
+          if (weapon.type === 'hitscan') {
+            dot.position.set(origin.x + dir.x * dist * t, origin.y + dir.y * dist * t, origin.z + dir.z * dist * t);
+          } else {
+            const tx = activeWorm.x + Math.sin(activeWorm.yaw) * dist * t;
+            const tz = activeWorm.z + Math.cos(activeWorm.yaw) * dist * t;
+            dot.position.set(tx, this.engine.terrain.getHeightAt(tx, tz) + 0.6, tz);
+          }
+          dot.material.color.setHex(0xef4444);
+        });
+      } else {
+        this.aimDots.forEach((d) => (d.visible = false));
+      }
+    }
+
+    // 5. 同步飞行弹丸
+    const activeProjIds = new Set();
+    for (const p of this.engine.projectiles) {
+      activeProjIds.add(p.id);
+      let mesh = this.projMeshes.get(p.id);
+      if (!mesh) {
+        mesh = new THREE.Mesh(
+          new THREE.SphereGeometry(p.radius * 1.15, 10, 10),
+          new THREE.MeshStandardMaterial({ color: p.color, emissive: p.color, emissiveIntensity: 0.4 })
+        );
+        this.scene.add(mesh);
+        this.projMeshes.set(p.id, mesh);
+      }
+      mesh.position.set(p.x, p.y, p.z);
+
+      // 弹丸尾烟
+      if (Math.random() < 0.65) {
+        const smoke = new THREE.Mesh(
+          new THREE.SphereGeometry(0.18, 5, 5),
+          new THREE.MeshBasicMaterial({ color: 0xe2e8f0, transparent: true, opacity: 0.65 })
+        );
+        smoke.position.set(p.x, p.y, p.z);
+        this.scene.add(smoke);
+        this.particles.push({ mesh: smoke, vx: 0, vy: 0.6, vz: 0, life: 0.35, maxLife: 0.35, grow: 1.5, gravity: 0 });
+      }
+    }
+    for (const [id, mesh] of this.projMeshes.entries()) {
+      if (!activeProjIds.has(id)) {
+        this.scene.remove(mesh);
+        this.projMeshes.delete(id);
+      }
+    }
+
+    // 6. 同步空投补给箱
+    const activeCrateIds = new Set();
+    for (const c of this.engine.crates) {
+      activeCrateIds.add(c.id);
+      let group = this.crateMeshes.get(c.id);
+      if (!group) {
+        group = new THREE.Group();
+        const box = new THREE.Mesh(
+          new THREE.BoxGeometry(1.1, 1.1, 1.1),
+          new THREE.MeshStandardMaterial({ color: c.kind === 'health' ? 0xf8fafc : 0xb45309, roughness: 0.6 })
+        );
+        box.castShadow = true;
+        group.add(box);
+
+        // 十字标志或军火条纹
+        const badge = new THREE.Mesh(
+          new THREE.BoxGeometry(1.14, 0.3, 0.3),
+          new THREE.MeshBasicMaterial({ color: c.kind === 'health' ? 0xef4444 : 0xfacc15 })
+        );
+        group.add(badge);
+
+        const chute = new THREE.Mesh(
+          new THREE.SphereGeometry(1.4, 10, 8, 0, Math.PI * 2, 0, Math.PI * 0.5),
+          new THREE.MeshLambertMaterial({ color: 0xffffff, side: THREE.DoubleSide })
+        );
+        chute.position.y = 2.0;
+        group.userData = { chute };
+        group.add(chute);
+
+        this.scene.add(group);
+        this.crateMeshes.set(c.id, group);
+      }
+      group.position.set(c.x, c.y, c.z);
+      group.rotation.y += dt * 1.1;
+      if (group.userData.chute) {
+        group.userData.chute.visible = !c.grounded;
+      }
+    }
+    for (const [id, group] of this.crateMeshes.entries()) {
+      if (!activeCrateIds.has(id)) {
+        this.scene.remove(group);
+        this.crateMeshes.delete(id);
+      }
+    }
+
+    // 7. 更新粒子与射线残影
+    for (let i = this.particles.length - 1; i >= 0; i--) {
+      const p = this.particles[i];
+      p.life -= dt;
+      if (p.life <= 0) {
+        this.scene.remove(p.mesh);
+        this.particles.splice(i, 1);
+        continue;
+      }
+      p.vy -= p.gravity * dt;
+      p.mesh.position.x += p.vx * dt;
+      p.mesh.position.y += p.vy * dt;
+      p.mesh.position.z += p.vz * dt;
+      if (p.grow > 0) {
+        const s = 1 + p.grow * dt;
+        p.mesh.scale.multiplyScalar(s);
+      }
+      p.mesh.material.opacity = Math.max(0, p.life / p.maxLife);
+    }
+
+    for (let i = this.tracers.length - 1; i >= 0; i--) {
+      const tr = this.tracers[i];
+      tr.life -= dt;
+      if (tr.life <= 0) {
+        this.scene.remove(tr.mesh);
+        tr.mesh.geometry.dispose();
+        this.tracers.splice(i, 1);
+      } else {
+        tr.mesh.material.opacity = tr.life / tr.maxLife;
+      }
+    }
+
+    // 8. 相机平滑追踪
+    this.updateCamera(dt);
+    this.renderer.render(this.scene, this.camera);
+  }
+
+  updateCamera(dt) {
+    const targetPos = new THREE.Vector3();
+    const targetLook = new THREE.Vector3();
+
+    if (this.engine.projectiles.length > 0 && this.cameraMode === 'follow') {
+      const p = this.engine.projectiles[0];
+      targetLook.set(p.x, p.y, p.z);
+      targetPos.set(p.x - p.vx * 0.45, Math.max(p.y + 8, 12), p.z - p.vz * 0.45 + 12);
+    } else if (this.cameraMode === 'tactical') {
+      const x = Math.sin(this.tacticalYaw) * Math.cos(this.tacticalPitch) * this.tacticalDist;
+      const y = Math.sin(this.tacticalPitch) * this.tacticalDist + 4;
+      const z = Math.cos(this.tacticalYaw) * Math.cos(this.tacticalPitch) * this.tacticalDist;
+      targetPos.set(x, y, z);
+      targetLook.set(0, 4, 0);
+    } else {
+      const w = this.engine.getActiveWorm();
+      if (w && w.alive) {
+        const backDist = 11.5;
+        const heightOffset = 5.4 - Math.sin(w.pitch) * 2.2;
+        targetPos.set(
+          w.x - Math.sin(w.yaw) * backDist,
+          Math.max(this.engine.waterLevel + 2.5, w.y + heightOffset),
+          w.z - Math.cos(w.yaw) * backDist
+        );
+        targetLook.set(
+          w.x + Math.sin(w.yaw) * 7.5,
+          w.y + 1.8 + Math.sin(w.pitch) * 5.0,
+          w.z + Math.cos(w.yaw) * 7.5
+        );
+      } else {
+        targetPos.set(0, 32, 48);
+        targetLook.set(0, 3, 0);
+      }
+    }
+
+    const lerpRate = Math.min(1, dt * 6.5);
+    this.camPos.lerp(targetPos, lerpRate);
+    this.camLook.lerp(targetLook, lerpRate);
+
+    // 爆炸震屏效果
+    let sx = 0, sy = 0, sz = 0;
+    if (this.cameraShake > 0.01) {
+      sx = (Math.random() - 0.5) * this.cameraShake;
+      sy = (Math.random() - 0.5) * this.cameraShake;
+      sz = (Math.random() - 0.5) * this.cameraShake;
+      this.cameraShake = Math.max(0, this.cameraShake - dt * 2.6);
+    }
+
+    this.camera.position.set(this.camPos.x + sx, this.camPos.y + sy, this.camPos.z + sz);
+    this.camera.lookAt(this.camLook);
+  }
+}
+
+// === src/ui/hud.js ===
+/**
+ * 百战天虫 3D - HUD 与交互界面控制器
+ * 负责队伍血条、回合倒计时、风向罗盘、武器栏、蓄力槽、3D头顶虫子血条、战报、设置弹窗与触控按钮。
+ */
+class HUDController {
+  constructor(engine, renderer, sound) {
+    this.engine = engine;
+    this.renderer = renderer;
+    this.sound = sound;
+    this.labelElements = new Map();
+
+    this.el = {
+      team0HpBar: document.getElementById('team0-hp-bar'),
+      team1HpBar: document.getElementById('team1-hp-bar'),
+      team0HpText: document.getElementById('team0-hp-text'),
+      team1HpText: document.getElementById('team1-hp-text'),
+      turnBadge: document.getElementById('turn-badge'),
+      turnTimer: document.getElementById('turn-timer'),
+      roundBadge: document.getElementById('round-badge'),
+      windArrow: document.getElementById('wind-arrow'),
+      windValue: document.getElementById('wind-value'),
+      weaponBar: document.getElementById('weapon-bar'),
+      weaponDesc: document.getElementById('weapon-desc'),
+      powerWrap: document.getElementById('power-wrap'),
+      powerFill: document.getElementById('power-fill'),
+      killFeed: document.getElementById('kill-feed'),
+      labelsLayer: document.getElementById('worm-labels-layer'),
+      banner: document.getElementById('event-banner'),
+      gameOverModal: document.getElementById('gameover-modal'),
+      gameOverTitle: document.getElementById('gameover-title'),
+      gameOverSub: document.getElementById('gameover-sub'),
+      camBtn: document.getElementById('btn-camera'),
+      muteBtn: document.getElementById('btn-mute'),
+    };
+
+    this.bannerTimer = 0;
+    this.buildWeaponBar();
+    this.rebuildWormLabels();
+    this.bindEvents();
+  }
+
+  buildWeaponBar() {
+    if (!this.el.weaponBar) return;
+    this.el.weaponBar.innerHTML = '';
+    for (const w of WEAPON_LIST) {
+      const btn = document.createElement('button');
+      btn.type = 'button';
+      btn.dataset.weaponId = w.id;
+      btn.className =
+        'weapon-btn flex flex-col items-center justify-center px-2.5 py-1.5 rounded-lg border border-slate-600/70 bg-slate-900/80 text-white hover:bg-slate-800 transition select-none min-w-[60px]';
+      btn.innerHTML = `
+        <div class="flex items-center gap-1">
+          <span class="text-base leading-none">${w.icon}</span>
+          <span class="text-[10px] font-mono text-slate-400">[${w.key}]</span>
+        </div>
+        <span class="text-[11px] font-medium mt-0.5 whitespace-nowrap">${w.name}</span>
+        <span class="weapon-ammo text-[10px] font-mono text-amber-300">∞</span>
+      `;
+      btn.addEventListener('click', () => {
+        this.sound.unlock();
+        if (!this.engine.getActiveTeam().isAI) {
+          this.engine.selectWeapon(w.id);
+          this.updateWeaponBar();
+        }
+      });
+      this.el.weaponBar.appendChild(btn);
+    }
+  }
+
+  rebuildWormLabels() {
+    if (!this.el.labelsLayer) return;
+    this.el.labelsLayer.innerHTML = '';
+    this.labelElements.clear();
+
+    for (const worm of this.engine.worms) {
+      const team = this.engine.teams[worm.teamId];
+      const div = document.createElement('div');
+      div.className =
+        'absolute -translate-x-1/2 -translate-y-full pointer-events-none px-1.5 py-0.5 rounded bg-slate-950/75 border text-center shadow';
+      div.style.borderColor = team.colorHex;
+      div.innerHTML = `
+        <div class="text-[10px] font-bold leading-tight whitespace-nowrap" style="color:${team.colorHex}">${worm.name}</div>
+        <div class="w-12 h-1.5 bg-slate-800 rounded-full overflow-hidden mt-0.5">
+          <div class="worm-hp-fill h-full transition-all" style="width:100%;background:${team.colorHex}"></div>
+        </div>
+        <div class="worm-hp-num text-[9px] font-mono text-slate-200 leading-none mt-0.5">100</div>
+      `;
+      this.el.labelsLayer.appendChild(div);
+      this.labelElements.set(worm.id, div);
+    }
+  }
+
+  showBanner(text, duration = 2.2) {
+    if (!this.el.banner) return;
+    this.el.banner.textContent = text;
+    this.el.banner.classList.remove('opacity-0', 'scale-95');
+    this.el.banner.classList.add('opacity-100', 'scale-100');
+    this.bannerTimer = duration;
+  }
+
+  bindEvents() {
+    this.engine.on('match_reset', () => {
+      this.rebuildWormLabels();
+      if (this.el.gameOverModal) this.el.gameOverModal.classList.add('hidden');
+      this.updateWeaponBar();
+      this.updateKillFeed();
+    });
+
+    this.engine.on('turn_change', (snap) => {
+      this.updateWeaponBar();
+      const tag = snap.isAI ? '🤖 AI 思考中' : '🎯 轮到你行动';
+      this.showBanner(`第 ${snap.round} 轮 · ${snap.teamName} (${snap.wormName}) — ${tag}`, 2.1);
+    });
+
+    this.engine.on('weapon_change', () => this.updateWeaponBar());
+    this.engine.on('feed', () => this.updateKillFeed());
+    this.engine.on('sudden_death', (ev) => {
+      this.showBanner(`⚠️ 突然死亡！海平面上升至 ${ev.waterLevel.toFixed(1)}m`, 2.8);
+    });
+
+    this.engine.on('game_over', (ev) => {
+      this.sound.playVictory();
+      if (this.el.gameOverModal) {
+        this.el.gameOverTitle.textContent = ev.label;
+        this.el.gameOverSub.textContent = `总回合数：${this.engine.turnNumber} · 共经历 ${this.engine.round} 轮激战`;
+        this.el.gameOverModal.classList.remove('hidden');
+      }
+    });
+  }
+
+  updateWeaponBar() {
+    if (!this.el.weaponBar) return;
+    const team = this.engine.getActiveTeam();
+    const buttons = this.el.weaponBar.querySelectorAll('.weapon-btn');
+    for (const btn of buttons) {
+      const wid = btn.dataset.weaponId;
+      const ammo = team.ammo[wid];
+      const ammoEl = btn.querySelector('.weapon-ammo');
+      if (ammoEl) ammoEl.textContent = Number.isFinite(ammo) ? `x${ammo}` : '∞';
+
+      const selected = wid === this.engine.selectedWeaponId;
+      btn.classList.toggle('ring-2', selected);
+      btn.classList.toggle('ring-amber-400', selected);
+      btn.classList.toggle('bg-amber-500/20', selected);
+      btn.classList.toggle('opacity-40', ammo <= 0);
+      btn.disabled = ammo <= 0;
+    }
+
+    const w = WEAPONS[this.engine.selectedWeaponId];
+    if (this.el.weaponDesc && w) {
+      this.el.weaponDesc.textContent = `${w.icon} ${w.name}：${w.description}`;
+    }
+  }
+
+  updateKillFeed() {
+    if (!this.el.killFeed) return;
+    this.el.killFeed.innerHTML = this.engine.killFeed
+      .slice(0, 4)
+      .map(
+        (item) =>
+          `<div class="px-2.5 py-1 rounded bg-slate-950/75 border border-slate-700/60 text-xs text-slate-100 shadow">${item.message}</div>`
+      )
+      .join('');
+  }
+
+  update(dt) {
+    // 1. 顶部队伍总血量条
+    const maxTeamHp = this.engine.wormsPerTeam * 100;
+    const hp0 = this.engine.getTeamTotalHp(0);
+    const hp1 = this.engine.getTeamTotalHp(1);
+    if (this.el.team0HpBar) this.el.team0HpBar.style.width = `${(hp0 / maxTeamHp) * 100}%`;
+    if (this.el.team1HpBar) this.el.team1HpBar.style.width = `${(hp1 / maxTeamHp) * 100}%`;
+    if (this.el.team0HpText) this.el.team0HpText.textContent = `${hp0}`;
+    if (this.el.team1HpText) this.el.team1HpText.textContent = `${hp1}`;
+
+    // 2. 回合倒计时与阶段提示
+    const activeTeam = this.engine.getActiveTeam();
+    const activeWorm = this.engine.getActiveWorm();
+    if (this.el.roundBadge) {
+      this.el.roundBadge.textContent = `R${this.engine.round}`;
+    }
+    if (this.el.turnBadge && activeTeam) {
+      this.el.turnBadge.textContent = `${activeTeam.name} · ${activeWorm ? activeWorm.name : ''}`;
+      this.el.turnBadge.style.color = activeTeam.colorHex;
+    }
+    if (this.el.turnTimer) {
+      if (this.engine.phase === TURN_PHASE.RETREAT) {
+        this.el.turnTimer.textContent = `撤离 ${Math.ceil(this.engine.retreatTimer)}s`;
+        this.el.turnTimer.className = 'text-lg font-black font-mono text-emerald-400';
+      } else {
+        const t = Math.ceil(this.engine.turnTimer);
+        this.el.turnTimer.textContent = `${t}s`;
+        this.el.turnTimer.className = `text-lg font-black font-mono ${t <= 6 ? 'text-rose-400 animate-pulse' : 'text-amber-300'}`;
+      }
+    }
+
+    // 3. 风向与风速显示
+    const windSpeed = Math.hypot(this.engine.wind.x, this.engine.wind.z);
+    const windAngleDeg = (Math.atan2(this.engine.wind.x, this.engine.wind.z) * 180) / Math.PI;
+    if (this.el.windArrow) {
+      this.el.windArrow.style.transform = `rotate(${windAngleDeg.toFixed(1)}deg)`;
+    }
+    if (this.el.windValue) {
+      this.el.windValue.textContent = `${windSpeed.toFixed(1)} m/s`;
+    }
+
+    // 4. 蓄力槽显示
+    if (this.el.powerWrap && this.el.powerFill) {
+      const charging = this.engine.phase === TURN_PHASE.CHARGING;
+      this.el.powerWrap.classList.toggle('opacity-0', !charging);
+      this.el.powerFill.style.width = `${Math.round(this.engine.chargePower * 100)}%`;
+    }
+
+    // 5. 3D 投影虫子头顶血条
+    for (const worm of this.engine.worms) {
+      const el = this.labelElements.get(worm.id);
+      if (!el) continue;
+      if (!worm.alive) {
+        el.style.display = 'none';
+        continue;
+      }
+      const pos = this.renderer.projectToScreen(worm.x, worm.y + 2.45, worm.z);
+      if (!pos.visible) {
+        el.style.display = 'none';
+        continue;
+      }
+      el.style.display = 'block';
+      el.style.left = `${pos.x}px`;
+      el.style.top = `${pos.y}px`;
+      const fill = el.querySelector('.worm-hp-fill');
+      const num = el.querySelector('.worm-hp-num');
+      if (fill) fill.style.width = `${Math.max(0, (worm.hp / worm.maxHp) * 100)}%`;
+      if (num) num.textContent = `${worm.hp}`;
+    }
+
+    // 6. 横幅淡出
+    if (this.bannerTimer > 0) {
+      this.bannerTimer -= dt;
+      if (this.bannerTimer <= 0 && this.el.banner) {
+        this.el.banner.classList.add('opacity-0', 'scale-95');
+        this.el.banner.classList.remove('opacity-100', 'scale-100');
+      }
+    }
+  }
+}
+
+// === src/main.js ===
+/**
+ * 百战天虫 3D - 浏览器入口与输入调度器 (main.js)
+ */
+function bootWorms3D() {
+  const canvas = document.getElementById('game-canvas');
+  if (!canvas || typeof THREE === 'undefined') return null;
+
+  const engine = new GameEngine({
+    mode: 'ai',
+    wormsPerTeam: 3,
+    themeId: 'tropical',
+  });
+  const ai = new AIController(engine);
+  const sound = new SoundEngine();
+  const renderer = new Renderer3D(canvas, engine);
+  const hud = new HUDController(engine, renderer, sound);
+
+  // 音效绑定
+  engine.on('fire', (ev) => sound.playLaunch(ev.weaponId));
+  engine.on('explosion', (ev) => sound.playExplosion(ev.radius));
+  engine.on('bounce', () => sound.playBounce());
+  engine.on('splash', () => sound.playSplash());
+  engine.on('drown', () => sound.playSplash());
+  engine.on('jump', () => sound.playJump());
+  engine.on('crate_pickup', () => sound.playPickup());
+  engine.on('turn_change', () => ai.resetPlan());
+
+  // 键盘与触控状态
+  const keys = new Set();
+  const touchState = { forward: 0, turn: 0, pitch: 0 };
+
+  window.addEventListener('keydown', (e) => {
+    sound.unlock();
+    const code = e.code;
+    if (['Space', 'ArrowUp', 'ArrowDown', 'ArrowLeft', 'ArrowRight'].includes(code)) {
+      e.preventDefault();
+    }
+    if (e.repeat) return;
+    keys.add(code);
+
+    if (code === 'KeyC') {
+      const mode = renderer.toggleCameraMode();
+      hud.showBanner(mode === 'tactical' ? '🎥 战术上帝视角（拖拽旋转/滚轮缩放）' : '🎯 第三人称追尾视角', 1.4);
+      updateCameraBtnLabel();
+      return;
+    }
+    if (code === 'KeyM') {
+      const muted = sound.toggleMute();
+      updateMuteBtnLabel(muted);
+      return;
+    }
+
+    if (engine.getActiveTeam().isAI) return;
+
+    if (code === 'Space') {
+      engine.startCharge();
+    } else if (code === 'KeyJ' || code === 'Enter') {
+      engine.jumpActiveWorm();
+    } else if (code.startsWith('Digit')) {
+      const idx = parseInt(code.replace('Digit', ''), 10) - 1;
+      if (WEAPON_LIST[idx]) {
+        engine.selectWeapon(WEAPON_LIST[idx].id);
+      }
+    }
+  });
+
+  window.addEventListener('keyup', (e) => {
+    keys.delete(e.code);
+    if (e.code === 'Space' && !engine.getActiveTeam().isAI) {
+      engine.releaseCharge();
+    }
+  });
+
+  // 鼠标拖拽调整视角/瞄准
+  let dragging = false;
+  let lastX = 0;
+  let lastY = 0;
+  canvas.addEventListener('pointerdown', (e) => {
+    sound.unlock();
+    dragging = true;
+    lastX = e.clientX;
+    lastY = e.clientY;
+  });
+  window.addEventListener('pointerup', () => {
+    dragging = false;
+  });
+  window.addEventListener('pointermove', (e) => {
+    if (!dragging) return;
+    const dx = e.clientX - lastX;
+    const dy = e.clientY - lastY;
+    lastX = e.clientX;
+    lastY = e.clientY;
+
+    if (renderer.cameraMode === 'tactical') {
+      renderer.orbitTacticalCamera(dx, dy);
+    } else if (!engine.getActiveTeam().isAI && (engine.phase === TURN_PHASE.AIM || engine.phase === TURN_PHASE.RETREAT)) {
+      const worm = engine.getActiveWorm();
+      if (worm && worm.alive) {
+        worm.yaw -= dx * 0.007;
+        worm.pitch = Math.max(-0.55, Math.min(1.25, worm.pitch - dy * 0.005));
+      }
+    }
+  });
+
+  canvas.addEventListener(
+    'wheel',
+    (e) => {
+      if (renderer.cameraMode === 'tactical') {
+        e.preventDefault();
+        renderer.zoomTacticalCamera(e.deltaY);
+      }
+    },
+    { passive: false }
+  );
+
+  // 顶部与弹窗控制按钮
+  function updateCameraBtnLabel() {
+    const btn = document.getElementById('btn-camera');
+    if (btn) btn.textContent = renderer.cameraMode === 'tactical' ? '🎥 战术视角' : '🎯 追尾视角';
+  }
+  function updateMuteBtnLabel(muted) {
+    const btn = document.getElementById('btn-mute');
+    if (btn) btn.textContent = muted ? '🔇 静音' : '🔊 音效';
+  }
+
+  document.getElementById('btn-camera')?.addEventListener('click', () => {
+    sound.unlock();
+    renderer.toggleCameraMode();
+    updateCameraBtnLabel();
+  });
+
+  document.getElementById('btn-mute')?.addEventListener('click', () => {
+    const muted = sound.toggleMute();
+    updateMuteBtnLabel(muted);
+  });
+
+  const settingsModal = document.getElementById('settings-modal');
+  document.getElementById('btn-settings')?.addEventListener('click', () => {
+    sound.unlock();
+    settingsModal?.classList.remove('hidden');
+  });
+  document.getElementById('btn-close-settings')?.addEventListener('click', () => {
+    settingsModal?.classList.add('hidden');
+  });
+
+  const helpModal = document.getElementById('help-modal');
+  document.getElementById('btn-help')?.addEventListener('click', () => {
+    sound.unlock();
+    helpModal?.classList.remove('hidden');
+  });
+  document.getElementById('btn-close-help')?.addEventListener('click', () => {
+    helpModal?.classList.add('hidden');
+  });
+
+  function startNewMatchFromUI() {
+    const mode = document.getElementById('opt-mode')?.value || 'ai';
+    const themeId = document.getElementById('opt-theme')?.value || 'tropical';
+    const wormsPerTeam = parseInt(document.getElementById('opt-worms')?.value || '3', 10);
+    engine.initMatch({ mode, themeId, wormsPerTeam });
+    settingsModal?.classList.add('hidden');
+  }
+
+  document.getElementById('btn-apply-match')?.addEventListener('click', startNewMatchFromUI);
+  document.getElementById('btn-restart')?.addEventListener('click', () => {
+    sound.unlock();
+    startNewMatchFromUI();
+  });
+
+  // 触控/屏幕操作按钮绑定
+  function bindHoldButton(id, onDown, onUp) {
+    const btn = document.getElementById(id);
+    if (!btn) return;
+    const start = (e) => {
+      e.preventDefault();
+      sound.unlock();
+      onDown();
+    };
+    const end = (e) => {
+      e.preventDefault();
+      onUp();
+    };
+    btn.addEventListener('pointerdown', start);
+    btn.addEventListener('pointerup', end);
+    btn.addEventListener('pointerleave', end);
+    btn.addEventListener('pointercancel', end);
+  }
+
+  bindHoldButton('ctrl-fwd', () => (touchState.forward = 1), () => (touchState.forward = 0));
+  bindHoldButton('ctrl-back', () => (touchState.forward = -1), () => (touchState.forward = 0));
+  bindHoldButton('ctrl-left', () => (touchState.turn = 1), () => (touchState.turn = 0));
+  bindHoldButton('ctrl-right', () => (touchState.turn = -1), () => (touchState.turn = 0));
+  bindHoldButton('ctrl-up', () => (touchState.pitch = 1), () => (touchState.pitch = 0));
+  bindHoldButton('ctrl-down', () => (touchState.pitch = -1), () => (touchState.pitch = 0));
+
+  document.getElementById('ctrl-jump')?.addEventListener('click', () => {
+    sound.unlock();
+    if (!engine.getActiveTeam().isAI) engine.jumpActiveWorm();
+  });
+
+  bindHoldButton(
+    'ctrl-fire',
+    () => {
+      if (!engine.getActiveTeam().isAI) engine.startCharge();
+    },
+    () => {
+      if (!engine.getActiveTeam().isAI) engine.releaseCharge();
+    }
+  );
+
+  window.addEventListener('resize', () => renderer.resize());
+
+  // 主渲染与物理循环
+  let lastTime = performance.now();
+  let rafId = null;
+
+  function loop(now) {
+    const dt = Math.min(0.05, (now - lastTime) / 1000);
+    lastTime = now;
+
+    if (!engine.getActiveTeam().isAI) {
+      const fwd =
+        (keys.has('KeyW') || keys.has('ArrowUp') ? 1 : 0) -
+        (keys.has('KeyS') || keys.has('ArrowDown') ? 1 : 0) +
+        touchState.forward;
+      const turn =
+        (keys.has('KeyA') || keys.has('ArrowLeft') ? 1 : 0) -
+        (keys.has('KeyD') || keys.has('ArrowRight') ? 1 : 0) +
+        touchState.turn;
+      const pitch = (keys.has('KeyR') ? 1 : 0) - (keys.has('KeyF') ? 1 : 0) + touchState.pitch;
+
+      if (fwd !== 0 || turn !== 0 || pitch !== 0) {
+        engine.moveActiveWorm(Math.max(-1, Math.min(1, fwd)), Math.max(-1, Math.min(1, turn)), Math.max(-1, Math.min(1, pitch)), dt);
+      }
+    } else {
+      ai.update(dt);
+    }
+
+    engine.update(dt);
+    renderer.update(dt);
+    hud.update(dt);
+
+    rafId = requestAnimationFrame(loop);
+  }
+
+  rafId = requestAnimationFrame(loop);
+  return { engine, renderer, hud, ai, sound, stop: () => cancelAnimationFrame(rafId) };
+}
+
+if (typeof window !== 'undefined') {
+  window.addEventListener('load', () => bootWorms3D());
+}
+
+})();
+</script>
+</body>
+</html>

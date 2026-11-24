@@ -1,0 +1,2284 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>网页《传送门》· Aperture Web Lab</title>
+  <style>
+:root {
+  --bg: #0f172a;
+  --panel: #1e293b;
+  --panel-border: #334155;
+  --text: #f8fafc;
+  --muted: #94a3b8;
+  --blue: #00a8ff;
+  --orange: #ff7a00;
+  --green: #22c55e;
+  --danger: #ef4444;
+}
+
+* {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+}
+
+body {
+  font-family: Inter, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+  background: radial-gradient(circle at top, #1e293b 0%, #0b1120 75%);
+  color: var(--text);
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  padding: 14px;
+}
+
+.app-shell {
+  width: 100%;
+  max-width: 1000px;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.topbar {
+  background: rgba(30, 41, 59, 0.92);
+  border: 1px solid var(--panel-border);
+  border-radius: 12px;
+  padding: 10px 14px;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+}
+
+.brand {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.portal-dots {
+  display: flex;
+  gap: 5px;
+}
+
+.dot {
+  width: 12px;
+  height: 12px;
+  border-radius: 999px;
+}
+
+.dot.blue {
+  background: var(--blue);
+  box-shadow: 0 0 10px var(--blue);
+}
+
+.dot.orange {
+  background: var(--orange);
+  box-shadow: 0 0 10px var(--orange);
+}
+
+.brand h1 {
+  font-size: 1rem;
+  font-weight: 700;
+  letter-spacing: 0.02em;
+}
+
+.brand-sub {
+  font-size: 0.78rem;
+  color: var(--muted);
+}
+
+.toolbar {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+}
+
+select,
+button {
+  font: inherit;
+  font-size: 0.82rem;
+  border-radius: 8px;
+  border: 1px solid var(--panel-border);
+  background: #0f172a;
+  color: var(--text);
+  padding: 6px 11px;
+  cursor: pointer;
+  transition: border-color 0.15s, background 0.15s, transform 0.1s;
+}
+
+button:hover,
+select:hover {
+  border-color: var(--blue);
+  background: #172554;
+}
+
+button:active {
+  transform: scale(0.97);
+}
+
+.hud-bar {
+  background: rgba(15, 23, 42, 0.85);
+  border: 1px solid var(--panel-border);
+  border-radius: 12px;
+  padding: 10px 14px;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+}
+
+.chamber-meta {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.chamber-heading {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 0.92rem;
+  font-weight: 700;
+}
+
+.chamber-code {
+  font-size: 0.72rem;
+  font-weight: 700;
+  padding: 2px 7px;
+  border-radius: 6px;
+  background: rgba(0, 168, 255, 0.16);
+  color: #38bdf8;
+  border: 1px solid rgba(56, 189, 248, 0.35);
+}
+
+.chamber-subtitle {
+  font-size: 0.8rem;
+  color: var(--muted);
+}
+
+.status-pills {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+  font-size: 0.78rem;
+}
+
+.pill {
+  padding: 4px 9px;
+  border-radius: 999px;
+  background: #1e293b;
+  border: 1px solid #334155;
+  color: #cbd5e1;
+}
+
+.pill.portal-blue.active {
+  border-color: var(--blue);
+  color: #7dd3fc;
+  background: rgba(0, 168, 255, 0.15);
+}
+
+.pill.portal-orange.active {
+  border-color: var(--orange);
+  color: #fdba74;
+  background: rgba(255, 122, 0, 0.15);
+}
+
+.pill.door.open {
+  border-color: var(--green);
+  color: #86efac;
+  background: rgba(34, 197, 94, 0.15);
+}
+
+.hint-banner {
+  background: rgba(14, 165, 233, 0.12);
+  border: 1px solid rgba(56, 189, 248, 0.4);
+  border-radius: 10px;
+  padding: 9px 13px;
+  font-size: 0.82rem;
+  color: #e0f2fe;
+}
+
+.hint-banner.hidden,
+.overlay.hidden {
+  display: none;
+}
+
+.stage-wrap {
+  position: relative;
+  width: 100%;
+  aspect-ratio: 24 / 14;
+  border-radius: 14px;
+  overflow: hidden;
+  border: 2px solid var(--panel-border);
+  background: #0f172a;
+  box-shadow: 0 18px 40px rgba(0, 0, 0, 0.45);
+}
+
+#game-canvas {
+  width: 100%;
+  height: 100%;
+  display: block;
+  cursor: crosshair;
+  touch-action: none;
+}
+
+.overlay {
+  position: absolute;
+  inset: 0;
+  background: rgba(15, 23, 42, 0.82);
+  backdrop-filter: blur(4px);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 16px;
+}
+
+.overlay-card {
+  width: 100%;
+  max-width: 420px;
+  background: #1e293b;
+  border: 1px solid #475569;
+  border-radius: 14px;
+  padding: 22px;
+  text-align: center;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.overlay-card h2 {
+  font-size: 1.25rem;
+  color: #f8fafc;
+}
+
+.overlay-card p {
+  font-size: 0.88rem;
+  color: #cbd5e1;
+  line-height: 1.5;
+}
+
+.overlay-actions {
+  display: flex;
+  justify-content: center;
+  gap: 10px;
+  margin-top: 4px;
+}
+
+.btn-primary {
+  background: linear-gradient(135deg, #0284c7, #0ea5e9);
+  border-color: #38bdf8;
+  color: #ffffff;
+  font-weight: 600;
+}
+
+.btn-primary:hover {
+  background: linear-gradient(135deg, #0369a1, #0284c7);
+}
+
+.controls-footer {
+  background: rgba(30, 41, 59, 0.72);
+  border: 1px solid var(--panel-border);
+  border-radius: 12px;
+  padding: 10px 14px;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  font-size: 0.78rem;
+  color: var(--muted);
+}
+
+.kbd-list {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+}
+
+kbd {
+  display: inline-block;
+  padding: 1px 6px;
+  border-radius: 5px;
+  background: #0f172a;
+  border: 1px solid #475569;
+  color: #e2e8f0;
+  font-family: ui-monospace, SFMono-Regular, monospace;
+  font-size: 0.75rem;
+}
+
+.touch-controls {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
+.touch-btn {
+  min-width: 44px;
+  min-height: 36px;
+  font-weight: 600;
+}
+
+.touch-btn.orange {
+  border-color: var(--orange);
+  color: #fdba74;
+}
+
+  </style>
+</head>
+<body>
+  <div class="app-shell">
+    <header class="topbar">
+      <div class="brand">
+        <div class="portal-dots" aria-hidden="true">
+          <span class="dot blue"></span>
+          <span class="dot orange"></span>
+        </div>
+        <div>
+          <h1>网页《传送门》 · Web Portal</h1>
+          <div class="brand-sub">2D 物理引擎 · 动量守恒弹射 · 5 关测试舱</div>
+        </div>
+      </div>
+
+      <div class="toolbar">
+        <select id="level-select" aria-label="选择测试舱"></select>
+        <button id="btn-hint" type="button">提示</button>
+        <button id="btn-clear" type="button">清除传送门</button>
+        <button id="btn-reset" type="button">重置关卡</button>
+        <button id="btn-mute" type="button">音效：开</button>
+      </div>
+    </header>
+
+    <section class="hud-bar">
+      <div class="chamber-meta">
+        <div class="chamber-heading">
+          <span id="chamber-code" class="chamber-code">CHAMBER 01</span>
+          <span id="chamber-title">空间跃迁入门</span>
+        </div>
+        <div id="chamber-subtitle" class="chamber-subtitle"></div>
+      </div>
+
+      <div class="status-pills">
+        <span id="badge-blue" class="pill portal-blue">蓝门</span>
+        <span id="badge-orange" class="pill portal-orange">橙门</span>
+        <span id="badge-door" class="pill door">出口已解锁</span>
+        <span class="pill">用时 <strong id="stat-time">0.0s</strong></span>
+        <span class="pill">发射 <strong id="stat-portals">0</strong></span>
+        <span class="pill">跃迁 <strong id="stat-teleports">0</strong></span>
+      </div>
+    </section>
+
+    <div id="hint-banner" class="hint-banner hidden">
+      <strong>实验提示：</strong><span id="hint-text"></span>
+    </div>
+
+    <main class="stage-wrap">
+      <canvas id="game-canvas" width="960" height="560" aria-label="传送门游戏画布"></canvas>
+      <div id="stage-overlay" class="overlay hidden">
+        <div class="overlay-card">
+          <h2 id="overlay-title">测试完成</h2>
+          <p id="overlay-desc"></p>
+          <p id="overlay-stats"></p>
+          <div class="overlay-actions">
+            <button id="btn-replay-level" type="button">重玩本关</button>
+            <button id="btn-next-level" type="button" class="btn-primary">进入下一实验舱</button>
+          </div>
+        </div>
+      </div>
+    </main>
+
+    <footer class="controls-footer">
+      <div class="kbd-list">
+        <span><kbd>A</kbd>/<kbd>D</kbd> 移动</span>
+        <span><kbd>W</kbd>/<kbd>Space</kbd> 跳跃</span>
+        <span><kbd>左键</kbd> 蓝门</span>
+        <span><kbd>右键</kbd>/<kbd>Q</kbd> 橙门</span>
+        <span><kbd>E</kbd> 拾取方块</span>
+        <span><kbd>C</kbd> 清门</span>
+        <span><kbd>R</kbd> 重置</span>
+      </div>
+
+      <div class="touch-controls">
+        <button id="touch-left" type="button" class="touch-btn">◀</button>
+        <button id="touch-right" type="button" class="touch-btn">▶</button>
+        <button id="touch-jump" type="button" class="touch-btn">跳跃</button>
+        <button id="touch-pickup" type="button" class="touch-btn">拾取 E</button>
+        <button id="touch-portal-mode" type="button" class="touch-btn">点击发射：蓝门</button>
+      </div>
+    </footer>
+  </div>
+
+  <script>
+(function () {
+"use strict";
+
+// === src/constants.js ===
+/**
+ * 网页《传送门》核心常量与配置定义
+ */
+
+const TILE_SIZE = 40;
+const GRID_COLS = 24;
+const GRID_ROWS = 14;
+const WORLD_WIDTH = GRID_COLS * TILE_SIZE;   // 960
+const WORLD_HEIGHT = GRID_ROWS * TILE_SIZE;  // 560
+
+const FIXED_DT = 1 / 60;
+
+const PHYSICS = {
+  GRAVITY: 1380,            // 重力加速度 (px/s^2)
+  MOVE_ACCEL: 2400,         // 地面水平加速度 (px/s^2)
+  AIR_ACCEL: 1350,          // 空中水平加速度 (px/s^2)
+  MAX_RUN_SPEED: 265,       // 常规奔跑上限 (px/s)
+  MAX_SPEED: 1180,          // 绝对速度上限（支持高能弹射）
+  GROUND_FRICTION: 0.80,    // 地面水平阻尼（低速时）
+  AIR_DRAG: 0.992,          // 空中微小阻力（保留弹射动量）
+  JUMP_VELOCITY: -515,      // 跳跃初速度 (px/s)
+  COYOTE_TIME: 0.10,        // 土狼时间 (s)
+  JUMP_BUFFER: 0.12,        // 跳跃预输入缓冲 (s)
+  PORTAL_MIN_EXIT: 260,     // 传送门最小出射速度 (px/s)
+  PORTAL_COOLDOWN: 0.16,    // 实体传送冷却时间 (s)
+  PORTAL_HALF_SPAN: 26,     // 传送门半宽/半高 (px)
+  CUBE_SIZE: 28,            // 同伴方块边长 (px)
+  PLAYER_WIDTH: 24,         // 玩家碰撞箱宽 (px)
+  PLAYER_HEIGHT: 40,        // 玩家碰撞箱高 (px)
+  PICKUP_RADIUS: 68,        // 拾取方块最大距离 (px)
+  RAY_STEP: 2,              // 射线步进精度 (px)
+  MAX_RAY_DIST: 1400        // 射线最大检测距离 (px)
+};
+
+const TILE = {
+  EMPTY: 0,
+  PORTAL_WALL: 1,   // 白色光圈月岩混凝土面板（可开启传送门）
+  METAL_WALL: 2,    // 深灰金属面板（不可开启传送门）
+  HAZARD: 3,        // 腐蚀性测试液池（接触重置）
+  FIZZLER: 4        // 物质解离栅栏（玩家可通过，清除传送门并阻挡射线/方块）
+};
+
+const COLORS = {
+  BLUE_PORTAL: '#00A8FF',
+  BLUE_GLOW: 'rgba(0, 168, 255, 0.45)',
+  ORANGE_PORTAL: '#FF7A00',
+  ORANGE_GLOW: 'rgba(255, 122, 0, 0.45)',
+  BG_DARK: '#11161D',
+  CHAMBER_BG: '#E7EDF3',
+  CHAMBER_GRID: '#D4DEE8',
+  PORTAL_WALL_FILL: '#F8FAFC',
+  PORTAL_WALL_STROKE: '#CBD5E1',
+  METAL_WALL_FILL: '#2D3748',
+  METAL_WALL_STROKE: '#1A202C',
+  HAZARD_FILL: '#10B981',
+  FIZZLER_FILL: 'rgba(56, 189, 248, 0.35)'
+};
+
+// === src/physics.js ===
+/**
+ * 2D 物理引擎、精确 Grid DDA 射线检测与传送门动量守恒计算模块
+ * 纯函数设计，无 DOM 依赖，便于单元测试与复现
+ */
+
+const Vec2 = {
+  create(x = 0, y = 0) {
+    return { x, y };
+  },
+  add(a, b) {
+    return { x: a.x + b.x, y: a.y + b.y };
+  },
+  sub(a, b) {
+    return { x: a.x - b.x, y: a.y - b.y };
+  },
+  mul(v, s) {
+    return { x: v.x * s, y: v.y * s };
+  },
+  dot(a, b) {
+    return a.x * b.x + a.y * b.y;
+  },
+  len(v) {
+    return Math.hypot(v.x, v.y);
+  },
+  norm(v) {
+    const l = Math.hypot(v.x, v.y);
+    return l > 1e-8 ? { x: v.x / l, y: v.y / l } : { x: 0, y: 0 };
+  },
+  clampLen(v, maxLen) {
+    const l = Math.hypot(v.x, v.y);
+    if (l <= maxLen || l <= 1e-8) return { x: v.x, y: v.y };
+    const s = maxLen / l;
+    return { x: v.x * s, y: v.y * s };
+  }
+};
+
+/**
+ * 读取网格指定位置的瓦片类型，越界视为不可传送的金属墙
+ */
+function getTileAt(grid, col, row) {
+  if (row < 0 || row >= grid.length) return TILE.METAL_WALL;
+  if (col < 0 || col >= grid[0].length) return TILE.METAL_WALL;
+  return grid[row][col];
+}
+
+function isSolidTile(tile) {
+  return tile === TILE.PORTAL_WALL || tile === TILE.METAL_WALL;
+}
+
+/**
+ * 判断射线是否被瓦片阻挡（实心墙或解离栅栏都会阻挡传送门射线）
+ */
+function isRayBlockingTile(tile) {
+  return tile === TILE.PORTAL_WALL || tile === TILE.METAL_WALL || tile === TILE.FIZZLER;
+}
+
+/**
+ * 轴对齐包围盒 (AABB) 相交检测
+ */
+function aabbIntersects(a, b) {
+  return (
+    a.x < b.x + b.w &&
+    a.x + a.w > b.x &&
+    a.y < b.y + b.h &&
+    a.y + a.h > b.y
+  );
+}
+
+/**
+ * 精确 Amanatides & Woo 2D 网格 DDA 射线检测
+ * 逐网格边界推进，彻底消除固定步长穿角与内部法线误判问题
+ * @param {number[][]} grid - 关卡瓦片网格
+ * @param {{x:number, y:number}} origin - 发射起点
+ * @param {{x:number, y:number}} dir - 方向向量
+ * @param {number} maxDist - 最大检测距离
+ * @returns {object|null} 命中信息 { x, y, nx, ny, col, row, tile, dist, portalable }
+ */
+function castRay(grid, origin, dir, maxDist = PHYSICS.MAX_RAY_DIST) {
+  const nDir = Vec2.norm(dir);
+  if (nDir.x === 0 && nDir.y === 0) return null;
+
+  let col = Math.floor(origin.x / TILE_SIZE);
+  let row = Math.floor(origin.y / TILE_SIZE);
+
+  const stepX = nDir.x >= 0 ? 1 : -1;
+  const stepY = nDir.y >= 0 ? 1 : -1;
+
+  const tDeltaX = Math.abs(nDir.x) > 1e-9 ? TILE_SIZE / Math.abs(nDir.x) : Infinity;
+  const tDeltaY = Math.abs(nDir.y) > 1e-9 ? TILE_SIZE / Math.abs(nDir.y) : Infinity;
+
+  const nextGridX = (stepX > 0 ? col + 1 : col) * TILE_SIZE;
+  const nextGridY = (stepY > 0 ? row + 1 : row) * TILE_SIZE;
+
+  let tMaxX = Math.abs(nDir.x) > 1e-9 ? (nextGridX - origin.x) / nDir.x : Infinity;
+  let tMaxY = Math.abs(nDir.y) > 1e-9 ? (nextGridY - origin.y) / nDir.y : Infinity;
+
+  let dist = 0;
+  let nx = 0;
+  let ny = 0;
+
+  for (let iter = 0; iter < 128; iter++) {
+    if (tMaxX < tMaxY) {
+      dist = tMaxX;
+      tMaxX += tDeltaX;
+      col += stepX;
+      nx = -stepX;
+      ny = 0;
+    } else {
+      dist = tMaxY;
+      tMaxY += tDeltaY;
+      row += stepY;
+      nx = 0;
+      ny = -stepY;
+    }
+
+    if (dist > maxDist) return null;
+
+    const tile = getTileAt(grid, col, row);
+    if (isRayBlockingTile(tile)) {
+      const hitX = origin.x + nDir.x * dist;
+      const hitY = origin.y + nDir.y * dist;
+      return {
+        x: nx !== 0 ? (nx > 0 ? (col + 1) * TILE_SIZE : col * TILE_SIZE) : hitX,
+        y: ny !== 0 ? (ny > 0 ? (row + 1) * TILE_SIZE : row * TILE_SIZE) : hitY,
+        nx,
+        ny,
+        col,
+        row,
+        tile,
+        dist,
+        portalable: tile === TILE.PORTAL_WALL
+      };
+    }
+  }
+
+  return null;
+}
+
+/**
+ * 校验并对齐传送门放置位置
+ * 确保传送门完全贴合白色可传送面板，且前方留有出射空间、不与另一传送门重叠
+ */
+function validatePortalPlacement(grid, hit, otherPortal = null) {
+  if (!hit || !hit.portalable) return { valid: false, reason: 'surface_not_portalable' };
+
+  const { nx, ny } = hit;
+  const isVerticalSurface = Math.abs(nx) === 1;
+  const px = hit.x;
+  const py = hit.y;
+
+  // 将传送门中心微调对齐到可行区间（最多尝试偏移 ±18px 以避免轻微越界失败）
+  const offsets = [0, -10, 10, -18, 18];
+  let snapped = null;
+
+  for (const off of offsets) {
+    const cx = isVerticalSurface ? px : px + off;
+    const cy = isVerticalSurface ? py + off : py;
+    if (checkPortalSpanValid(grid, cx, cy, nx, ny)) {
+      snapped = { x: cx, y: cy };
+      break;
+    }
+  }
+
+  if (!snapped) {
+    return { valid: false, reason: 'insufficient_surface_span' };
+  }
+
+  // 检查是否与另一色传送门重叠
+  if (otherPortal) {
+    const sameNormal = otherPortal.nx === nx && otherPortal.ny === ny;
+    const dist = Math.hypot(otherPortal.x - snapped.x, otherPortal.y - snapped.y);
+    if (sameNormal && dist < PHYSICS.PORTAL_HALF_SPAN * 1.75) {
+      return { valid: false, reason: 'overlaps_other_portal' };
+    }
+  }
+
+  return {
+    valid: true,
+    portal: {
+      x: snapped.x,
+      y: snapped.y,
+      nx,
+      ny,
+      halfSpan: PHYSICS.PORTAL_HALF_SPAN
+    }
+  };
+}
+
+function checkPortalSpanValid(grid, cx, cy, nx, ny) {
+  const half = PHYSICS.PORTAL_HALF_SPAN - 4;
+  const isVertical = Math.abs(nx) === 1;
+  const sampleOffsets = [-half, 0, half];
+
+  for (const s of sampleOffsets) {
+    // 墙体内部采样点（法线反方向深入 4px）
+    const wallX = (isVertical ? cx : cx + s) - nx * 4;
+    const wallY = (isVertical ? cy + s : cy) - ny * 4;
+    const wallTile = getTileAt(grid, Math.floor(wallX / TILE_SIZE), Math.floor(wallY / TILE_SIZE));
+    if (wallTile !== TILE.PORTAL_WALL) return false;
+
+    // 墙体前方空间采样点（法线正方向伸出 8px，确保非实心墙）
+    const frontX = (isVertical ? cx : cx + s) + nx * 8;
+    const frontY = (isVertical ? cy + s : cy) + ny * 8;
+    const frontTile = getTileAt(grid, Math.floor(frontX / TILE_SIZE), Math.floor(frontY / TILE_SIZE));
+    if (isSolidTile(frontTile)) return false;
+  }
+  return true;
+}
+
+/**
+ * 计算实体通过传送门后的出射位置与速度向量（动量守恒核心算法）
+ */
+function computePortalExit(entity, inPortal, outPortal) {
+  const nIn = { x: inPortal.nx, y: inPortal.ny };
+  const nOut = { x: outPortal.nx, y: outPortal.ny };
+
+  const tIn = { x: -nIn.y, y: nIn.x };
+  const tOut = { x: -nOut.y, y: nOut.x };
+
+  const vIn = { x: entity.vx, y: entity.vy };
+  const entryNormalSpeed = -Vec2.dot(vIn, nIn);
+  const entryTangentSpeed = Vec2.dot(vIn, tIn);
+
+  const exitNormalSpeed = Math.max(entryNormalSpeed, PHYSICS.PORTAL_MIN_EXIT);
+
+  let vx = nOut.x * exitNormalSpeed - tOut.x * entryTangentSpeed * 0.65;
+  let vy = nOut.y * exitNormalSpeed - tOut.y * entryTangentSpeed * 0.65;
+
+  // 若出口是水平方向（竖直墙面）且速度较高，赋予轻微向上防贴地补偿，提升弹射手感
+  if (Math.abs(nOut.x) === 1 && exitNormalSpeed > 360) {
+    vy = Math.min(vy, -Math.min(180, exitNormalSpeed * 0.24));
+  }
+
+  const clamped = Vec2.clampLen({ x: vx, y: vy }, PHYSICS.MAX_SPEED);
+
+  const clearanceX = Math.abs(nOut.x) * (entity.w / 2 + 10);
+  const clearanceY = Math.abs(nOut.y) * (entity.h / 2 + 10);
+  const outCenterX = outPortal.x + nOut.x * clearanceX;
+  const outCenterY = outPortal.y + nOut.y * clearanceY;
+
+  return {
+    x: outCenterX - entity.w / 2,
+    y: outCenterY - entity.h / 2,
+    vx: clamped.x,
+    vy: clamped.y
+  };
+}
+
+/**
+ * 判断实体是否触发进入传送门
+ */
+function checkPortalEntry(entity, portal) {
+  if (!portal || entity.portalCooldown > 0) return false;
+
+  const cx = entity.x + entity.w / 2;
+  const cy = entity.y + entity.h / 2;
+  const dx = cx - portal.x;
+  const dy = cy - portal.y;
+
+  const normalDist = dx * portal.nx + dy * portal.ny;
+  const tangentDist = Math.abs(dx * -portal.ny + dy * portal.nx);
+
+  const halfExtentNormal = Math.abs(portal.nx) * (entity.w / 2) + Math.abs(portal.ny) * (entity.h / 2);
+  const withinNormal = normalDist >= -14 && normalDist <= halfExtentNormal + 8;
+  const withinTangent = tangentDist <= portal.halfSpan + 4;
+
+  const movingToward = entity.vx * portal.nx + entity.vy * portal.ny < 35;
+
+  return withinNormal && withinTangent && movingToward;
+}
+
+/**
+ * 轴分离 AABB 瓦片碰撞解析（含动态关闭门与解离栅栏检测）
+ */
+function resolveEntityCollisions(entity, grid, dt, extraSolids = [], blockFizzler = false) {
+  let onGround = false;
+  let hitHazard = false;
+  let hitFizzler = false;
+
+  // X 轴移动与碰撞
+  entity.x += entity.vx * dt;
+  const xSolids = collectNearbySolidRects(grid, entity, extraSolids, blockFizzler);
+  for (const rect of xSolids) {
+    if (aabbIntersects(entity, rect)) {
+      if (entity.vx > 0) {
+        entity.x = rect.x - entity.w;
+        entity.vx = 0;
+      } else if (entity.vx < 0) {
+        entity.x = rect.x + rect.w;
+        entity.vx = 0;
+      }
+    }
+  }
+
+  // Y 轴移动与碰撞
+  entity.y += entity.vy * dt;
+  const ySolids = collectNearbySolidRects(grid, entity, extraSolids, blockFizzler);
+  for (const rect of ySolids) {
+    if (aabbIntersects(entity, rect)) {
+      if (entity.vy > 0) {
+        entity.y = rect.y - entity.h;
+        entity.vy = 0;
+        onGround = true;
+      } else if (entity.vy < 0) {
+        entity.y = rect.y + rect.h;
+        entity.vy = 0;
+      }
+    }
+  }
+
+  // 特殊瓦片触发检测（腐蚀液池与解离栅栏）
+  const minCol = Math.floor(entity.x / TILE_SIZE);
+  const maxCol = Math.floor((entity.x + entity.w - 0.1) / TILE_SIZE);
+  const minRow = Math.floor(entity.y / TILE_SIZE);
+  const maxRow = Math.floor((entity.y + entity.h - 0.1) / TILE_SIZE);
+
+  for (let r = minRow; r <= maxRow; r++) {
+    for (let c = minCol; c <= maxCol; c++) {
+      const t = getTileAt(grid, c, r);
+      if (t === TILE.HAZARD) hitHazard = true;
+      if (t === TILE.FIZZLER) hitFizzler = true;
+    }
+  }
+
+  return { onGround, hitHazard, hitFizzler };
+}
+
+function collectNearbySolidRects(grid, entity, extraSolids, blockFizzler) {
+  const rects = [];
+  const minCol = Math.floor(entity.x / TILE_SIZE) - 1;
+  const maxCol = Math.floor((entity.x + entity.w) / TILE_SIZE) + 1;
+  const minRow = Math.floor(entity.y / TILE_SIZE) - 1;
+  const maxRow = Math.floor((entity.y + entity.h) / TILE_SIZE) + 1;
+
+  for (let r = minRow; r <= maxRow; r++) {
+    for (let c = minCol; c <= maxCol; c++) {
+      const t = getTileAt(grid, c, r);
+      if (isSolidTile(t) || (blockFizzler && t === TILE.FIZZLER)) {
+        rects.push({
+          x: c * TILE_SIZE,
+          y: r * TILE_SIZE,
+          w: TILE_SIZE,
+          h: TILE_SIZE
+        });
+      }
+    }
+  }
+
+  for (const s of extraSolids) {
+    rects.push(s);
+  }
+  return rects;
+}
+
+// === src/levels.js ===
+/**
+ * 5 个精心设计的《传送门》测试舱关卡 (24x14 网格)
+ * 符号说明：
+ *   '#' = 白色可传送面板 (PORTAL_WALL)
+ *   'M' = 深灰金属不可传送墙 (METAL_WALL)
+ *   '~' = 腐蚀液池 (HAZARD)
+ *   '|' = 物质解离栅栏 (FIZZLER)
+ *   '.' = 空气 (EMPTY)
+ */
+
+const CHAR_MAP = {
+  '.': TILE.EMPTY,
+  '#': TILE.PORTAL_WALL,
+  'M': TILE.METAL_WALL,
+  '~': TILE.HAZARD,
+  '|': TILE.FIZZLER
+};
+
+function parseGrid(rows) {
+  if (rows.length !== GRID_ROWS) {
+    throw new Error(`Invalid grid height: expected ${GRID_ROWS}, got ${rows.length}`);
+  }
+  return rows.map((rowStr, rIdx) => {
+    if (rowStr.length !== GRID_COLS) {
+      throw new Error(`Invalid grid width at row ${rIdx}: expected ${GRID_COLS}, got ${rowStr.length}`);
+    }
+    return [...rowStr].map((ch) => {
+      if (!(ch in CHAR_MAP)) throw new Error(`Unknown tile char '${ch}'`);
+      return CHAR_MAP[ch];
+    });
+  });
+}
+
+const RAW_LEVELS = [
+  {
+    id: 1,
+    code: 'CHAMBER 01',
+    title: '空间跃迁入门',
+    subtitle: '左键发射蓝门，右键 / Q 发射橙门，跨越腐蚀液池抵达出口。',
+    hint: '在左侧白色墙面开启蓝门，在对岸右侧白色墙面开启橙门，穿过蓝门即可安全到达对岸。',
+    spawn: { col: 2.5, row: 10 },
+    exit: { col: 21, row: 11 },
+    cubes: [],
+    buttons: [],
+    doorRequiresButtons: false,
+    map: [
+      'MMMMMMMMMMMMMMMMMMMMMMMM',
+      'M......................M',
+      'M......................M',
+      'M......................M',
+      'M......................M',
+      'M......................M',
+      'M......................M',
+      '#......................#',
+      '#......................#',
+      '#......................#',
+      '#......................#',
+      '#......................#',
+      'MMMMMMM~~~~~~~~~~MMMMMMM',
+      'MMMMMMMMMMMMMMMMMMMMMMMM'
+    ]
+  },
+  {
+    id: 2,
+    code: 'CHAMBER 02',
+    title: '动量守恒弹射',
+    subtitle: '“高速进去，高速出来。”利用高处落差积累动能，从左侧高墙弹射飞跃深渊。',
+    hint: '在下方深坑的白色地板开蓝门，在左上高墙白色面板开橙门，从平台跳入蓝门即可借动量飞跃毒池！',
+    spawn: { col: 2.5, row: 3 },
+    exit: { col: 20.5, row: 6 },
+    cubes: [],
+    buttons: [],
+    doorRequiresButtons: false,
+    map: [
+      'MMMMMMMMMMMMMMMMMMMMMMMM',
+      '#......................M',
+      '#......................M',
+      '#......................M',
+      '#......................M',
+      'MMMMM..................M',
+      'M......................M',
+      'M..............MMMMMMMMM',
+      'M..............M.......M',
+      'M..............M.......M',
+      'M..............M.......M',
+      'M..............M.......M',
+      'MMMMM#####~~~~~~MMMMMMMM',
+      'MMMMMMMMMMMMMMMMMMMMMMMM'
+    ]
+  },
+  {
+    id: 3,
+    code: 'CHAMBER 03',
+    title: '同伴方块与重压开关',
+    subtitle: '按 E 拾取 / 放下同伴方块，将其压在红色压力开关上以解锁出口大门。',
+    hint: '利用上下白色面板建立传送通道，登上高台按 E 搬运同伴方块并放到红色压力板上。',
+    spawn: { col: 2.5, row: 10 },
+    exit: { col: 21, row: 11 },
+    cubes: [{ col: 3.5, row: 4 }],
+    buttons: [{ id: 'btn-1', col: 13, row: 12 }],
+    doorRequiresButtons: true,
+    map: [
+      'MMMMMMMMMMMMMMMMMMMMMMMM',
+      'M......................M',
+      'M......................M',
+      '#......................M',
+      '#......................M',
+      '#......................M',
+      'MMMMMMM................M',
+      'M......................M',
+      'M......................M',
+      '#......................#',
+      '#......................#',
+      '#......................#',
+      'MMMMMMMMMMMMM#MMMMMMMMMM',
+      'MMMMMMMMMMMMMMMMMMMMMMMM'
+    ]
+  },
+  {
+    id: 4,
+    code: 'CHAMBER 04',
+    title: '物质解离栅栏',
+    subtitle: '蓝色解离栅栏会清除已开启的传送门并阻挡射线，穿过栅栏后再规划空间跃迁。',
+    hint: '先向右侧穿过解离栅栏，再用右墙上下两处白色面板传送到高台取回同伴方块，压住下方压力板。',
+    spawn: { col: 2.5, row: 10 },
+    exit: { col: 21, row: 11 },
+    cubes: [{ col: 18, row: 3 }],
+    buttons: [{ id: 'btn-1', col: 14, row: 12 }],
+    doorRequiresButtons: true,
+    map: [
+      'MMMMMMMMMMMMMMMMMMMMMMMM',
+      'M......................M',
+      'M......................#',
+      'M......................#',
+      'M......................#',
+      'M.............MMMMMMMMMM',
+      'M......................M',
+      'M......|...............M',
+      'M......|...............M',
+      'M......|...............#',
+      'M......|...............#',
+      'M......|...............#',
+      'MMMMMMMMMMMM###MMMMMMMMM',
+      'MMMMMMMMMMMMMMMMMMMMMMMM'
+    ]
+  },
+  {
+    id: 5,
+    code: 'CHAMBER 05',
+    title: '光圈终极综合测试',
+    subtitle: '综合运用方块搬运、压力开关与高空传送跃迁，完成最终实验舱挑战。',
+    hint: '先通过左墙上下白色面板取得同伴方块并放置在中层压力板，再向右上白色面板开启出口通道。',
+    spawn: { col: 2.5, row: 10 },
+    exit: { col: 21, row: 4 },
+    cubes: [{ col: 3.5, row: 3 }],
+    buttons: [{ id: 'btn-1', col: 10, row: 9 }],
+    doorRequiresButtons: true,
+    map: [
+      'MMMMMMMMMMMMMMMMMMMMMMMM',
+      'M......................M',
+      '#......................#',
+      '#......................#',
+      '#......................#',
+      'MMMMMM............MMMMMM',
+      'M......................M',
+      'M.......#..............M',
+      'M.......#..............M',
+      'M.......MMMMM..........M',
+      '#......................#',
+      '#......................#',
+      'MMMMMMM~~~~~~#####MMMMMM',
+      'MMMMMMMMMMMMMMMMMMMMMMMM'
+    ]
+  }
+];
+
+function buildLevel(index) {
+  const raw = RAW_LEVELS[index];
+  if (!raw) throw new Error(`Level index out of bounds: ${index}`);
+  return {
+    ...raw,
+    grid: parseGrid(raw.map),
+    spawnPos: {
+      x: raw.spawn.col * TILE_SIZE,
+      y: raw.spawn.row * TILE_SIZE
+    },
+    exitRect: {
+      x: raw.exit.col * TILE_SIZE,
+      y: (raw.exit.row - 1) * TILE_SIZE,
+      w: TILE_SIZE * 1.15,
+      h: TILE_SIZE * 2
+    },
+    initialCubes: raw.cubes.map((c, idx) => ({
+      id: `cube-${idx}`,
+      x: c.col * TILE_SIZE,
+      y: c.row * TILE_SIZE
+    })),
+    buttonRects: raw.buttons.map((b) => ({
+      id: b.id,
+      x: b.col * TILE_SIZE + 4,
+      y: b.row * TILE_SIZE - 8,
+      w: TILE_SIZE - 8,
+      h: 8,
+      pressed: false
+    }))
+  };
+}
+
+// === src/audio.js ===
+/**
+ * 纯 Web Audio API 程序化音效合成器（零外部音频资源依赖）
+ */
+
+class SoundSynthesizer {
+  constructor() {
+    this.ctx = null;
+    this.muted = false;
+  }
+
+  ensureContext() {
+    if (this.muted) return null;
+    if (typeof window === 'undefined') return null;
+    const AudioCtx = window.AudioContext || window.webkitAudioContext;
+    if (!AudioCtx) return null;
+    if (!this.ctx) {
+      this.ctx = new AudioCtx();
+    }
+    if (this.ctx.state === 'suspended') {
+      this.ctx.resume().catch(() => {});
+    }
+    return this.ctx;
+  }
+
+  setMuted(muted) {
+    this.muted = Boolean(muted);
+  }
+
+  toggleMute() {
+    this.muted = !this.muted;
+    return this.muted;
+  }
+
+  playTone({ type = 'sine', startFreq = 440, endFreq = 220, duration = 0.14, gain = 0.12 }) {
+    const ctx = this.ensureContext();
+    if (!ctx) return;
+
+    const now = ctx.currentTime;
+    const osc = ctx.createOscillator();
+    const amp = ctx.createGain();
+
+    osc.type = type;
+    osc.frequency.setValueAtTime(startFreq, now);
+    osc.frequency.exponentialRampToValueAtTime(Math.max(20, endFreq), now + duration);
+
+    amp.gain.setValueAtTime(gain, now);
+    amp.gain.exponentialRampToValueAtTime(0.001, now + duration);
+
+    osc.connect(amp);
+    amp.connect(ctx.destination);
+    osc.start(now);
+    osc.stop(now + duration);
+  }
+
+  playPortalFire(color) {
+    if (color === 'blue') {
+      this.playTone({ type: 'triangle', startFreq: 760, endFreq: 260, duration: 0.16, gain: 0.14 });
+    } else {
+      this.playTone({ type: 'sawtooth', startFreq: 620, endFreq: 210, duration: 0.16, gain: 0.11 });
+    }
+  }
+
+  playPortalFail() {
+    this.playTone({ type: 'square', startFreq: 180, endFreq: 110, duration: 0.10, gain: 0.08 });
+  }
+
+  playTeleport() {
+    this.playTone({ type: 'sine', startFreq: 240, endFreq: 880, duration: 0.18, gain: 0.14 });
+  }
+
+  playJump() {
+    this.playTone({ type: 'sine', startFreq: 190, endFreq: 340, duration: 0.09, gain: 0.09 });
+  }
+
+  playButton(pressed) {
+    this.playTone({
+      type: 'triangle',
+      startFreq: pressed ? 330 : 440,
+      endFreq: pressed ? 520 : 280,
+      duration: 0.12,
+      gain: 0.12
+    });
+  }
+
+  playFizzler() {
+    this.playTone({ type: 'sawtooth', startFreq: 900, endFreq: 160, duration: 0.22, gain: 0.10 });
+  }
+
+  playHazard() {
+    this.playTone({ type: 'sawtooth', startFreq: 240, endFreq: 70, duration: 0.28, gain: 0.13 });
+  }
+
+  playPickup(picked) {
+    this.playTone({
+      type: 'sine',
+      startFreq: picked ? 380 : 460,
+      endFreq: picked ? 580 : 300,
+      duration: 0.09,
+      gain: 0.10
+    });
+  }
+
+  playLevelClear() {
+    const notes = [523.25, 659.25, 783.99, 1046.5];
+    const ctx = this.ensureContext();
+    if (!ctx) return;
+    notes.forEach((freq, i) => {
+      const now = ctx.currentTime + i * 0.085;
+      const osc = ctx.createOscillator();
+      const amp = ctx.createGain();
+      osc.type = 'triangle';
+      osc.frequency.setValueAtTime(freq, now);
+      amp.gain.setValueAtTime(0.12, now);
+      amp.gain.exponentialRampToValueAtTime(0.001, now + 0.22);
+      osc.connect(amp);
+      amp.connect(ctx.destination);
+      osc.start(now);
+      osc.stop(now + 0.22);
+    });
+  }
+}
+
+// === src/engine.js ===
+/**
+ * 游戏主逻辑引擎 (GameEngine)
+ * 管理测试舱状态、玩家控制、同伴方块、双色传送门、压力板与粒子特效
+ * 完全解耦 DOM/Canvas，可在 Node.js 中无头运行自动化测试
+ */
+
+
+
+class GameEngine {
+  constructor(options = {}) {
+    this.sound = options.sound || null;
+    this.onStateChange = options.onStateChange || null;
+    this.levelIndex = 0;
+    this.levelCount = RAW_LEVELS.length;
+    this.completedLevels = new Set();
+    this.paused = false;
+
+    this.input = {
+      left: false,
+      right: false,
+      jumpHeld: false,
+      jumpBufferTimer: 0,
+      aimX: 480,
+      aimY: 280
+    };
+
+    this.loadLevel(0);
+  }
+
+  loadLevel(index) {
+    const safeIdx = Math.max(0, Math.min(this.levelCount - 1, index));
+    this.levelIndex = safeIdx;
+    this.level = buildLevel(safeIdx);
+    this.status = 'playing'; // 'playing' | 'level_clear' | 'all_clear'
+    this.elapsedTime = 0;
+    this.portalsFired = 0;
+    this.teleportsCount = 0;
+    this.deathCount = 0;
+
+    this.player = {
+      x: this.level.spawnPos.x,
+      y: this.level.spawnPos.y,
+      w: PHYSICS.PLAYER_WIDTH,
+      h: PHYSICS.PLAYER_HEIGHT,
+      vx: 0,
+      vy: 0,
+      onGround: false,
+      coyoteTimer: 0,
+      portalCooldown: 0,
+      facing: 1,
+      carryingCubeId: null
+    };
+
+    this.cubes = this.level.initialCubes.map((c) => ({
+      id: c.id,
+      x: c.x,
+      y: c.y,
+      w: PHYSICS.CUBE_SIZE,
+      h: PHYSICS.CUBE_SIZE,
+      vx: 0,
+      vy: 0,
+      onGround: false,
+      portalCooldown: 0
+    }));
+
+    this.buttons = this.level.buttonRects.map((b) => ({ ...b, pressed: false }));
+    this.doorOpen = !this.level.doorRequiresButtons;
+
+    this.portals = {
+      blue: null,
+      orange: null
+    };
+
+    this.particles = [];
+    this.aimPreview = null;
+    this.statusMessage = this.level.subtitle;
+
+    this.emitState();
+  }
+
+  resetLevel() {
+    this.loadLevel(this.levelIndex);
+  }
+
+  nextLevel() {
+    if (this.levelIndex + 1 < this.levelCount) {
+      this.loadLevel(this.levelIndex + 1);
+      return true;
+    }
+    this.status = 'all_clear';
+    this.emitState();
+    return false;
+  }
+
+  setInput(patch) {
+    if (patch.jumpPressed) {
+      this.input.jumpBufferTimer = PHYSICS.JUMP_BUFFER;
+    }
+    if (typeof patch.left === 'boolean') this.input.left = patch.left;
+    if (typeof patch.right === 'boolean') this.input.right = patch.right;
+    if (typeof patch.jumpHeld === 'boolean') this.input.jumpHeld = patch.jumpHeld;
+    if (typeof patch.aimX === 'number') this.input.aimX = patch.aimX;
+    if (typeof patch.aimY === 'number') this.input.aimY = patch.aimY;
+  }
+
+  getPlayerGunOrigin() {
+    return {
+      x: this.player.x + this.player.w / 2,
+      y: this.player.y + this.player.h * 0.42
+    };
+  }
+
+  firePortal(color, targetX = this.input.aimX, targetY = this.input.aimY) {
+    if (this.status !== 'playing' || this.paused) return { placed: false, reason: 'not_playing' };
+
+    const origin = this.getPlayerGunOrigin();
+    const dir = { x: targetX - origin.x, y: targetY - origin.y };
+    const hit = castRay(this.level.grid, origin, dir);
+    this.portalsFired += 1;
+
+    if (!hit) {
+      this.sound?.playPortalFail();
+      return { placed: false, reason: 'no_hit' };
+    }
+
+    const otherColor = color === 'blue' ? 'orange' : 'blue';
+    const result = validatePortalPlacement(this.level.grid, hit, this.portals[otherColor]);
+
+    if (!result.valid) {
+      this.spawnBurst(hit.x, hit.y, '#EF4444', 10);
+      this.sound?.playPortalFail();
+      return { placed: false, reason: result.reason, hit };
+    }
+
+    this.portals[color] = {
+      ...result.portal,
+      color,
+      age: 0
+    };
+
+    const burstColor = color === 'blue' ? COLORS.BLUE_PORTAL : COLORS.ORANGE_PORTAL;
+    this.spawnBurst(result.portal.x, result.portal.y, burstColor, 18);
+    this.sound?.playPortalFire(color);
+    this.emitState();
+    return { placed: true, portal: this.portals[color] };
+  }
+
+  clearPortals() {
+    if (this.portals.blue || this.portals.orange) {
+      if (this.portals.blue) this.spawnBurst(this.portals.blue.x, this.portals.blue.y, COLORS.BLUE_PORTAL, 12);
+      if (this.portals.orange) this.spawnBurst(this.portals.orange.x, this.portals.orange.y, COLORS.ORANGE_PORTAL, 12);
+      this.portals.blue = null;
+      this.portals.orange = null;
+      this.sound?.playFizzler();
+      this.emitState();
+    }
+  }
+
+  toggleCarryCube() {
+    if (this.status !== 'playing' || this.paused) return false;
+
+    if (this.player.carryingCubeId) {
+      const cube = this.cubes.find((c) => c.id === this.player.carryingCubeId);
+      if (cube) {
+        cube.vx = this.player.vx * 0.4 + this.player.facing * 75;
+        cube.vy = Math.min(this.player.vy * 0.3, -40);
+      }
+      this.player.carryingCubeId = null;
+      this.sound?.playPickup(false);
+      return true;
+    }
+
+    const px = this.player.x + this.player.w / 2;
+    const py = this.player.y + this.player.h / 2;
+    let nearest = null;
+    let bestDist = PHYSICS.PICKUP_RADIUS;
+
+    for (const cube of this.cubes) {
+      const cx = cube.x + cube.w / 2;
+      const cy = cube.y + cube.h / 2;
+      const d = Math.hypot(cx - px, cy - py);
+      if (d <= bestDist) {
+        bestDist = d;
+        nearest = cube;
+      }
+    }
+
+    if (nearest) {
+      this.player.carryingCubeId = nearest.id;
+      this.sound?.playPickup(true);
+      return true;
+    }
+    return false;
+  }
+
+  step(dt = FIXED_DT) {
+    if (this.paused || this.status !== 'playing') return;
+
+    this.elapsedTime += dt;
+    this.updateAimPreview();
+    this.updatePlayer(dt);
+    this.updateCubes(dt);
+    this.updateButtonsAndDoor();
+    this.updatePortalTimers(dt);
+    this.updateParticles(dt);
+    this.checkExitReached();
+  }
+
+  updateAimPreview() {
+    const origin = this.getPlayerGunOrigin();
+    const dir = { x: this.input.aimX - origin.x, y: this.input.aimY - origin.y };
+    this.aimPreview = castRay(this.level.grid, origin, dir);
+    if (dir.x !== 0) {
+      this.player.facing = dir.x >= 0 ? 1 : -1;
+    }
+  }
+
+  updatePlayer(dt) {
+    const p = this.player;
+    if (p.portalCooldown > 0) p.portalCooldown = Math.max(0, p.portalCooldown - dt);
+    if (this.input.jumpBufferTimer > 0) this.input.jumpBufferTimer = Math.max(0, this.input.jumpBufferTimer - dt);
+
+    const moveDir = (this.input.right ? 1 : 0) - (this.input.left ? 1 : 0);
+    const accel = p.onGround ? PHYSICS.MOVE_ACCEL : PHYSICS.AIR_ACCEL;
+
+    if (moveDir !== 0) {
+      p.facing = moveDir;
+      const sameDirFast = !p.onGround && Math.sign(p.vx) === moveDir && Math.abs(p.vx) > PHYSICS.MAX_RUN_SPEED;
+      if (!sameDirFast) {
+        p.vx += moveDir * accel * dt;
+        if (p.onGround && Math.abs(p.vx) > PHYSICS.MAX_RUN_SPEED) {
+          p.vx = Math.sign(p.vx) * PHYSICS.MAX_RUN_SPEED;
+        }
+      }
+    } else if (p.onGround) {
+      p.vx *= PHYSICS.GROUND_FRICTION;
+      if (Math.abs(p.vx) < 8) p.vx = 0;
+    } else {
+      p.vx *= PHYSICS.AIR_DRAG;
+    }
+
+    p.vy = Math.min(PHYSICS.MAX_SPEED, p.vy + PHYSICS.GRAVITY * dt);
+
+    if (p.onGround) {
+      p.coyoteTimer = PHYSICS.COYOTE_TIME;
+    } else {
+      p.coyoteTimer = Math.max(0, p.coyoteTimer - dt);
+    }
+
+    if (this.input.jumpBufferTimer > 0 && p.coyoteTimer > 0) {
+      p.vy = PHYSICS.JUMP_VELOCITY;
+      p.onGround = false;
+      p.coyoteTimer = 0;
+      this.input.jumpBufferTimer = 0;
+      this.sound?.playJump();
+    }
+
+    if (this.tryTeleportEntity(p, true)) {
+      return;
+    }
+
+    // 记录碰撞前速度，避免高速落入/撞入传送门表面时因碰撞清零而损失动量
+    const preImpactVel = { vx: p.vx, vy: p.vy };
+    const col = resolveEntityCollisions(p, this.level.grid, dt, [], false);
+    p.onGround = col.onGround;
+
+    if (col.hitFizzler) {
+      this.clearPortals();
+      if (p.carryingCubeId) {
+        this.respawnCube(p.carryingCubeId);
+        p.carryingCubeId = null;
+      }
+    }
+
+    if (col.hitHazard) {
+      this.deathCount += 1;
+      this.sound?.playHazard();
+      this.respawnPlayer();
+      return;
+    }
+
+    this.tryTeleportEntity(p, true, preImpactVel);
+  }
+
+  updateCubes(dt) {
+    const p = this.player;
+    for (const cube of this.cubes) {
+      if (cube.portalCooldown > 0) cube.portalCooldown = Math.max(0, cube.portalCooldown - dt);
+
+      if (p.carryingCubeId === cube.id) {
+        const targetX = p.x + p.w / 2 + p.facing * 26 - cube.w / 2;
+        const targetY = p.y + p.h * 0.38 - cube.h / 2;
+        cube.x += (targetX - cube.x) * 0.45;
+        cube.y += (targetY - cube.y) * 0.45;
+        cube.vx = p.vx;
+        cube.vy = p.vy;
+        cube.onGround = false;
+        continue;
+      }
+
+      cube.vy = Math.min(PHYSICS.MAX_SPEED, cube.vy + PHYSICS.GRAVITY * dt);
+      if (cube.onGround) {
+        cube.vx *= 0.82;
+        if (Math.abs(cube.vx) < 6) cube.vx = 0;
+      } else {
+        cube.vx *= 0.992;
+      }
+
+      if (this.tryTeleportEntity(cube, false)) {
+        continue;
+      }
+
+      const preImpactVel = { vx: cube.vx, vy: cube.vy };
+      const col = resolveEntityCollisions(cube, this.level.grid, dt, [], true);
+      cube.onGround = col.onGround;
+
+      if (col.hitHazard) {
+        this.respawnCube(cube.id);
+        continue;
+      }
+
+      this.tryTeleportEntity(cube, false, preImpactVel);
+    }
+  }
+
+  tryTeleportEntity(entity, isPlayer, velocityOverride = null) {
+    const { blue, orange } = this.portals;
+    if (!blue || !orange) return false;
+
+    const probe = velocityOverride
+      ? { ...entity, vx: velocityOverride.vx, vy: velocityOverride.vy }
+      : entity;
+
+    let inPortal = null;
+    let outPortal = null;
+
+    if (checkPortalEntry(probe, blue)) {
+      inPortal = blue;
+      outPortal = orange;
+    } else if (checkPortalEntry(probe, orange)) {
+      inPortal = orange;
+      outPortal = blue;
+    }
+
+    if (!inPortal || !outPortal) return false;
+
+    const exitState = computePortalExit(probe, inPortal, outPortal);
+    entity.x = exitState.x;
+    entity.y = exitState.y;
+    entity.vx = exitState.vx;
+    entity.vy = exitState.vy;
+    entity.onGround = false;
+    entity.portalCooldown = PHYSICS.PORTAL_COOLDOWN;
+
+    if (isPlayer && this.player.carryingCubeId) {
+      const carried = this.cubes.find((c) => c.id === this.player.carryingCubeId);
+      if (carried) {
+        carried.x = entity.x;
+        carried.y = entity.y;
+        carried.portalCooldown = PHYSICS.PORTAL_COOLDOWN;
+      }
+    }
+
+    this.teleportsCount += 1;
+    const outColor = outPortal.color === 'blue' ? COLORS.BLUE_PORTAL : COLORS.ORANGE_PORTAL;
+    this.spawnBurst(outPortal.x, outPortal.y, outColor, 16);
+    this.sound?.playTeleport();
+    this.emitState();
+    return true;
+  }
+
+  updateButtonsAndDoor() {
+    if (!this.level.doorRequiresButtons) {
+      this.doorOpen = true;
+      return;
+    }
+
+    let allPressed = true;
+    for (const btn of this.buttons) {
+      const triggerBox = { x: btn.x - 4, y: btn.y - 10, w: btn.w + 8, h: btn.h + 12 };
+      const playerOn = aabbIntersects(this.player, triggerBox);
+      const cubeOn = this.cubes.some(
+        (c) => c.id !== this.player.carryingCubeId && aabbIntersects(c, triggerBox)
+      );
+      const nowPressed = playerOn || cubeOn;
+      if (nowPressed !== btn.pressed) {
+        btn.pressed = nowPressed;
+        this.sound?.playButton(nowPressed);
+      }
+      if (!btn.pressed) allPressed = false;
+    }
+
+    if (allPressed !== this.doorOpen) {
+      this.doorOpen = allPressed;
+      this.emitState();
+    }
+  }
+
+  checkExitReached() {
+    if (!this.doorOpen) return;
+    if (aabbIntersects(this.player, this.level.exitRect)) {
+      this.completedLevels.add(this.levelIndex);
+      this.status = this.levelIndex + 1 >= this.levelCount ? 'all_clear' : 'level_clear';
+      this.sound?.playLevelClear();
+      this.spawnBurst(
+        this.level.exitRect.x + this.level.exitRect.w / 2,
+        this.level.exitRect.y + this.level.exitRect.h / 2,
+        '#10B981',
+        26
+      );
+      this.emitState();
+    }
+  }
+
+  respawnPlayer() {
+    this.player.x = this.level.spawnPos.x;
+    this.player.y = this.level.spawnPos.y;
+    this.player.vx = 0;
+    this.player.vy = 0;
+    this.player.onGround = false;
+    this.player.portalCooldown = 0.2;
+    this.spawnBurst(this.player.x + 12, this.player.y + 20, '#F59E0B', 14);
+    this.emitState();
+  }
+
+  respawnCube(cubeId) {
+    const cube = this.cubes.find((c) => c.id === cubeId);
+    const init = this.level.initialCubes.find((c) => c.id === cubeId);
+    if (cube && init) {
+      cube.x = init.x;
+      cube.y = init.y;
+      cube.vx = 0;
+      cube.vy = 0;
+      cube.portalCooldown = 0.2;
+      this.spawnBurst(cube.x + 14, cube.y + 14, '#EC4899', 12);
+    }
+  }
+
+  updatePortalTimers(dt) {
+    if (this.portals.blue) this.portals.blue.age += dt;
+    if (this.portals.orange) this.portals.orange.age += dt;
+  }
+
+  spawnBurst(x, y, color, count = 12) {
+    for (let i = 0; i < count; i++) {
+      const ang = (Math.PI * 2 * i) / count + Math.random() * 0.4;
+      const spd = 60 + Math.random() * 190;
+      this.particles.push({
+        x,
+        y,
+        vx: Math.cos(ang) * spd,
+        vy: Math.sin(ang) * spd,
+        life: 0.28 + Math.random() * 0.22,
+        maxLife: 0.5,
+        color,
+        size: 2.5 + Math.random() * 3
+      });
+    }
+  }
+
+  updateParticles(dt) {
+    for (let i = this.particles.length - 1; i >= 0; i--) {
+      const pt = this.particles[i];
+      pt.x += pt.vx * dt;
+      pt.y += pt.vy * dt;
+      pt.vx *= 0.94;
+      pt.vy *= 0.94;
+      pt.life -= dt;
+      if (pt.life <= 0) this.particles.splice(i, 1);
+    }
+  }
+
+  getSnapshot() {
+    return {
+      levelIndex: this.levelIndex,
+      levelCount: this.levelCount,
+      code: this.level.code,
+      title: this.level.title,
+      subtitle: this.level.subtitle,
+      hint: this.level.hint,
+      status: this.status,
+      doorOpen: this.doorOpen,
+      elapsedTime: this.elapsedTime,
+      portalsFired: this.portalsFired,
+      teleportsCount: this.teleportsCount,
+      deathCount: this.deathCount,
+      hasBlue: Boolean(this.portals.blue),
+      hasOrange: Boolean(this.portals.orange),
+      completedCount: this.completedLevels.size
+    };
+  }
+
+  emitState() {
+    if (this.onStateChange) {
+      this.onStateChange(this.getSnapshot());
+    }
+  }
+}
+
+// === src/renderer.js ===
+/**
+ * HTML5 Canvas 2D 渲染器
+ * 光圈实验室工业风视觉呈现：白色月岩面板、深灰金属墙、动态椭圆传送门、瞄准射线、同伴方块与粒子
+ */
+
+class PortalRenderer {
+  constructor(canvas) {
+    this.canvas = canvas;
+    this.ctx = canvas.getContext('2d');
+    this.time = 0;
+  }
+
+  render(engine, dt = 1 / 60) {
+    this.time += dt;
+    const ctx = this.ctx;
+    ctx.save();
+
+    // 1. 实验室背景与精密网格
+    this.drawChamberBackground(ctx);
+
+    // 2. 地图瓦片（可传送面板、金属墙、腐蚀液池、解离栅栏）
+    this.drawTiles(ctx, engine.level.grid);
+
+    // 3. 按钮连线与出口大门
+    this.drawIndicatorWires(ctx, engine);
+    this.drawExitDoor(ctx, engine);
+    this.drawButtons(ctx, engine.buttons);
+
+    // 4. 瞄准激光与落点预览
+    this.drawAimLaser(ctx, engine);
+
+    // 5. 蓝/橙双色传送门
+    if (engine.portals.blue) this.drawPortal(ctx, engine.portals.blue);
+    if (engine.portals.orange) this.drawPortal(ctx, engine.portals.orange);
+
+    // 6. 同伴方块与测试者角色
+    this.drawCubes(ctx, engine.cubes, engine.player.carryingCubeId);
+    this.drawPlayer(ctx, engine);
+
+    // 7. 粒子特效
+    this.drawParticles(ctx, engine.particles);
+
+    ctx.restore();
+  }
+
+  drawChamberBackground(ctx) {
+    ctx.fillStyle = COLORS.CHAMBER_BG;
+    ctx.fillRect(0, 0, WORLD_WIDTH, WORLD_HEIGHT);
+
+    // 细网格线
+    ctx.strokeStyle = COLORS.CHAMBER_GRID;
+    ctx.lineWidth = 1;
+    ctx.beginPath();
+    for (let x = 0; x <= WORLD_WIDTH; x += TILE_SIZE) {
+      ctx.moveTo(x + 0.5, 0);
+      ctx.lineTo(x + 0.5, WORLD_HEIGHT);
+    }
+    for (let y = 0; y <= WORLD_HEIGHT; y += TILE_SIZE) {
+      ctx.moveTo(0, y + 0.5);
+      ctx.lineTo(WORLD_WIDTH, y + 0.5);
+    }
+    ctx.stroke();
+
+    // 光圈实验室水印标识
+    ctx.save();
+    ctx.fillStyle = 'rgba(100, 116, 139, 0.08)';
+    ctx.font = '700 44px Inter, system-ui, sans-serif';
+    ctx.textAlign = 'center';
+    ctx.fillText('APERTURE WEB LAB', WORLD_WIDTH / 2, WORLD_HEIGHT / 2 + 16);
+    ctx.restore();
+  }
+
+  drawTiles(ctx, grid) {
+    for (let r = 0; r < grid.length; r++) {
+      for (let c = 0; c < grid[r].length; c++) {
+        const t = grid[r][c];
+        const x = c * TILE_SIZE;
+        const y = r * TILE_SIZE;
+
+        if (t === TILE.PORTAL_WALL) {
+          ctx.fillStyle = COLORS.PORTAL_WALL_FILL;
+          ctx.fillRect(x, y, TILE_SIZE, TILE_SIZE);
+          ctx.strokeStyle = COLORS.PORTAL_WALL_STROKE;
+          ctx.lineWidth = 1.5;
+          ctx.strokeRect(x + 1, y + 1, TILE_SIZE - 2, TILE_SIZE - 2);
+          // 四角微铆钉
+          ctx.fillStyle = '#CBD5E1';
+          ctx.fillRect(x + 4, y + 4, 2, 2);
+          ctx.fillRect(x + TILE_SIZE - 6, y + 4, 2, 2);
+          ctx.fillRect(x + 4, y + TILE_SIZE - 6, 2, 2);
+          ctx.fillRect(x + TILE_SIZE - 6, y + TILE_SIZE - 6, 2, 2);
+        } else if (t === TILE.METAL_WALL) {
+          ctx.fillStyle = COLORS.METAL_WALL_FILL;
+          ctx.fillRect(x, y, TILE_SIZE, TILE_SIZE);
+          ctx.strokeStyle = COLORS.METAL_WALL_STROKE;
+          ctx.lineWidth = 1.5;
+          ctx.strokeRect(x + 0.5, y + 0.5, TILE_SIZE - 1, TILE_SIZE - 1);
+          // 工业斜纹细节
+          ctx.fillStyle = 'rgba(255,255,255,0.05)';
+          ctx.fillRect(x + 4, y + 4, TILE_SIZE - 8, 4);
+        } else if (t === TILE.HAZARD) {
+          const wave = Math.sin(this.time * 4 + c * 0.9) * 3;
+          ctx.fillStyle = '#065F46';
+          ctx.fillRect(x, y + 6, TILE_SIZE, TILE_SIZE - 6);
+          ctx.fillStyle = '#10B981';
+          ctx.fillRect(x, y + 8 + wave * 0.5, TILE_SIZE, 8);
+          ctx.fillStyle = 'rgba(167, 243, 208, 0.55)';
+          ctx.fillRect(x + 4, y + 10 + wave * 0.5, TILE_SIZE - 8, 2);
+        } else if (t === TILE.FIZZLER) {
+          const pulse = 0.25 + 0.15 * Math.sin(this.time * 8 + r);
+          ctx.fillStyle = `rgba(56, 189, 248, ${pulse.toFixed(2)})`;
+          ctx.fillRect(x + 12, y, TILE_SIZE - 24, TILE_SIZE);
+          ctx.strokeStyle = '#38BDF8';
+          ctx.lineWidth = 2;
+          ctx.beginPath();
+          ctx.moveTo(x + TILE_SIZE / 2, y);
+          ctx.lineTo(x + TILE_SIZE / 2, y + TILE_SIZE);
+          ctx.stroke();
+        }
+      }
+    }
+  }
+
+  drawIndicatorWires(ctx, engine) {
+    if (!engine.buttons.length) return;
+    const exitCx = engine.level.exitRect.x + engine.level.exitRect.w / 2;
+    const exitCy = engine.level.exitRect.y + engine.level.exitRect.h;
+
+    for (const btn of engine.buttons) {
+      const bx = btn.x + btn.w / 2;
+      const by = btn.y + btn.h;
+      ctx.save();
+      ctx.strokeStyle = btn.pressed ? '#00A8FF' : '#F97316';
+      ctx.lineWidth = 3;
+      ctx.setLineDash([6, 4]);
+      ctx.beginPath();
+      ctx.moveTo(bx, by + 4);
+      ctx.lineTo(exitCx, by + 4);
+      ctx.lineTo(exitCx, exitCy);
+      ctx.stroke();
+      ctx.restore();
+    }
+  }
+
+  drawButtons(ctx, buttons) {
+    for (const btn of buttons) {
+      // 底座
+      ctx.fillStyle = '#334155';
+      ctx.fillRect(btn.x - 3, btn.y + 4, btn.w + 6, 5);
+      // 红色/绿色压板
+      const pressOffset = btn.pressed ? 3 : 0;
+      ctx.fillStyle = btn.pressed ? '#22C55E' : '#EF4444';
+      ctx.fillRect(btn.x, btn.y + pressOffset, btn.w, btn.h - pressOffset);
+    }
+  }
+
+  drawExitDoor(ctx, engine) {
+    const r = engine.level.exitRect;
+    // 门框
+    ctx.fillStyle = '#1E293B';
+    ctx.fillRect(r.x - 4, r.y - 6, r.w + 8, r.h + 6);
+
+    if (engine.doorOpen) {
+      // 开启状态：发光通道
+      const grad = ctx.createLinearGradient(r.x, r.y, r.x, r.y + r.h);
+      grad.addColorStop(0, '#0EA5E9');
+      grad.addColorStop(1, '#10B981');
+      ctx.fillStyle = grad;
+      ctx.fillRect(r.x + 2, r.y, r.w - 4, r.h);
+
+      ctx.fillStyle = '#FFFFFF';
+      ctx.font = '700 10px Inter, sans-serif';
+      ctx.textAlign = 'center';
+      ctx.fillText('EXIT', r.x + r.w / 2, r.y + 20);
+    } else {
+      // 关闭状态：双重金属闸门
+      ctx.fillStyle = '#475569';
+      ctx.fillRect(r.x + 2, r.y, r.w - 4, r.h);
+      ctx.strokeStyle = '#94A3B8';
+      ctx.lineWidth = 2;
+      ctx.beginPath();
+      ctx.moveTo(r.x + r.w / 2, r.y);
+      ctx.lineTo(r.x + r.w / 2, r.y + r.h);
+      ctx.stroke();
+    }
+
+    // 顶部状态灯
+    ctx.fillStyle = engine.doorOpen ? '#22C55E' : '#EF4444';
+    ctx.beginPath();
+    ctx.arc(r.x + r.w / 2, r.y - 12, 5, 0, Math.PI * 2);
+    ctx.fill();
+  }
+
+  drawAimLaser(ctx, engine) {
+    if (engine.status !== 'playing' || !engine.aimPreview) return;
+    const origin = engine.getPlayerGunOrigin();
+    const hit = engine.aimPreview;
+
+    ctx.save();
+    ctx.strokeStyle = hit.portalable ? 'rgba(0, 168, 255, 0.38)' : 'rgba(239, 68, 68, 0.28)';
+    ctx.lineWidth = 1.5;
+    ctx.setLineDash([5, 5]);
+    ctx.beginPath();
+    ctx.moveTo(origin.x, origin.y);
+    ctx.lineTo(hit.x, hit.y);
+    ctx.stroke();
+    ctx.setLineDash([]);
+
+    // 落点准星
+    ctx.fillStyle = hit.portalable ? '#00A8FF' : '#EF4444';
+    ctx.beginPath();
+    ctx.arc(hit.x, hit.y, 4, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.restore();
+  }
+
+  drawPortal(ctx, portal) {
+    const isBlue = portal.color === 'blue';
+    const coreColor = isBlue ? COLORS.BLUE_PORTAL : COLORS.ORANGE_PORTAL;
+    const glowColor = isBlue ? COLORS.BLUE_GLOW : COLORS.ORANGE_GLOW;
+    const isVertical = Math.abs(portal.nx) === 1;
+    const pulse = 1 + Math.sin(this.time * 9) * 0.06;
+
+    ctx.save();
+    ctx.translate(portal.x + portal.nx * 2, portal.y + portal.ny * 2);
+    if (!isVertical) ctx.rotate(Math.PI / 2);
+
+    // 外发光光晕
+    ctx.shadowColor = coreColor;
+    ctx.shadowBlur = 16;
+
+    // 外环
+    ctx.fillStyle = glowColor;
+    ctx.beginPath();
+    ctx.ellipse(0, 0, 11 * pulse, portal.halfSpan * pulse, 0, 0, Math.PI * 2);
+    ctx.fill();
+
+    // 核心漩涡边框
+    ctx.strokeStyle = coreColor;
+    ctx.lineWidth = 4;
+    ctx.beginPath();
+    ctx.ellipse(0, 0, 7, portal.halfSpan - 2, 0, 0, Math.PI * 2);
+    ctx.stroke();
+
+    // 内部空间暗核
+    ctx.fillStyle = '#0F172A';
+    ctx.beginPath();
+    ctx.ellipse(0, 0, 4.5, portal.halfSpan - 6, 0, 0, Math.PI * 2);
+    ctx.fill();
+
+    ctx.restore();
+  }
+
+  drawCubes(ctx, cubes, carryingId) {
+    for (const c of cubes) {
+      ctx.save();
+      if (c.id === carryingId) {
+        ctx.shadowColor = '#00A8FF';
+        ctx.shadowBlur = 10;
+      }
+      // 主体外壳
+      ctx.fillStyle = '#E2E8F0';
+      ctx.fillRect(c.x, c.y, c.w, c.h);
+      ctx.strokeStyle = '#475569';
+      ctx.lineWidth = 2;
+      ctx.strokeRect(c.x + 1, c.y + 1, c.w - 2, c.h - 2);
+
+      // 四角金属护角
+      ctx.fillStyle = '#64748B';
+      ctx.fillRect(c.x, c.y, 6, 6);
+      ctx.fillRect(c.x + c.w - 6, c.y, 6, 6);
+      ctx.fillRect(c.x, c.y + c.h - 6, 6, 6);
+      ctx.fillRect(c.x + c.w - 6, c.y + c.h - 6, 6, 6);
+
+      // 标志性粉色爱心徽章
+      const cx = c.x + c.w / 2;
+      const cy = c.y + c.h / 2;
+      ctx.fillStyle = '#EC4899';
+      ctx.beginPath();
+      ctx.arc(cx - 3, cy - 1.5, 3.2, 0, Math.PI * 2);
+      ctx.arc(cx + 3, cy - 1.5, 3.2, 0, Math.PI * 2);
+      ctx.moveTo(cx - 6, cy);
+      ctx.lineTo(cx, cy + 6.5);
+      ctx.lineTo(cx + 6, cy);
+      ctx.fill();
+      ctx.restore();
+    }
+  }
+
+  drawPlayer(ctx, engine) {
+    const p = engine.player;
+    const cx = p.x + p.w / 2;
+    const cy = p.y + p.h / 2;
+
+    ctx.save();
+    // 橙色光圈实验服主体
+    ctx.fillStyle = '#F97316';
+    ctx.beginPath();
+    ctx.roundRect(p.x + 3, p.y + 12, p.w - 6, p.h - 14, 5);
+    ctx.fill();
+    ctx.strokeStyle = '#1E293B';
+    ctx.lineWidth = 2;
+    ctx.stroke();
+
+    // 白色腿部减震靴
+    ctx.fillStyle = '#F8FAFC';
+    ctx.fillRect(p.x + 4, p.y + p.h - 8, 6, 8);
+    ctx.fillRect(p.x + p.w - 10, p.y + p.h - 8, 6, 8);
+
+    // 头部
+    ctx.fillStyle = '#1E293B';
+    ctx.beginPath();
+    ctx.arc(cx, p.y + 8, 7.5, 0, Math.PI * 2);
+    ctx.fill();
+
+    // 护目镜亮条
+    ctx.fillStyle = '#38BDF8';
+    ctx.fillRect(cx + (p.facing > 0 ? 1 : -6), p.y + 6, 5, 3);
+
+    // 传送门枪（指向瞄准方向）
+    const gunOrigin = engine.getPlayerGunOrigin();
+    const angle = Math.atan2(engine.input.aimY - gunOrigin.y, engine.input.aimX - gunOrigin.x);
+    ctx.translate(gunOrigin.x, gunOrigin.y);
+    ctx.rotate(angle);
+    ctx.fillStyle = '#FFFFFF';
+    ctx.strokeStyle = '#0F172A';
+    ctx.lineWidth = 1.5;
+    ctx.beginPath();
+    ctx.roundRect(-2, -4, 18, 8, 3);
+    ctx.fill();
+    ctx.stroke();
+    // 枪身指示灯
+    ctx.fillStyle = '#00A8FF';
+    ctx.fillRect(4, -2, 6, 4);
+    ctx.restore();
+  }
+
+  drawParticles(ctx, particles) {
+    for (const pt of particles) {
+      const alpha = Math.max(0, pt.life / pt.maxLife);
+      ctx.save();
+      ctx.globalAlpha = alpha;
+      ctx.fillStyle = pt.color;
+      ctx.beginPath();
+      ctx.arc(pt.x, pt.y, pt.size, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.restore();
+    }
+  }
+}
+
+// === src/main.js ===
+/**
+ * 浏览器端入口控制器：绑定 Canvas、键鼠与触屏交互、HUD 与关卡切换
+ */
+
+
+
+
+
+function bootstrap() {
+  const canvas = document.getElementById('game-canvas');
+  const sound = new SoundSynthesizer();
+  const renderer = new PortalRenderer(canvas);
+
+  let touchPortalColor = 'blue';
+  let rafId = null;
+  let lastTime = 0;
+  let accumulator = 0;
+
+  const ui = {
+    chamberCode: document.getElementById('chamber-code'),
+    chamberTitle: document.getElementById('chamber-title'),
+    chamberSubtitle: document.getElementById('chamber-subtitle'),
+    statTime: document.getElementById('stat-time'),
+    statPortals: document.getElementById('stat-portals'),
+    statTeleports: document.getElementById('stat-teleports'),
+    blueBadge: document.getElementById('badge-blue'),
+    orangeBadge: document.getElementById('badge-orange'),
+    doorBadge: document.getElementById('badge-door'),
+    levelSelect: document.getElementById('level-select'),
+    btnReset: document.getElementById('btn-reset'),
+    btnClear: document.getElementById('btn-clear'),
+    btnHint: document.getElementById('btn-hint'),
+    btnMute: document.getElementById('btn-mute'),
+    hintBanner: document.getElementById('hint-banner'),
+    hintText: document.getElementById('hint-text'),
+    overlay: document.getElementById('stage-overlay'),
+    overlayTitle: document.getElementById('overlay-title'),
+    overlayDesc: document.getElementById('overlay-desc'),
+    overlayStats: document.getElementById('overlay-stats'),
+    btnNextLevel: document.getElementById('btn-next-level'),
+    btnReplayLevel: document.getElementById('btn-replay-level'),
+    touchModeBtn: document.getElementById('touch-portal-mode')
+  };
+
+  // 初始化关卡下拉菜单
+  ui.levelSelect.innerHTML = '';
+  RAW_LEVELS.forEach((lv, idx) => {
+    const opt = document.createElement('option');
+    opt.value = String(idx);
+    opt.textContent = `${lv.code} · ${lv.title}`;
+    ui.levelSelect.appendChild(opt);
+  });
+
+  const engine = new GameEngine({
+    sound,
+    onStateChange: (snap) => syncHUD(snap)
+  });
+
+  function syncHUD(snap) {
+    ui.chamberCode.textContent = snap.code;
+    ui.chamberTitle.textContent = snap.title;
+    ui.chamberSubtitle.textContent = snap.subtitle;
+    ui.levelSelect.value = String(snap.levelIndex);
+    ui.statPortals.textContent = String(snap.portalsFired);
+    ui.statTeleports.textContent = String(snap.teleportsCount);
+    ui.blueBadge.classList.toggle('active', snap.hasBlue);
+    ui.orangeBadge.classList.toggle('active', snap.hasOrange);
+    ui.doorBadge.textContent = snap.doorOpen ? '出口已解锁' : '出口已锁定';
+    ui.doorBadge.classList.toggle('open', snap.doorOpen);
+    ui.hintText.textContent = snap.hint;
+
+    if (snap.status === 'level_clear' || snap.status === 'all_clear') {
+      ui.overlay.classList.remove('hidden');
+      const isAll = snap.status === 'all_clear';
+      ui.overlayTitle.textContent = isAll ? '全部测试舱通关！' : `${snap.code} 测试完成`;
+      ui.overlayDesc.textContent = isAll
+        ? '恭喜完成光圈网页实验室全部 5 项空间跃迁与动量测试！'
+        : `你已通过「${snap.title}」，准备进入下一实验舱。`;
+      ui.overlayStats.textContent = `用时 ${snap.elapsedTime.toFixed(1)}s · 发射 ${snap.portalsFired} 次 · 跃迁 ${snap.teleportsCount} 次`;
+      ui.btnNextLevel.textContent = isAll ? '重新从第 1 关开始' : '进入下一实验舱';
+    } else {
+      ui.overlay.classList.add('hidden');
+    }
+  }
+
+  function resizeCanvas() {
+    const dpr = Math.min(window.devicePixelRatio || 1, 2);
+    canvas.width = WORLD_WIDTH * dpr;
+    canvas.height = WORLD_HEIGHT * dpr;
+    renderer.ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+    renderer.render(engine, 0);
+  }
+
+  function clientToWorld(clientX, clientY) {
+    const rect = canvas.getBoundingClientRect();
+    return {
+      x: ((clientX - rect.left) / rect.width) * WORLD_WIDTH,
+      y: ((clientY - rect.top) / rect.height) * WORLD_HEIGHT
+    };
+  }
+
+  // 鼠标瞄准与发射
+  canvas.addEventListener('mousemove', (e) => {
+    const pt = clientToWorld(e.clientX, e.clientY);
+    engine.setInput({ aimX: pt.x, aimY: pt.y });
+  });
+
+  canvas.addEventListener('mousedown', (e) => {
+    sound.ensureContext();
+    const pt = clientToWorld(e.clientX, e.clientY);
+    engine.setInput({ aimX: pt.x, aimY: pt.y });
+    if (e.button === 0) {
+      engine.firePortal('blue', pt.x, pt.y);
+    } else if (e.button === 2) {
+      engine.firePortal('orange', pt.x, pt.y);
+    }
+  });
+
+  canvas.addEventListener('contextmenu', (e) => e.preventDefault());
+
+  canvas.addEventListener('touchstart', (e) => {
+    if (e.touches.length === 0) return;
+    e.preventDefault();
+    sound.ensureContext();
+    const t = e.touches[0];
+    const pt = clientToWorld(t.clientX, t.clientY);
+    engine.setInput({ aimX: pt.x, aimY: pt.y });
+    engine.firePortal(touchPortalColor, pt.x, pt.y);
+  }, { passive: false });
+
+  // 键盘控制
+  window.addEventListener('keydown', (e) => {
+    sound.ensureContext();
+    const code = e.code;
+    if (['Space', 'ArrowUp', 'ArrowDown', 'ArrowLeft', 'ArrowRight'].includes(code)) {
+      e.preventDefault();
+    }
+    if (code === 'KeyA' || code === 'ArrowLeft') engine.setInput({ left: true });
+    if (code === 'KeyD' || code === 'ArrowRight') engine.setInput({ right: true });
+    if (code === 'KeyW' || code === 'ArrowUp' || code === 'Space') {
+      engine.setInput({ jumpPressed: true, jumpHeld: true });
+    }
+    if (code === 'KeyQ') engine.firePortal('orange');
+    if (code === 'KeyE') engine.toggleCarryCube();
+    if (code === 'KeyR') {
+      ui.hintBanner.classList.add('hidden');
+      engine.resetLevel();
+    }
+    if (code === 'KeyC') engine.clearPortals();
+  });
+
+  window.addEventListener('keyup', (e) => {
+    const code = e.code;
+    if (code === 'KeyA' || code === 'ArrowLeft') engine.setInput({ left: false });
+    if (code === 'KeyD' || code === 'ArrowRight') engine.setInput({ right: false });
+    if (code === 'KeyW' || code === 'ArrowUp' || code === 'Space') engine.setInput({ jumpHeld: false });
+  });
+
+  // 工具栏按钮绑定
+  ui.levelSelect.addEventListener('change', (e) => {
+    ui.hintBanner.classList.add('hidden');
+    engine.loadLevel(Number(e.target.value));
+  });
+
+  ui.btnReset.addEventListener('click', () => {
+    ui.hintBanner.classList.add('hidden');
+    engine.resetLevel();
+  });
+
+  ui.btnClear.addEventListener('click', () => engine.clearPortals());
+
+  ui.btnHint.addEventListener('click', () => {
+    ui.hintBanner.classList.toggle('hidden');
+  });
+
+  ui.btnMute.addEventListener('click', () => {
+    const muted = sound.toggleMute();
+    ui.btnMute.textContent = muted ? '音效：关' : '音效：开';
+  });
+
+  ui.btnNextLevel.addEventListener('click', () => {
+    ui.hintBanner.classList.add('hidden');
+    if (engine.status === 'all_clear') {
+      engine.loadLevel(0);
+    } else {
+      engine.nextLevel();
+    }
+  });
+
+  ui.btnReplayLevel.addEventListener('click', () => {
+    ui.hintBanner.classList.add('hidden');
+    engine.resetLevel();
+  });
+
+  // 触屏 / 屏幕辅助按键绑定
+  function bindHoldButton(id, onDown, onUp) {
+    const el = document.getElementById(id);
+    if (!el) return;
+    const start = (e) => {
+      e.preventDefault();
+      sound.ensureContext();
+      onDown();
+    };
+    const end = (e) => {
+      e.preventDefault();
+      onUp();
+    };
+    el.addEventListener('mousedown', start);
+    el.addEventListener('mouseup', end);
+    el.addEventListener('mouseleave', end);
+    el.addEventListener('touchstart', start, { passive: false });
+    el.addEventListener('touchend', end, { passive: false });
+    el.addEventListener('touchcancel', end, { passive: false });
+  }
+
+  bindHoldButton('touch-left', () => engine.setInput({ left: true }), () => engine.setInput({ left: false }));
+  bindHoldButton('touch-right', () => engine.setInput({ right: true }), () => engine.setInput({ right: false }));
+  bindHoldButton('touch-jump', () => engine.setInput({ jumpPressed: true, jumpHeld: true }), () => engine.setInput({ jumpHeld: false }));
+
+  const touchPickup = document.getElementById('touch-pickup');
+  if (touchPickup) {
+    touchPickup.addEventListener('click', () => {
+      sound.ensureContext();
+      engine.toggleCarryCube();
+    });
+  }
+
+  if (ui.touchModeBtn) {
+    ui.touchModeBtn.addEventListener('click', () => {
+      touchPortalColor = touchPortalColor === 'blue' ? 'orange' : 'blue';
+      ui.touchModeBtn.textContent = touchPortalColor === 'blue' ? '点击发射：蓝门' : '点击发射：橙门';
+      ui.touchModeBtn.classList.toggle('orange', touchPortalColor === 'orange');
+    });
+  }
+
+  // 主循环（固定物理步长累加器）
+  function loop(now) {
+    if (!lastTime) lastTime = now;
+    const frameDt = Math.min((now - lastTime) / 1000, 0.05);
+    lastTime = now;
+    accumulator += frameDt;
+
+    while (accumulator >= FIXED_DT) {
+      engine.step(FIXED_DT);
+      accumulator -= FIXED_DT;
+    }
+
+    ui.statTime.textContent = `${engine.elapsedTime.toFixed(1)}s`;
+    renderer.render(engine, frameDt);
+    rafId = window.requestAnimationFrame(loop);
+  }
+
+  window.addEventListener('resize', resizeCanvas);
+  resizeCanvas();
+  syncHUD(engine.getSnapshot());
+  if (rafId) window.cancelAnimationFrame(rafId);
+  rafId = window.requestAnimationFrame(loop);
+}
+
+window.addEventListener('load', bootstrap);
+})();
+  </script>
+</body>
+</html>

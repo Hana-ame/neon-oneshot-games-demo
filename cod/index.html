@@ -1,0 +1,3243 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
+  <title>Web COD — Operation Ironline 战术第一人称射击</title>
+  <style>
+    :root {
+      --bg-dark: #070b12;
+      --panel: rgba(11, 17, 28, 0.88);
+      --border: rgba(148, 163, 184, 0.28);
+      --amber: #f59e0b;
+      --cyan: #22d3ee;
+      --red: #ef4444;
+      --green: #22c55e;
+      --text: #f1f5f9;
+      --muted: #94a3b8;
+    }
+    * { box-sizing: border-box; margin: 0; padding: 0; user-select: none; }
+    html, body {
+      width: 100%;
+      height: 100%;
+      background: var(--bg-dark);
+      color: var(--text);
+      font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+      overflow: hidden;
+    }
+    #app {
+      position: relative;
+      width: 100%;
+      height: 100%;
+      display: flex;
+      flex-direction: column;
+    }
+    #game-stage {
+      position: relative;
+      flex: 1;
+      width: 100%;
+      height: 100%;
+      overflow: hidden;
+      background: #0b111c;
+    }
+    #game-canvas {
+      display: block;
+      width: 100%;
+      height: 100%;
+      cursor: crosshair;
+      touch-action: none;
+    }
+    .hud-layer {
+      position: absolute;
+      inset: 0;
+      pointer-events: none;
+      display: flex;
+      flex-direction: column;
+      justify-content: space-between;
+      padding: 12px 16px;
+    }
+    .hud-top {
+      display: flex;
+      justify-content: space-between;
+      align-items: flex-start;
+      gap: 12px;
+      padding-left: 152px;
+    }
+    .hud-score-strip {
+      display: flex;
+      gap: 14px;
+      align-items: center;
+      background: var(--panel);
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      padding: 6px 14px;
+      backdrop-filter: blur(6px);
+    }
+    .stat-pill {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      min-width: 54px;
+    }
+    .stat-label {
+      font-size: 10px;
+      letter-spacing: 0.08em;
+      color: var(--muted);
+      text-transform: uppercase;
+    }
+    .stat-val {
+      font-size: 16px;
+      font-weight: 700;
+      color: var(--text);
+      font-variant-numeric: tabular-nums;
+    }
+    .stat-val.amber { color: var(--amber); }
+    .stat-val.cyan { color: var(--cyan); }
+    .hud-actions {
+      display: flex;
+      gap: 8px;
+      pointer-events: auto;
+    }
+    .hud-btn {
+      background: var(--panel);
+      color: var(--text);
+      border: 1px solid var(--border);
+      border-radius: 6px;
+      padding: 6px 11px;
+      font-size: 12px;
+      font-weight: 600;
+      cursor: pointer;
+      transition: border-color 0.15s, background 0.15s;
+    }
+    .hud-btn:hover { border-color: var(--amber); background: rgba(30, 41, 59, 0.92); }
+    #kill-feed {
+      position: absolute;
+      top: 58px;
+      right: 16px;
+      display: flex;
+      flex-direction: column;
+      gap: 4px;
+      align-items: flex-end;
+    }
+    .kf-item {
+      background: rgba(9, 13, 20, 0.78);
+      border-right: 3px solid var(--amber);
+      padding: 4px 10px;
+      border-radius: 4px;
+      font-size: 12px;
+      font-weight: 600;
+      letter-spacing: 0.02em;
+    }
+    .kf-item.kf-hs { border-right-color: var(--red); color: #fecaca; }
+    #wave-banner {
+      position: absolute;
+      top: 74px;
+      left: 50%;
+      transform: translateX(-50%);
+      background: rgba(15, 23, 42, 0.9);
+      border: 1px solid var(--amber);
+      color: var(--amber);
+      padding: 8px 20px;
+      border-radius: 6px;
+      font-size: 14px;
+      font-weight: 700;
+      letter-spacing: 0.1em;
+      text-transform: uppercase;
+      white-space: nowrap;
+    }
+    #tactical-toast {
+      position: absolute;
+      top: 122px;
+      left: 50%;
+      transform: translateX(-50%) translateY(-8px);
+      background: rgba(14, 116, 144, 0.92);
+      border: 1px solid var(--cyan);
+      color: #ecfeff;
+      padding: 7px 16px;
+      border-radius: 6px;
+      font-size: 13px;
+      font-weight: 600;
+      opacity: 0;
+      transition: opacity 0.2s, transform 0.2s;
+      pointer-events: none;
+    }
+    #tactical-toast.visible { opacity: 1; transform: translateX(-50%) translateY(0); }
+
+    .hud-bottom {
+      display: flex;
+      justify-content: space-between;
+      align-items: flex-end;
+      gap: 12px;
+      flex-wrap: wrap;
+    }
+    .vitals-card, .weapon-card {
+      background: var(--panel);
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      padding: 10px 14px;
+      backdrop-filter: blur(6px);
+      min-width: 210px;
+    }
+    .bar-row {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      margin-bottom: 6px;
+    }
+    .bar-row:last-child { margin-bottom: 0; }
+    .bar-label { font-size: 11px; color: var(--muted); width: 34px; font-weight: 700; }
+    .bar-track {
+      flex: 1;
+      height: 8px;
+      background: rgba(255,255,255,0.1);
+      border-radius: 4px;
+      overflow: hidden;
+    }
+    .bar-fill { height: 100%; transition: width 0.15s; }
+    .bar-fill.hp { background: linear-gradient(90deg, #dc2626, #22c55e); }
+    .bar-fill.armor { background: linear-gradient(90deg, #0284c7, #38bdf8); }
+    .bar-num { font-size: 13px; font-weight: 700; width: 30px; text-align: right; font-variant-numeric: tabular-nums; }
+
+    .killstreak-bar {
+      display: flex;
+      gap: 8px;
+      margin-top: 8px;
+      pointer-events: auto;
+    }
+    .ks-btn {
+      flex: 1;
+      background: rgba(15, 23, 42, 0.75);
+      border: 1px solid rgba(148, 163, 184, 0.25);
+      color: var(--muted);
+      padding: 5px 8px;
+      border-radius: 5px;
+      font-size: 11px;
+      font-weight: 700;
+      cursor: pointer;
+    }
+    .ks-btn.ready {
+      border-color: var(--amber);
+      color: #fef3c7;
+      background: rgba(217, 119, 6, 0.28);
+      box-shadow: 0 0 12px rgba(245, 158, 11, 0.35);
+    }
+    .ks-btn.active-ks {
+      border-color: var(--cyan);
+      color: #cffafe;
+      background: rgba(6, 182, 212, 0.25);
+    }
+    .ks-btn:disabled { opacity: 0.55; cursor: not-allowed; }
+
+    .weapon-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: baseline;
+      gap: 10px;
+      margin-bottom: 4px;
+    }
+    #hud-weapon-name { font-size: 13px; font-weight: 700; color: var(--amber); }
+    #hud-reloading { font-size: 11px; color: var(--cyan); font-weight: 700; }
+    .ammo-row { display: flex; align-items: baseline; gap: 6px; margin-bottom: 8px; }
+    #hud-ammo { font-size: 28px; font-weight: 800; line-height: 1; font-variant-numeric: tabular-nums; }
+    #hud-reserve { font-size: 14px; color: var(--muted); font-variant-numeric: tabular-nums; }
+    .weapon-slots {
+      display: grid;
+      grid-template-columns: repeat(4, 1fr);
+      gap: 5px;
+      pointer-events: auto;
+    }
+    .slot-btn {
+      background: rgba(30, 41, 59, 0.7);
+      border: 1px solid rgba(148, 163, 184, 0.25);
+      color: var(--muted);
+      border-radius: 4px;
+      padding: 4px 2px;
+      font-size: 11px;
+      font-weight: 700;
+      cursor: pointer;
+    }
+    .slot-btn.active {
+      background: rgba(245, 158, 11, 0.22);
+      border-color: var(--amber);
+      color: var(--text);
+    }
+
+    /* On-screen touch / fallback controls */
+    .touch-controls {
+      display: flex;
+      gap: 6px;
+      align-items: center;
+      pointer-events: auto;
+      background: var(--panel);
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      padding: 6px 8px;
+    }
+    .t-btn {
+      min-width: 36px;
+      height: 34px;
+      background: rgba(30, 41, 59, 0.9);
+      border: 1px solid rgba(148, 163, 184, 0.35);
+      color: var(--text);
+      border-radius: 6px;
+      font-size: 12px;
+      font-weight: 700;
+      cursor: pointer;
+      padding: 0 8px;
+    }
+    .t-btn.fire { background: rgba(220, 38, 38, 0.85); border-color: #f87171; }
+    .t-btn.active { background: rgba(245, 158, 11, 0.35); border-color: var(--amber); }
+
+    /* Modal Overlays */
+    .overlay {
+      position: absolute;
+      inset: 0;
+      background: radial-gradient(circle at center, rgba(15, 23, 42, 0.86), rgba(5, 8, 15, 0.96));
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 16px;
+      z-index: 20;
+    }
+    .hidden { display: none !important; }
+    .modal-card {
+      width: 100%;
+      max-width: 580px;
+      background: rgba(15, 23, 42, 0.95);
+      border: 1px solid rgba(245, 158, 11, 0.45);
+      border-radius: 12px;
+      padding: 24px 26px;
+      box-shadow: 0 20px 60px rgba(0, 0, 0, 0.65);
+    }
+    .badge {
+      display: inline-block;
+      font-size: 11px;
+      font-weight: 700;
+      letter-spacing: 0.14em;
+      color: var(--amber);
+      border: 1px solid rgba(245, 158, 11, 0.45);
+      padding: 3px 10px;
+      border-radius: 999px;
+      margin-bottom: 10px;
+    }
+    .modal-title {
+      font-size: 28px;
+      font-weight: 800;
+      letter-spacing: 0.04em;
+      margin-bottom: 6px;
+    }
+    .modal-sub {
+      font-size: 13px;
+      color: var(--muted);
+      margin-bottom: 18px;
+      line-height: 1.5;
+    }
+    .map-grid {
+      display: grid;
+      grid-template-columns: repeat(2, 1fr);
+      gap: 10px;
+      margin-bottom: 18px;
+    }
+    .map-card {
+      text-align: left;
+      background: rgba(30, 41, 59, 0.65);
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      padding: 12px;
+      color: var(--text);
+      cursor: pointer;
+      transition: border-color 0.15s, background 0.15s;
+    }
+    .map-card.active {
+      border-color: var(--amber);
+      background: rgba(245, 158, 11, 0.14);
+    }
+    .map-card h4 { font-size: 14px; font-weight: 700; margin-bottom: 4px; }
+    .map-card p { font-size: 12px; color: var(--muted); line-height: 1.4; }
+    .controls-hint {
+      display: grid;
+      grid-template-columns: repeat(2, 1fr);
+      gap: 6px 14px;
+      background: rgba(7, 11, 18, 0.65);
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      padding: 10px 14px;
+      font-size: 12px;
+      color: #cbd5e1;
+      margin-bottom: 18px;
+    }
+    .controls-hint kbd {
+      background: #1e293b;
+      border: 1px solid #475569;
+      border-radius: 4px;
+      padding: 1px 5px;
+      font-size: 11px;
+      color: var(--amber);
+      margin-right: 4px;
+    }
+    .primary-btn {
+      width: 100%;
+      background: linear-gradient(135deg, #d97706, #f59e0b);
+      color: #0b111c;
+      border: none;
+      border-radius: 8px;
+      padding: 12px 18px;
+      font-size: 15px;
+      font-weight: 800;
+      letter-spacing: 0.08em;
+      cursor: pointer;
+    }
+    .primary-btn:hover { filter: brightness(1.08); }
+    .btn-row { display: flex; gap: 10px; margin-top: 12px; }
+    .secondary-btn {
+      flex: 1;
+      background: rgba(30, 41, 59, 0.85);
+      color: var(--text);
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      padding: 11px 16px;
+      font-size: 14px;
+      font-weight: 700;
+      cursor: pointer;
+    }
+    .stats-grid {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 10px;
+      margin-bottom: 18px;
+    }
+    .stat-box {
+      background: rgba(30, 41, 59, 0.65);
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      padding: 10px;
+      text-align: center;
+    }
+    .stat-box .label { font-size: 11px; color: var(--muted); }
+    .stat-box .num { font-size: 22px; font-weight: 800; color: var(--amber); margin-top: 2px; }
+
+    @media (max-width: 720px) {
+      .hud-top { padding-left: 0; justify-content: flex-end; }
+      .vitals-card, .weapon-card { min-width: 165px; padding: 8px 10px; }
+      .map-grid, .controls-hint { grid-template-columns: 1fr; }
+    }
+  </style>
+</head>
+<body>
+  <div id="app">
+    <div id="game-stage">
+      <canvas id="game-canvas"></canvas>
+
+      <div class="hud-layer">
+        <div class="hud-top">
+          <div class="hud-score-strip">
+            <div class="stat-pill"><span class="stat-label">波次</span><span class="stat-val amber" id="hud-wave">WAVE 1</span></div>
+            <div class="stat-pill"><span class="stat-label">剩余敌军</span><span class="stat-val" id="hud-enemies">0</span></div>
+            <div class="stat-pill"><span class="stat-label">得分</span><span class="stat-val cyan" id="hud-score">0</span></div>
+            <div class="stat-pill"><span class="stat-label">连杀</span><span class="stat-val amber" id="hud-streak">0</span></div>
+          </div>
+          <div class="hud-actions">
+            <button type="button" class="hud-btn" id="btn-mute">🔊 音效</button>
+            <button type="button" class="hud-btn" id="btn-pause">⏸ 暂停</button>
+          </div>
+        </div>
+
+        <div id="wave-banner" class="hidden">WAVE 1</div>
+        <div id="tactical-toast"></div>
+        <div id="kill-feed"></div>
+
+        <div class="hud-bottom">
+          <div class="vitals-card">
+            <div class="bar-row">
+              <span class="bar-label">生命</span>
+              <div class="bar-track"><div class="bar-fill hp" id="hud-hp-bar" style="width:100%"></div></div>
+              <span class="bar-num" id="hud-hp">100</span>
+            </div>
+            <div class="bar-row">
+              <span class="bar-label">护甲</span>
+              <div class="bar-track"><div class="bar-fill armor" id="hud-armor-bar" style="width:100%"></div></div>
+              <span class="bar-num" id="hud-armor">50</span>
+            </div>
+            <div class="killstreak-bar">
+              <button type="button" class="ks-btn" id="btn-uav" disabled>Q · UAV (3杀)</button>
+              <button type="button" class="ks-btn" id="btn-airstrike" disabled>E · 空袭 (5杀)</button>
+            </div>
+          </div>
+
+          <div class="touch-controls" aria-label="快捷控制">
+            <button type="button" class="t-btn" id="touch-left">↺</button>
+            <button type="button" class="t-btn" id="touch-up">▲</button>
+            <button type="button" class="t-btn" id="touch-down">▼</button>
+            <button type="button" class="t-btn" id="touch-right">↻</button>
+            <button type="button" class="t-btn" id="touch-ads">瞄准</button>
+            <button type="button" class="t-btn" id="touch-reload">换弹</button>
+            <button type="button" class="t-btn fire" id="touch-fire">开火</button>
+          </div>
+
+          <div class="weapon-card">
+            <div class="weapon-header">
+              <span id="hud-weapon-name">M4A1 突击步枪</span>
+              <span id="hud-reloading" class="hidden">换弹中...</span>
+            </div>
+            <div class="ammo-row">
+              <span id="hud-ammo">30</span>
+              <span id="hud-reserve">/ 150</span>
+            </div>
+            <div class="weapon-slots">
+              <button type="button" class="slot-btn active" data-weapon-slot="m4a1">1 M4</button>
+              <button type="button" class="slot-btn" data-weapon-slot="mp5">2 MP5</button>
+              <button type="button" class="slot-btn" data-weapon-slot="m870">3 M870</button>
+              <button type="button" class="slot-btn" data-weapon-slot="awp">4 AWP</button>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Start Menu Overlay -->
+      <div id="start-overlay" class="overlay">
+        <div class="modal-card">
+          <span class="badge">TASK FORCE 141 · TACTICAL FPS</span>
+          <h1 class="modal-title">WEB COD: OPERATION IRONLINE</h1>
+          <p class="modal-sub">基于纯 HTML5 Canvas 3D 纹理光线投射引擎与 Web Audio 实时音效合成。选择作战地图并立即部署。</p>
+          <div class="map-grid">
+            <button type="button" class="map-card active" data-map-btn="killhouse">
+              <h4>KILLHOUSE 杀戮屋</h4>
+              <p>经典近中距离 CQB 训练场，双侧包抄通道与中央集装箱掩体。</p>
+            </button>
+            <button type="button" class="map-card" data-map-btn="cargoyard">
+              <h4>CARGO YARD 集装箱码头</h4>
+              <p>开阔港口阵地，适合突击步枪推进与 AWP 远距离狙击卡点。</p>
+            </button>
+          </div>
+          <div class="controls-hint">
+            <div><kbd>WASD</kbd> 移动 / <kbd>Shift</kbd> 冲刺 / <kbd>C</kbd> 下蹲</div>
+            <div><kbd>鼠标</kbd> 视角转向（支持锁定或拖拽）</div>
+            <div><kbd>左键</kbd> 开火 / <kbd>右键</kbd> 机瞄开镜</div>
+            <div><kbd>1-4</kbd> 切枪 / <kbd>R</kbd> 换弹 / <kbd>Q E</kbd> 连杀</div>
+          </div>
+          <button type="button" class="primary-btn" id="btn-deploy">立即部署作战 · DEPLOY</button>
+        </div>
+      </div>
+
+      <!-- Pause Overlay -->
+      <div id="pause-overlay" class="overlay hidden">
+        <div class="modal-card" style="max-width:420px;text-align:center;">
+          <span class="badge">MISSION PAUSED</span>
+          <h2 class="modal-title">战术暂停</h2>
+          <p class="modal-sub">调整装备或点击继续返回战场。</p>
+          <button type="button" class="primary-btn" id="btn-resume">继续战斗</button>
+          <div class="btn-row">
+            <button type="button" class="secondary-btn" id="btn-restart-pause">重新部署</button>
+          </div>
+        </div>
+      </div>
+
+      <!-- Game Over Overlay -->
+      <div id="gameover-overlay" class="overlay hidden">
+        <div class="modal-card" style="max-width:480px;">
+          <span class="badge" style="color:#f87171;border-color:rgba(248,113,113,0.5);">KILLED IN ACTION</span>
+          <h2 class="modal-title">行动结束 · 战绩结算</h2>
+          <p class="modal-sub">本次作战数据已统计完毕，随时可以重新投入战斗。</p>
+          <div class="stats-grid">
+            <div class="stat-box"><div class="label">总得分</div><div class="num" id="go-score">0</div></div>
+            <div class="stat-box"><div class="label">抵达波次</div><div class="num" id="go-wave">1</div></div>
+            <div class="stat-box"><div class="label">消灭敌军</div><div class="num" id="go-kills">0</div></div>
+            <div class="stat-box"><div class="label">爆头击杀</div><div class="num" id="go-headshots">0</div></div>
+            <div class="stat-box"><div class="label">命中率</div><div class="num" id="go-accuracy">0%</div></div>
+            <div class="stat-box"><div class="label">最高连杀</div><div class="num" id="go-streak">0</div></div>
+          </div>
+          <button type="button" class="primary-btn" id="btn-restart-go">再次部署 · REDEPLOY</button>
+          <div class="btn-row">
+            <button type="button" class="secondary-btn" id="btn-menu-go">返回地图选择</button>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+  <script>
+// ===== Module: src/config.js =====
+/**
+ * Web COD — Operation Ironline
+ * Core game configuration: weapons, maps, enemy archetypes, and killstreaks.
+ */
+(function (root) {
+  'use strict';
+
+  const WEAPONS = {
+    m4a1: {
+      id: 'm4a1',
+      name: 'M4A1 突击步枪',
+      shortName: 'M4A1',
+      category: 'ASSAULT',
+      damage: 28,
+      headshotMultiplier: 2.0,
+      fireRateMs: 105,
+      magSize: 30,
+      reserveAmmo: 150,
+      reloadTimeMs: 1650,
+      range: 22,
+      falloffStart: 10,
+      minDamageRatio: 0.6,
+      pellets: 1,
+      spreadHip: 0.032,
+      spreadAds: 0.006,
+      recoilKick: 0.022,
+      adsFovFactor: 0.72,
+      auto: true,
+      moveSpeedFactor: 1.0,
+      color: '#4b5563',
+      accent: '#f59e0b'
+    },
+    mp5: {
+      id: 'mp5',
+      name: 'MP5 冲锋枪',
+      shortName: 'MP5',
+      category: 'SMG',
+      damage: 21,
+      headshotMultiplier: 1.8,
+      fireRateMs: 72,
+      magSize: 35,
+      reserveAmmo: 175,
+      reloadTimeMs: 1350,
+      range: 16,
+      falloffStart: 7,
+      minDamageRatio: 0.45,
+      pellets: 1,
+      spreadHip: 0.042,
+      spreadAds: 0.012,
+      recoilKick: 0.016,
+      adsFovFactor: 0.8,
+      auto: true,
+      moveSpeedFactor: 1.12,
+      color: '#374151',
+      accent: '#38bdf8'
+    },
+    m870: {
+      id: 'm870',
+      name: 'M870 战术霰弹枪',
+      shortName: 'M870',
+      category: 'SHOTGUN',
+      damage: 16,
+      headshotMultiplier: 1.5,
+      fireRateMs: 680,
+      magSize: 8,
+      reserveAmmo: 40,
+      reloadTimeMs: 2100,
+      range: 11,
+      falloffStart: 4.5,
+      minDamageRatio: 0.25,
+      pellets: 7,
+      spreadHip: 0.11,
+      spreadAds: 0.07,
+      recoilKick: 0.065,
+      adsFovFactor: 0.86,
+      auto: false,
+      moveSpeedFactor: 0.96,
+      color: '#292524',
+      accent: '#ef4444'
+    },
+    awp: {
+      id: 'awp',
+      name: 'AWP 狙击步枪',
+      shortName: 'AWP',
+      category: 'SNIPER',
+      damage: 95,
+      headshotMultiplier: 2.5,
+      fireRateMs: 1150,
+      magSize: 5,
+      reserveAmmo: 25,
+      reloadTimeMs: 2350,
+      range: 32,
+      falloffStart: 22,
+      minDamageRatio: 0.85,
+      pellets: 1,
+      spreadHip: 0.085,
+      spreadAds: 0.001,
+      recoilKick: 0.085,
+      adsFovFactor: 0.36,
+      auto: false,
+      scoped: true,
+      moveSpeedFactor: 0.88,
+      color: '#3f6212',
+      accent: '#a3e635'
+    }
+  };
+
+  const WEAPON_ORDER = ['m4a1', 'mp5', 'm870', 'awp'];
+
+  const ENEMY_TYPES = {
+    trooper: {
+      id: 'trooper',
+      name: '突击兵',
+      maxHp: 100,
+      speed: 2.05,
+      fireRateMs: 780,
+      damage: 11,
+      accuracy: 0.58,
+      sightRange: 14,
+      attackRange: 9.5,
+      score: 100,
+      radius: 0.32,
+      bodyColor: '#475569',
+      armorColor: '#1e293b',
+      visorColor: '#f97316'
+    },
+    heavy: {
+      id: 'heavy',
+      name: '重装兵',
+      maxHp: 190,
+      speed: 1.4,
+      fireRateMs: 520,
+      damage: 14,
+      accuracy: 0.5,
+      sightRange: 13,
+      attackRange: 8.0,
+      score: 200,
+      radius: 0.38,
+      bodyColor: '#334155',
+      armorColor: '#0f172a',
+      visorColor: '#ef4444'
+    },
+    sniper: {
+      id: 'sniper',
+      name: '狙击手',
+      maxHp: 80,
+      speed: 1.75,
+      fireRateMs: 1650,
+      damage: 26,
+      accuracy: 0.78,
+      sightRange: 19,
+      attackRange: 16.0,
+      score: 150,
+      radius: 0.3,
+      bodyColor: '#365314',
+      armorColor: '#1a2e05',
+      visorColor: '#22d3ee'
+    }
+  };
+
+  const KILLSTREAKS = {
+    uav: {
+      id: 'uav',
+      name: 'UAV 战术侦察机',
+      requiredKills: 3,
+      durationMs: 15000
+    },
+    airstrike: {
+      id: 'airstrike',
+      name: '精确空袭',
+      requiredKills: 5,
+      radius: 4.5,
+      damage: 220
+    }
+  };
+
+  // Wall tile legend:
+  // 0 = empty, 1 = concrete bunker, 2 = shipping container (rust),
+  // 3 = tactical hazard barrier, 4 = dark reinforced steel
+  const MAPS = {
+    killhouse: {
+      id: 'killhouse',
+      name: 'KILLHOUSE 杀戮屋',
+      description: '经典近中距离CQB训练场，双侧包抄通道与中央集装箱掩体',
+      playerSpawn: { x: 2.5, y: 2.5, angle: 0.6 },
+      enemySpawns: [
+        { x: 13.5, y: 2.5 },
+        { x: 13.5, y: 13.5 },
+        { x: 2.5, y: 13.5 },
+        { x: 8.5, y: 13.5 },
+        { x: 13.5, y: 8.5 },
+        { x: 8.5, y: 2.5 }
+      ],
+      grid: [
+        [4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4],
+        [4,0,0,0,0,1,0,0,0,0,1,0,0,0,0,4],
+        [4,0,0,0,0,1,0,0,0,0,1,0,0,0,0,4],
+        [4,0,0,3,0,0,0,2,2,0,0,0,3,0,0,4],
+        [4,0,0,3,0,0,0,0,0,0,0,0,3,0,0,4],
+        [4,1,0,0,0,0,0,0,0,0,0,0,0,0,1,4],
+        [4,0,0,0,2,0,0,3,3,0,0,2,0,0,0,4],
+        [4,0,0,0,2,0,0,0,0,0,0,2,0,0,0,4],
+        [4,0,0,0,0,0,0,0,0,0,0,0,0,0,0,4],
+        [4,0,0,0,2,0,0,3,3,0,0,2,0,0,0,4],
+        [4,1,0,0,0,0,0,0,0,0,0,0,0,0,1,4],
+        [4,0,0,3,0,0,0,0,0,0,0,0,3,0,0,4],
+        [4,0,0,3,0,0,0,2,2,0,0,0,3,0,0,4],
+        [4,0,0,0,0,1,0,0,0,0,1,0,0,0,0,4],
+        [4,0,0,0,0,1,0,0,0,0,1,0,0,0,0,4],
+        [4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4]
+      ]
+    },
+    cargoyard: {
+      id: 'cargoyard',
+      name: 'CARGO YARD 集装箱码头',
+      description: '开阔中远距离港口阵地，适合步枪推进与狙击卡点',
+      playerSpawn: { x: 2.5, y: 8.0, angle: 0.0 },
+      enemySpawns: [
+        { x: 13.5, y: 2.5 },
+        { x: 13.5, y: 8.0 },
+        { x: 13.5, y: 13.5 },
+        { x: 9.5, y: 2.5 },
+        { x: 9.5, y: 13.5 },
+        { x: 6.5, y: 2.5 }
+      ],
+      grid: [
+        [4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4],
+        [4,0,0,0,0,0,0,0,0,0,0,0,0,0,0,4],
+        [4,0,2,2,0,0,0,1,1,0,0,0,2,2,0,4],
+        [4,0,2,0,0,0,0,0,0,0,0,0,0,2,0,4],
+        [4,0,0,0,0,3,0,0,0,0,3,0,0,0,0,4],
+        [4,0,0,0,0,3,0,2,2,0,3,0,0,0,0,4],
+        [4,0,1,0,0,0,0,0,0,0,0,0,0,1,0,4],
+        [4,0,0,0,0,0,0,0,0,0,0,0,0,0,0,4],
+        [4,0,0,0,0,0,0,0,0,0,0,0,0,0,0,4],
+        [4,0,1,0,0,0,0,0,0,0,0,0,0,1,0,4],
+        [4,0,0,0,0,3,0,2,2,0,3,0,0,0,0,4],
+        [4,0,0,0,0,3,0,0,0,0,3,0,0,0,0,4],
+        [4,0,2,0,0,0,0,0,0,0,0,0,0,2,0,4],
+        [4,0,2,2,0,0,0,1,1,0,0,0,2,2,0,4],
+        [4,0,0,0,0,0,0,0,0,0,0,0,0,0,0,4],
+        [4,4,4,4,4,4,4,4,4,4,4,4,4,4,4,4]
+      ]
+    }
+  };
+
+  const PLAYER_DEFAULTS = {
+    maxHp: 100,
+    maxArmor: 50,
+    baseSpeed: 3.4,
+    sprintMultiplier: 1.48,
+    crouchMultiplier: 0.62,
+    adsSpeedMultiplier: 0.65,
+    radius: 0.28,
+    regenDelayMs: 4000,
+    regenRatePerSec: 18,
+    baseFov: Math.PI / 3
+  };
+
+  const Config = {
+    WEAPONS,
+    WEAPON_ORDER,
+    ENEMY_TYPES,
+    KILLSTREAKS,
+    MAPS,
+    PLAYER_DEFAULTS
+  };
+
+  if (typeof module !== 'undefined' && module.exports) {
+    module.exports = Config;
+  } else {
+    root.WebCOD = root.WebCOD || {};
+    root.WebCOD.Config = Config;
+  }
+})(typeof globalThis !== 'undefined' ? globalThis : window);
+
+
+// ===== Module: src/map.js =====
+/**
+ * Web COD — Operation Ironline
+ * Tactical map representation, AABB/circle collision resolution,
+ * DDA raycasting, and line-of-sight checks.
+ */
+(function (root) {
+  'use strict';
+
+  class TacticalMap {
+    constructor(mapDef) {
+      if (!mapDef || !Array.isArray(mapDef.grid) || mapDef.grid.length === 0) {
+        throw new Error('Invalid map definition');
+      }
+      this.id = mapDef.id;
+      this.name = mapDef.name;
+      this.description = mapDef.description || '';
+      this.grid = mapDef.grid.map((row) => row.slice());
+      this.height = this.grid.length;
+      this.width = this.grid[0].length;
+      this.playerSpawn = { ...mapDef.playerSpawn };
+      this.enemySpawns = (mapDef.enemySpawns || []).map((s) => ({ ...s }));
+    }
+
+    getTile(x, y) {
+      const gx = Math.floor(x);
+      const gy = Math.floor(y);
+      if (gx < 0 || gy < 0 || gx >= this.width || gy >= this.height) {
+        return 4; // Solid outer boundary
+      }
+      return this.grid[gy][gx];
+    }
+
+    isWall(x, y) {
+      return this.getTile(x, y) > 0;
+    }
+
+    /**
+     * Checks whether a circle of given radius at (x, y) overlaps any solid tile.
+     */
+    collidesCircle(x, y, radius) {
+      const minX = Math.floor(x - radius);
+      const maxX = Math.floor(x + radius);
+      const minY = Math.floor(y - radius);
+      const maxY = Math.floor(y + radius);
+
+      for (let gy = minY; gy <= maxY; gy++) {
+        for (let gx = minX; gx <= maxX; gx++) {
+          if (this.getTile(gx, gy) > 0) {
+            const closestX = Math.max(gx, Math.min(x, gx + 1));
+            const closestY = Math.max(gy, Math.min(y, gy + 1));
+            const dx = x - closestX;
+            const dy = y - closestY;
+            if (dx * dx + dy * dy < radius * radius) {
+              return true;
+            }
+          }
+        }
+      }
+      return false;
+    }
+
+    /**
+     * Moves an entity from (x, y) by (dx, dy) with axis-separated wall sliding.
+     */
+    moveWithSlide(x, y, dx, dy, radius) {
+      let nextX = x + dx;
+      let nextY = y;
+      if (this.collidesCircle(nextX, nextY, radius)) {
+        nextX = x;
+      }
+      nextY = y + dy;
+      if (this.collidesCircle(nextX, nextY, radius)) {
+        nextY = y;
+      }
+      return { x: nextX, y: nextY };
+    }
+
+    /**
+     * Digital Differential Analyzer (DDA) raycast from (originX, originY) along angle.
+     * Returns hit distance, hit coordinates, wall tile ID, side (0=NS, 1=EW), and texture U coordinate.
+     */
+    castRay(originX, originY, angle, maxDist = 40) {
+      const rayDirX = Math.cos(angle);
+      const rayDirY = Math.sin(angle);
+
+      let mapX = Math.floor(originX);
+      let mapY = Math.floor(originY);
+
+      const deltaDistX = rayDirX === 0 ? 1e30 : Math.abs(1 / rayDirX);
+      const deltaDistY = rayDirY === 0 ? 1e30 : Math.abs(1 / rayDirY);
+
+      let stepX, stepY, sideDistX, sideDistY;
+
+      if (rayDirX < 0) {
+        stepX = -1;
+        sideDistX = (originX - mapX) * deltaDistX;
+      } else {
+        stepX = 1;
+        sideDistX = (mapX + 1.0 - originX) * deltaDistX;
+      }
+
+      if (rayDirY < 0) {
+        stepY = -1;
+        sideDistY = (originY - mapY) * deltaDistY;
+      } else {
+        stepY = 1;
+        sideDistY = (mapY + 1.0 - originY) * deltaDistY;
+      }
+
+      let side = 0;
+      let tile = 0;
+      let dist = 0;
+      let steps = 0;
+      const maxSteps = Math.ceil(maxDist * 2.5);
+
+      while (steps < maxSteps) {
+        steps++;
+        if (sideDistX < sideDistY) {
+          sideDistX += deltaDistX;
+          mapX += stepX;
+          side = 0;
+          dist = (mapX - originX + (1 - stepX) / 2) / (rayDirX || 1e-9);
+        } else {
+          sideDistY += deltaDistY;
+          mapY += stepY;
+          side = 1;
+          dist = (mapY - originY + (1 - stepY) / 2) / (rayDirY || 1e-9);
+        }
+
+        if (dist > maxDist) {
+          return {
+            hit: false,
+            dist: maxDist,
+            tile: 0,
+            side,
+            wallX: 0,
+            hitX: originX + rayDirX * maxDist,
+            hitY: originY + rayDirY * maxDist
+          };
+        }
+
+        tile = this.getTile(mapX, mapY);
+        if (tile > 0) {
+          const safeDist = Math.max(0.001, dist);
+          let wallX = side === 0 ? originY + safeDist * rayDirY : originX + safeDist * rayDirX;
+          wallX -= Math.floor(wallX);
+          return {
+            hit: true,
+            dist: safeDist,
+            tile,
+            side,
+            wallX,
+            hitX: originX + rayDirX * safeDist,
+            hitY: originY + rayDirY * safeDist
+          };
+        }
+      }
+
+      return {
+        hit: false,
+        dist: maxDist,
+        tile: 0,
+        side: 0,
+        wallX: 0,
+        hitX: originX + rayDirX * maxDist,
+        hitY: originY + rayDirY * maxDist
+      };
+    }
+
+    /**
+     * Checks unobstructed line of sight between two points.
+     */
+    hasLineOfSight(x1, y1, x2, y2) {
+      const dx = x2 - x1;
+      const dy = y2 - y1;
+      const dist = Math.hypot(dx, dy);
+      if (dist < 0.001) return true;
+      const angle = Math.atan2(dy, dx);
+      const ray = this.castRay(x1, y1, angle, dist);
+      return !ray.hit || ray.dist >= dist - 0.05;
+    }
+  }
+
+  if (typeof module !== 'undefined' && module.exports) {
+    module.exports = { TacticalMap };
+  } else {
+    root.WebCOD = root.WebCOD || {};
+    root.WebCOD.TacticalMap = TacticalMap;
+  }
+})(typeof globalThis !== 'undefined' ? globalThis : window);
+
+
+// ===== Module: src/weapons.js =====
+/**
+ * Web COD — Operation Ironline
+ * Weapon loadout state, firing, recoil, reload, ADS, and ballistic damage calculation.
+ */
+(function (root) {
+  'use strict';
+
+  const Config =
+    root.WebCOD.Config;
+
+  class WeaponSystem {
+    constructor(weaponOrder = Config.WEAPON_ORDER) {
+      this.order = weaponOrder.slice();
+      this.slots = {};
+      for (const id of this.order) {
+        const spec = Config.WEAPONS[id];
+        if (!spec) continue;
+        this.slots[id] = {
+          id,
+          ammo: spec.magSize,
+          reserve: spec.reserveAmmo
+        };
+      }
+      this.currentId = this.order[0];
+      this.lastShotTime = -99999;
+      this.reloading = false;
+      this.reloadEndTime = 0;
+      this.recoilOffset = 0;
+      this.muzzleFlashTimer = 0;
+      this.adsProgress = 0;
+      this.isAds = false;
+    }
+
+    getCurrentSpec() {
+      return Config.WEAPONS[this.currentId];
+    }
+
+    getCurrentSlot() {
+      return this.slots[this.currentId];
+    }
+
+    switchWeapon(weaponId) {
+      if (!this.slots[weaponId] || weaponId === this.currentId) return false;
+      this.currentId = weaponId;
+      this.reloading = false;
+      this.reloadEndTime = 0;
+      this.recoilOffset = 0;
+      this.isAds = false;
+      this.adsProgress = 0;
+      return true;
+    }
+
+    switchByIndex(index) {
+      if (index < 0 || index >= this.order.length) return false;
+      return this.switchWeapon(this.order[index]);
+    }
+
+    cycleWeapon(delta) {
+      const idx = this.order.indexOf(this.currentId);
+      const next = (idx + delta + this.order.length) % this.order.length;
+      return this.switchWeapon(this.order[next]);
+    }
+
+    setAds(active) {
+      this.isAds = Boolean(active) && !this.reloading;
+    }
+
+    startReload(nowMs) {
+      const spec = this.getCurrentSpec();
+      const slot = this.getCurrentSlot();
+      if (this.reloading) return false;
+      if (slot.ammo >= spec.magSize || slot.reserve <= 0) return false;
+      this.reloading = true;
+      this.isAds = false;
+      this.reloadEndTime = nowMs + spec.reloadTimeMs;
+      return true;
+    }
+
+    update(dtSec, nowMs) {
+      let reloadCompleted = false;
+      if (this.reloading && nowMs >= this.reloadEndTime) {
+        const spec = this.getCurrentSpec();
+        const slot = this.getCurrentSlot();
+        const needed = spec.magSize - slot.ammo;
+        const load = Math.min(needed, slot.reserve);
+        slot.ammo += load;
+        slot.reserve -= load;
+        this.reloading = false;
+        reloadCompleted = true;
+      }
+
+      // Smooth recoil recovery
+      this.recoilOffset = Math.max(0, this.recoilOffset - dtSec * 0.24);
+      this.muzzleFlashTimer = Math.max(0, this.muzzleFlashTimer - dtSec);
+
+      // Smooth ADS blend
+      const targetAds = this.isAds && !this.reloading ? 1 : 0;
+      const blendRate = 8.5 * dtSec;
+      if (this.adsProgress < targetAds) {
+        this.adsProgress = Math.min(targetAds, this.adsProgress + blendRate);
+      } else {
+        this.adsProgress = Math.max(targetAds, this.adsProgress - blendRate);
+      }
+
+      return { reloadCompleted };
+    }
+
+    canFire(nowMs) {
+      const spec = this.getCurrentSpec();
+      const slot = this.getCurrentSlot();
+      if (this.reloading) return false;
+      if (slot.ammo <= 0) return false;
+      return nowMs - this.lastShotTime >= spec.fireRateMs;
+    }
+
+    /**
+     * Fires the active weapon if ready. Returns array of pellet angle offsets, or null.
+     */
+    fire(nowMs, rng = Math.random) {
+      if (!this.canFire(nowMs)) return null;
+      const spec = this.getCurrentSpec();
+      const slot = this.getCurrentSlot();
+
+      slot.ammo -= 1;
+      this.lastShotTime = nowMs;
+      this.recoilOffset = Math.min(0.18, this.recoilOffset + spec.recoilKick);
+      this.muzzleFlashTimer = 0.065;
+
+      const spread =
+        spec.spreadHip * (1 - this.adsProgress) +
+        spec.spreadAds * this.adsProgress +
+        this.recoilOffset * 0.22;
+
+      const pellets = [];
+      for (let i = 0; i < spec.pellets; i++) {
+        const angleOffset = (rng() - 0.5) * 2 * spread;
+        const verticalOffset = (rng() - 0.5) * 2 * spread * 0.6;
+        pellets.push({ angleOffset, verticalOffset });
+      }
+
+      return {
+        weaponId: spec.id,
+        pellets,
+        ammoLeft: slot.ammo,
+        autoReloadNeeded: slot.ammo === 0 && slot.reserve > 0
+      };
+    }
+
+    /**
+     * Computes distance-attenuated ballistic damage with optional headshot multiplier.
+     */
+    computeDamage(weaponId, distance, isHeadshot = false) {
+      const spec = Config.WEAPONS[weaponId];
+      if (!spec || distance > spec.range) return 0;
+
+      let ratio = 1.0;
+      if (distance > spec.falloffStart) {
+        const span = Math.max(0.001, spec.range - spec.falloffStart);
+        const t = Math.min(1, (distance - spec.falloffStart) / span);
+        ratio = 1 - t * (1 - spec.minDamageRatio);
+      }
+
+      let dmg = spec.damage * ratio;
+      if (isHeadshot) {
+        dmg *= spec.headshotMultiplier;
+      }
+      return Math.round(dmg);
+    }
+
+    refillAmmo(ratio = 0.5) {
+      for (const id of this.order) {
+        const spec = Config.WEAPONS[id];
+        const slot = this.slots[id];
+        const add = Math.ceil(spec.reserveAmmo * ratio);
+        slot.reserve = Math.min(spec.reserveAmmo, slot.reserve + add);
+      }
+    }
+  }
+
+  if (typeof module !== 'undefined' && module.exports) {
+    module.exports = { WeaponSystem };
+  } else {
+    root.WebCOD = root.WebCOD || {};
+    root.WebCOD.WeaponSystem = WeaponSystem;
+  }
+})(typeof globalThis !== 'undefined' ? globalThis : window);
+
+
+// ===== Module: src/player.js =====
+/**
+ * Web COD — Operation Ironline
+ * Player physics, movement, health regeneration, armor absorption, and killstreaks.
+ */
+(function (root) {
+  'use strict';
+
+  const Config =
+    root.WebCOD.Config;
+
+  class Player {
+    constructor(spawn) {
+      const d = Config.PLAYER_DEFAULTS;
+      this.x = spawn.x;
+      this.y = spawn.y;
+      this.angle = spawn.angle || 0;
+      this.pitch = 0; // vertical look offset in pixels/ratio (-0.35 to 0.35)
+      this.hp = d.maxHp;
+      this.maxHp = d.maxHp;
+      this.armor = d.maxArmor;
+      this.maxArmor = d.maxArmor;
+      this.radius = d.radius;
+      this.alive = true;
+
+      this.isSprinting = false;
+      this.isCrouching = false;
+      this.bobPhase = 0;
+      this.moveIntensity = 0;
+
+      this.lastDamageTime = -99999;
+      this.damageFlash = 0;
+      this.lastHitAngle = null; // world angle pointing toward attacker
+
+      this.kills = 0;
+      this.headshots = 0;
+      this.score = 0;
+      this.currentStreak = 0;
+      this.bestStreak = 0;
+
+      this.uavReady = false;
+      this.uavActiveUntil = 0;
+      this.airstrikeReady = false;
+    }
+
+    rotate(deltaAngle, deltaPitch = 0) {
+      this.angle = (this.angle + deltaAngle + Math.PI * 2) % (Math.PI * 2);
+      this.pitch = Math.max(-0.35, Math.min(0.35, this.pitch + deltaPitch));
+    }
+
+    move(input, dtSec, map, weaponSpeedFactor = 1.0, isAds = false) {
+      if (!this.alive) return;
+      const d = Config.PLAYER_DEFAULTS;
+
+      this.isCrouching = Boolean(input.crouch);
+      this.isSprinting =
+        Boolean(input.sprint) && !this.isCrouching && !isAds && (input.forward || 0) > 0;
+
+      let speed = d.baseSpeed * weaponSpeedFactor;
+      if (this.isSprinting) speed *= d.sprintMultiplier;
+      if (this.isCrouching) speed *= d.crouchMultiplier;
+      if (isAds) speed *= d.adsSpeedMultiplier;
+
+      const forward = (input.forward || 0);
+      const strafe = (input.strafe || 0);
+      const len = Math.hypot(forward, strafe);
+
+      if (len > 0.001) {
+        const nf = forward / len;
+        const ns = strafe / len;
+        const cos = Math.cos(this.angle);
+        const sin = Math.sin(this.angle);
+
+        const dx = (cos * nf - sin * ns) * speed * dtSec;
+        const dy = (sin * nf + cos * ns) * speed * dtSec;
+
+        const res = map.moveWithSlide(this.x, this.y, dx, dy, this.radius);
+        const moved = Math.hypot(res.x - this.x, res.y - this.y);
+        this.x = res.x;
+        this.y = res.y;
+        this.moveIntensity = Math.min(1, moved / Math.max(0.001, speed * dtSec));
+        this.bobPhase += dtSec * (this.isSprinting ? 12.5 : 8.5) * this.moveIntensity;
+      } else {
+        this.moveIntensity = Math.max(0, this.moveIntensity - dtSec * 8);
+      }
+    }
+
+    takeDamage(amount, nowMs, sourceX = null, sourceY = null) {
+      if (!this.alive || amount <= 0) return 0;
+
+      let remaining = amount;
+      if (this.armor > 0) {
+        const absorbed = Math.min(this.armor, Math.ceil(remaining * 0.55));
+        this.armor -= absorbed;
+        remaining -= absorbed;
+      }
+
+      this.hp = Math.max(0, this.hp - remaining);
+      this.lastDamageTime = nowMs;
+      this.damageFlash = 1.0;
+
+      if (sourceX !== null && sourceY !== null) {
+        this.lastHitAngle = Math.atan2(sourceY - this.y, sourceX - this.x);
+      }
+
+      if (this.hp <= 0) {
+        this.alive = false;
+        this.currentStreak = 0;
+      }
+      return amount;
+    }
+
+    heal(hpAmount = 35, armorAmount = 25) {
+      if (!this.alive) return;
+      this.hp = Math.min(this.maxHp, this.hp + hpAmount);
+      this.armor = Math.min(this.maxArmor, this.armor + armorAmount);
+    }
+
+    registerKill(points, isHeadshot = false) {
+      this.kills += 1;
+      if (isHeadshot) this.headshots += 1;
+      this.currentStreak += 1;
+      if (this.currentStreak > this.bestStreak) {
+        this.bestStreak = this.currentStreak;
+      }
+      const bonus = isHeadshot ? 50 : 0;
+      this.score += points + bonus;
+
+      const unlocked = [];
+      if (
+        this.currentStreak >= Config.KILLSTREAKS.uav.requiredKills &&
+        this.currentStreak % Config.KILLSTREAKS.uav.requiredKills === 0 &&
+        !this.uavReady
+      ) {
+        this.uavReady = true;
+        unlocked.push('uav');
+      }
+      if (
+        this.currentStreak >= Config.KILLSTREAKS.airstrike.requiredKills &&
+        this.currentStreak % Config.KILLSTREAKS.airstrike.requiredKills === 0 &&
+        !this.airstrikeReady
+      ) {
+        this.airstrikeReady = true;
+        unlocked.push('airstrike');
+      }
+      return unlocked;
+    }
+
+    activateUav(nowMs) {
+      if (!this.uavReady) return false;
+      this.uavReady = false;
+      this.uavActiveUntil = nowMs + Config.KILLSTREAKS.uav.durationMs;
+      return true;
+    }
+
+    isUavActive(nowMs) {
+      return nowMs < this.uavActiveUntil;
+    }
+
+    consumeAirstrike() {
+      if (!this.airstrikeReady) return false;
+      this.airstrikeReady = false;
+      return true;
+    }
+
+    update(dtSec, nowMs) {
+      const d = Config.PLAYER_DEFAULTS;
+      this.damageFlash = Math.max(0, this.damageFlash - dtSec * 2.2);
+
+      if (this.alive && this.hp < this.maxHp && nowMs - this.lastDamageTime >= d.regenDelayMs) {
+        this.hp = Math.min(this.maxHp, this.hp + d.regenRatePerSec * dtSec);
+      }
+    }
+  }
+
+  if (typeof module !== 'undefined' && module.exports) {
+    module.exports = { Player };
+  } else {
+    root.WebCOD = root.WebCOD || {};
+    root.WebCOD.Player = Player;
+  }
+})(typeof globalThis !== 'undefined' ? globalThis : window);
+
+
+// ===== Module: src/ai.js =====
+/**
+ * Web COD — Operation Ironline
+ * Tactical Enemy AI Finite State Machine (PATROL, CHASE, ENGAGE, STRAFE, DEAD)
+ * and Wave Spawner.
+ */
+(function (root) {
+  'use strict';
+
+  const Config =
+    root.WebCOD.Config;
+
+  let nextEnemyId = 1;
+
+  class Enemy {
+    constructor(typeId, x, y, waveScale = 1.0) {
+      const spec = Config.ENEMY_TYPES[typeId] || Config.ENEMY_TYPES.trooper;
+      this.id = nextEnemyId++;
+      this.typeId = spec.id;
+      this.name = spec.name;
+      this.x = x;
+      this.y = y;
+      this.radius = spec.radius;
+      this.maxHp = Math.round(spec.maxHp * (1 + (waveScale - 1) * 0.12));
+      this.hp = this.maxHp;
+      this.speed = spec.speed * (1 + Math.min(0.35, (waveScale - 1) * 0.04));
+      this.fireRateMs = Math.max(320, Math.round(spec.fireRateMs / (1 + (waveScale - 1) * 0.05)));
+      this.damage = Math.round(spec.damage * (1 + (waveScale - 1) * 0.08));
+      this.accuracy = Math.min(0.9, spec.accuracy + (waveScale - 1) * 0.02);
+      this.sightRange = spec.sightRange;
+      this.attackRange = spec.attackRange;
+      this.score = spec.score;
+      this.bodyColor = spec.bodyColor;
+      this.armorColor = spec.armorColor;
+      this.visorColor = spec.visorColor;
+
+      this.state = 'PATROL';
+      this.angle = 0;
+      this.lastShotTime = -99999;
+      this.hitFlash = 0;
+      this.muzzleFlash = 0;
+      this.strafeDir = Math.random() < 0.5 ? -1 : 1;
+      this.stateTimer = 0;
+      this.lastSeenPlayer = null;
+      this.alive = true;
+    }
+
+    takeDamage(amount) {
+      if (!this.alive) return { killed: false, damage: 0 };
+      const applied = Math.max(0, amount);
+      this.hp = Math.max(0, this.hp - applied);
+      this.hitFlash = 0.16;
+      if (this.hp <= 0) {
+        this.alive = false;
+        this.state = 'DEAD';
+        return { killed: true, damage: applied };
+      }
+      if (this.state === 'PATROL') {
+        this.state = 'CHASE';
+      }
+      return { killed: false, damage: applied };
+    }
+
+    /**
+     * Updates enemy AI state, movement, and firing decision.
+     * Returns a shot event if the enemy fires at the player this tick.
+     */
+    update(dtSec, nowMs, player, map, rng = Math.random) {
+      this.hitFlash = Math.max(0, this.hitFlash - dtSec);
+      this.muzzleFlash = Math.max(0, this.muzzleFlash - dtSec);
+
+      if (!this.alive || !player.alive) return null;
+
+      const dx = player.x - this.x;
+      const dy = player.y - this.y;
+      const dist = Math.hypot(dx, dy);
+      const angleToPlayer = Math.atan2(dy, dx);
+      const canSee =
+        dist <= this.sightRange && map.hasLineOfSight(this.x, this.y, player.x, player.y);
+
+      if (canSee) {
+        this.lastSeenPlayer = { x: player.x, y: player.y };
+        this.angle = angleToPlayer;
+      }
+
+      this.stateTimer -= dtSec;
+
+      // State transitions
+      if (canSee && dist <= this.attackRange) {
+        this.state = dist < 3.5 ? 'STRAFE' : 'ENGAGE';
+      } else if (canSee || this.lastSeenPlayer) {
+        this.state = 'CHASE';
+      } else {
+        this.state = 'PATROL';
+      }
+
+      // Movement by state
+      let moveX = 0;
+      let moveY = 0;
+
+      if (this.state === 'CHASE') {
+        const target = canSee ? player : this.lastSeenPlayer;
+        const tdx = target.x - this.x;
+        const tdy = target.y - this.y;
+        const tdist = Math.hypot(tdx, tdy);
+        if (tdist > 0.35) {
+          this.angle = Math.atan2(tdy, tdx);
+          moveX = (tdx / tdist) * this.speed * dtSec;
+          moveY = (tdy / tdist) * this.speed * dtSec;
+        } else if (!canSee) {
+          this.lastSeenPlayer = null;
+          this.state = 'PATROL';
+        }
+      } else if (this.state === 'ENGAGE' || this.state === 'STRAFE') {
+        if (this.stateTimer <= 0) {
+          this.strafeDir = rng() < 0.5 ? -1 : 1;
+          this.stateTimer = 1.0 + rng() * 1.4;
+        }
+        const perpX = -Math.sin(angleToPlayer) * this.strafeDir;
+        const perpY = Math.cos(angleToPlayer) * this.strafeDir;
+        const strafeSpeed = this.speed * (this.state === 'STRAFE' ? 0.85 : 0.45);
+        moveX = perpX * strafeSpeed * dtSec;
+        moveY = perpY * strafeSpeed * dtSec;
+      } else if (this.state === 'PATROL') {
+        if (this.stateTimer <= 0) {
+          this.angle = rng() * Math.PI * 2;
+          this.stateTimer = 1.8 + rng() * 2.0;
+        }
+        moveX = Math.cos(this.angle) * this.speed * 0.45 * dtSec;
+        moveY = Math.sin(this.angle) * this.speed * 0.45 * dtSec;
+      }
+
+      if (moveX !== 0 || moveY !== 0) {
+        const moved = map.moveWithSlide(this.x, this.y, moveX, moveY, this.radius);
+        // If blocked while patrolling, flip heading
+        if (
+          this.state === 'PATROL' &&
+          Math.hypot(moved.x - this.x, moved.y - this.y) < 0.001
+        ) {
+          this.angle = (this.angle + Math.PI * 0.75) % (Math.PI * 2);
+        }
+        this.x = moved.x;
+        this.y = moved.y;
+      }
+
+      // Firing logic
+      if (
+        (this.state === 'ENGAGE' || this.state === 'STRAFE') &&
+        canSee &&
+        nowMs - this.lastShotTime >= this.fireRateMs
+      ) {
+        this.lastShotTime = nowMs;
+        this.muzzleFlash = 0.09;
+        const distancePenalty = Math.max(0.35, 1 - dist / (this.attackRange * 1.5));
+        const crouchPenalty = player.isCrouching ? 0.85 : 1.0;
+        const hitChance = this.accuracy * distancePenalty * crouchPenalty;
+        const didHit = rng() < hitChance;
+        return {
+          enemyId: this.id,
+          enemyName: this.name,
+          didHit,
+          damage: didHit ? this.damage : 0,
+          sourceX: this.x,
+          sourceY: this.y
+        };
+      }
+
+      return null;
+    }
+  }
+
+  function createWavePlan(waveNumber) {
+    const total = Math.min(18, 4 + waveNumber * 2);
+    const list = [];
+    for (let i = 0; i < total; i++) {
+      if (waveNumber >= 3 && i % 5 === 4) {
+        list.push('heavy');
+      } else if (waveNumber >= 2 && i % 4 === 3) {
+        list.push('sniper');
+      } else {
+        list.push('trooper');
+      }
+    }
+    return list;
+  }
+
+  if (typeof module !== 'undefined' && module.exports) {
+    module.exports = { Enemy, createWavePlan };
+  } else {
+    root.WebCOD = root.WebCOD || {};
+    root.WebCOD.Enemy = Enemy;
+    root.WebCOD.createWavePlan = createWavePlan;
+  }
+})(typeof globalThis !== 'undefined' ? globalThis : window);
+
+
+// ===== Module: src/engine.js =====
+/**
+ * Web COD — Operation Ironline
+ * Core game simulation engine: hitscan ray-circle intersection, wave lifecycle,
+ * supply pickups, killfeed, killstreak execution, and match statistics.
+ */
+(function (root) {
+  'use strict';
+
+  const Config =
+    root.WebCOD.Config;
+  const { TacticalMap } =
+    root.WebCOD;
+  const { WeaponSystem } =
+    root.WebCOD;
+  const { Player } =
+    root.WebCOD;
+  const { Enemy, createWavePlan } =
+    root.WebCOD;
+
+  class GameEngine {
+    constructor(options = {}) {
+      this.mapId = options.mapId || 'killhouse';
+      this.rng = options.rng || Math.random;
+      this.events = []; // Transient events consumed by renderer/audio
+      this.reset(this.mapId);
+    }
+
+    reset(mapId = this.mapId) {
+      this.mapId = Config.MAPS[mapId] ? mapId : 'killhouse';
+      this.map = new TacticalMap(Config.MAPS[this.mapId]);
+      this.player = new Player(this.map.playerSpawn);
+      this.weapons = new WeaponSystem();
+
+      this.status = 'MENU'; // MENU | PLAYING | PAUSED | GAMEOVER
+      this.nowMs = 0;
+      this.wave = 1;
+      this.waveQueue = [];
+      this.spawnTimerMs = 0;
+      this.waveBannerTimer = 0;
+
+      this.enemies = [];
+      this.pickups = []; // { id, type: 'medkit'|'ammo', x, y }
+      this.killFeed = []; // { text, isHeadshot, timeMs }
+      this.hitmarker = { timer: 0, type: 'normal' }; // normal | headshot | kill
+      this.screenShake = 0;
+      this.shotsFired = 0;
+      this.shotsHit = 0;
+      this.events = [];
+      this.nextPickupId = 1;
+    }
+
+    startGame(mapId = this.mapId) {
+      this.reset(mapId);
+      this.status = 'PLAYING';
+      this.startWave(1);
+      this.pushEvent('game_start', { mapId: this.mapId });
+    }
+
+    togglePause() {
+      if (this.status === 'PLAYING') {
+        this.status = 'PAUSED';
+        return true;
+      }
+      if (this.status === 'PAUSED') {
+        this.status = 'PLAYING';
+        return false;
+      }
+      return false;
+    }
+
+    pushEvent(type, payload = {}) {
+      this.events.push({ type, payload, timeMs: this.nowMs });
+    }
+
+    consumeEvents() {
+      const out = this.events.slice();
+      this.events.length = 0;
+      return out;
+    }
+
+    startWave(waveNum) {
+      this.wave = waveNum;
+      this.waveQueue = createWavePlan(waveNum);
+      this.spawnTimerMs = 200;
+      this.waveBannerTimer = 2.6;
+      this.pushEvent('wave_start', { wave: waveNum, totalEnemies: this.waveQueue.length });
+    }
+
+    spawnNextEnemy() {
+      if (this.waveQueue.length === 0) return null;
+      const typeId = this.waveQueue.shift();
+      const spawns = this.map.enemySpawns;
+      // Pick spawn farthest from player to avoid unfair instant spawns
+      let bestSpawn = spawns[0];
+      let bestScore = -1;
+      for (const sp of spawns) {
+        const d = Math.hypot(sp.x - this.player.x, sp.y - this.player.y);
+        const jitter = this.rng() * 3.5;
+        if (d + jitter > bestScore) {
+          bestScore = d + jitter;
+          bestSpawn = sp;
+        }
+      }
+      const enemy = new Enemy(typeId, bestSpawn.x, bestSpawn.y, this.wave);
+      this.enemies.push(enemy);
+      return enemy;
+    }
+
+    /**
+     * Resolves a single hitscan pellet against walls and alive enemies.
+     */
+    tracePellet(angle, verticalOffset, weaponId) {
+      const wallHit = this.map.castRay(
+        this.player.x,
+        this.player.y,
+        angle,
+        Config.WEAPONS[weaponId].range
+      );
+      const maxDist = wallHit.dist;
+      const dirX = Math.cos(angle);
+      const dirY = Math.sin(angle);
+
+      let closestEnemy = null;
+      let closestDist = maxDist;
+      let hitOffsetRatio = 1.0;
+
+      for (const enemy of this.enemies) {
+        if (!enemy.alive) continue;
+        const ex = enemy.x - this.player.x;
+        const ey = enemy.y - this.player.y;
+        const proj = ex * dirX + ey * dirY;
+        if (proj <= 0.1 || proj >= closestDist) continue;
+
+        const perpDist = Math.abs(ex * -dirY + ey * dirX);
+        if (perpDist <= enemy.radius) {
+          closestDist = proj;
+          closestEnemy = enemy;
+          hitOffsetRatio = perpDist / enemy.radius;
+        }
+      }
+
+      if (!closestEnemy) {
+        return {
+          hitEnemy: null,
+          wallHit,
+          dist: maxDist,
+          damage: 0,
+          isHeadshot: false
+        };
+      }
+
+      // Headshot when aiming near center + slightly high or tight center aim
+      const isHeadshot =
+        hitOffsetRatio < 0.38 &&
+        Math.abs(this.player.pitch + verticalOffset) < 0.14;
+
+      const damage = this.weapons.computeDamage(weaponId, closestDist, isHeadshot);
+      return {
+        hitEnemy: closestEnemy,
+        wallHit,
+        dist: closestDist,
+        damage,
+        isHeadshot
+      };
+    }
+
+    firePlayerWeapon() {
+      if (this.status !== 'PLAYING' || !this.player.alive) return null;
+      const shot = this.weapons.fire(this.nowMs, this.rng);
+      if (!shot) {
+        const slot = this.weapons.getCurrentSlot();
+        if (slot.ammo === 0 && !this.weapons.reloading) {
+          this.weapons.startReload(this.nowMs);
+          this.pushEvent('reload_start', { weaponId: this.weapons.currentId });
+        }
+        return null;
+      }
+
+      this.shotsFired += 1;
+      this.screenShake = Math.min(1, this.screenShake + Config.WEAPONS[shot.weaponId].recoilKick * 5.5);
+      this.pushEvent('weapon_fire', { weaponId: shot.weaponId });
+
+      let anyHit = false;
+      let anyHeadshot = false;
+      let anyKill = false;
+      const hits = [];
+
+      for (const pellet of shot.pellets) {
+        const res = this.tracePellet(
+          this.player.angle + pellet.angleOffset,
+          pellet.verticalOffset,
+          shot.weaponId
+        );
+        if (res.hitEnemy && res.damage > 0) {
+          anyHit = true;
+          if (res.isHeadshot) anyHeadshot = true;
+          const outcome = res.hitEnemy.takeDamage(res.damage);
+          hits.push({
+            enemyId: res.hitEnemy.id,
+            damage: outcome.damage,
+            isHeadshot: res.isHeadshot,
+            killed: outcome.killed
+          });
+          if (outcome.killed) {
+            anyKill = true;
+            this.handleEnemyKilled(res.hitEnemy, shot.weaponId, res.isHeadshot);
+          }
+        }
+      }
+
+      if (anyHit) {
+        this.shotsHit += 1;
+        this.hitmarker = {
+          timer: 0.22,
+          type: anyKill ? 'kill' : anyHeadshot ? 'headshot' : 'normal'
+        };
+        this.pushEvent('hitmarker', { type: this.hitmarker.type });
+      }
+
+      if (shot.autoReloadNeeded) {
+        this.weapons.startReload(this.nowMs);
+        this.pushEvent('reload_start', { weaponId: shot.weaponId });
+      }
+
+      return { shot, hits };
+    }
+
+    handleEnemyKilled(enemy, weaponLabel, isHeadshot) {
+      const unlocked = this.player.registerKill(enemy.score, isHeadshot);
+      const spec = Config.WEAPONS[weaponLabel];
+      const wName = spec ? spec.shortName : weaponLabel;
+      this.killFeed.unshift({
+        text: `YOU [${wName}] ☠ ${enemy.name}${isHeadshot ? ' 爆头' : ''}`,
+        isHeadshot,
+        timeMs: this.nowMs
+      });
+      if (this.killFeed.length > 5) this.killFeed.pop();
+
+      for (const ks of unlocked) {
+        this.pushEvent('killstreak_unlocked', { killstreak: ks });
+      }
+
+      // Chance to drop tactical supply crate
+      if (this.rng() < 0.38) {
+        this.pickups.push({
+          id: this.nextPickupId++,
+          type: this.rng() < 0.5 ? 'medkit' : 'ammo',
+          x: enemy.x,
+          y: enemy.y
+        });
+      }
+    }
+
+    triggerUav() {
+      if (this.status !== 'PLAYING') return false;
+      if (this.player.activateUav(this.nowMs)) {
+        this.pushEvent('uav_activated', { durationMs: Config.KILLSTREAKS.uav.durationMs });
+        return true;
+      }
+      return false;
+    }
+
+    triggerAirstrike() {
+      if (this.status !== 'PLAYING') return false;
+      const aliveEnemies = this.enemies.filter((e) => e.alive);
+      if (aliveEnemies.length === 0) return false;
+      if (!this.player.consumeAirstrike()) return false;
+
+      // Target the enemy with most nearby allies
+      let bestTarget = aliveEnemies[0];
+      let bestCount = -1;
+      const radius = Config.KILLSTREAKS.airstrike.radius;
+      for (const e of aliveEnemies) {
+        const count = aliveEnemies.filter(
+          (o) => Math.hypot(o.x - e.x, o.y - e.y) <= radius
+        ).length;
+        if (count > bestCount) {
+          bestCount = count;
+          bestTarget = e;
+        }
+      }
+
+      let killedCount = 0;
+      for (const e of aliveEnemies) {
+        const dist = Math.hypot(e.x - bestTarget.x, e.y - bestTarget.y);
+        if (dist <= radius) {
+          const outcome = e.takeDamage(Config.KILLSTREAKS.airstrike.damage);
+          if (outcome.killed) {
+            killedCount++;
+            this.handleEnemyKilled(e, 'AIRSTRIKE', false);
+          }
+        }
+      }
+
+      this.screenShake = 1.0;
+      this.pushEvent('airstrike', {
+        x: bestTarget.x,
+        y: bestTarget.y,
+        killedCount
+      });
+      return true;
+    }
+
+    update(dtSec, input = {}) {
+      if (this.status !== 'PLAYING') return;
+      const clampedDt = Math.min(0.1, Math.max(0, dtSec));
+      this.nowMs += clampedDt * 1000;
+
+      // Update player & weapon systems
+      const weaponSpec = this.weapons.getCurrentSpec();
+      this.weapons.setAds(Boolean(input.ads));
+      const { reloadCompleted } = this.weapons.update(clampedDt, this.nowMs);
+      if (reloadCompleted) {
+        this.pushEvent('reload_complete', { weaponId: this.weapons.currentId });
+      }
+
+      if (input.turn) {
+        this.player.rotate(input.turn * clampedDt * 2.4, 0);
+      }
+
+      this.player.move(
+        input,
+        clampedDt,
+        this.map,
+        weaponSpec.moveSpeedFactor,
+        this.weapons.isAds
+      );
+      this.player.update(clampedDt, this.nowMs);
+
+      if (input.fire && (weaponSpec.auto || input.fireJustPressed)) {
+        this.firePlayerWeapon();
+      }
+
+      // Collect tactical pickups
+      for (let i = this.pickups.length - 1; i >= 0; i--) {
+        const p = this.pickups[i];
+        if (Math.hypot(p.x - this.player.x, p.y - this.player.y) < 0.75) {
+          if (p.type === 'medkit') {
+            this.player.heal(35, 25);
+          } else {
+            this.weapons.refillAmmo(0.45);
+          }
+          this.pushEvent('pickup', { type: p.type });
+          this.pickups.splice(i, 1);
+        }
+      }
+
+      // Spawn queued enemies progressively
+      if (this.waveQueue.length > 0) {
+        this.spawnTimerMs -= clampedDt * 1000;
+        const aliveCount = this.enemies.filter((e) => e.alive).length;
+        if (this.spawnTimerMs <= 0 && aliveCount < 8) {
+          this.spawnNextEnemy();
+          this.spawnTimerMs = Math.max(700, 1750 - this.wave * 110);
+        }
+      }
+
+      // Update enemies
+      for (const enemy of this.enemies) {
+        if (!enemy.alive) continue;
+        const shot = enemy.update(clampedDt, this.nowMs, this.player, this.map, this.rng);
+        if (shot) {
+          this.pushEvent('enemy_fire', { enemyId: shot.enemyId, didHit: shot.didHit });
+          if (shot.didHit) {
+            this.player.takeDamage(shot.damage, this.nowMs, shot.sourceX, shot.sourceY);
+            this.screenShake = Math.min(1, this.screenShake + 0.35);
+            this.pushEvent('player_hit', { damage: shot.damage });
+          }
+        }
+      }
+
+      // Clean up dead enemies when wave finishes
+      const remainingAlive = this.enemies.filter((e) => e.alive).length;
+      if (this.waveQueue.length === 0 && remainingAlive === 0) {
+        this.enemies = [];
+        this.player.heal(25, 15);
+        this.weapons.refillAmmo(0.35);
+        this.startWave(this.wave + 1);
+      }
+
+      // Timers
+      this.hitmarker.timer = Math.max(0, this.hitmarker.timer - clampedDt);
+      this.screenShake = Math.max(0, this.screenShake - clampedDt * 3.8);
+      this.waveBannerTimer = Math.max(0, this.waveBannerTimer - clampedDt);
+
+      // Trim expired killfeed entries
+      this.killFeed = this.killFeed.filter((k) => this.nowMs - k.timeMs < 5500);
+
+      if (!this.player.alive) {
+        this.status = 'GAMEOVER';
+        this.pushEvent('game_over', this.getSummaryStats());
+      }
+    }
+
+    getAccuracyPercent() {
+      if (this.shotsFired === 0) return 0;
+      return Math.round((this.shotsHit / this.shotsFired) * 100);
+    }
+
+    getSummaryStats() {
+      return {
+        mapName: this.map.name,
+        wave: this.wave,
+        score: this.player.score,
+        kills: this.player.kills,
+        headshots: this.player.headshots,
+        bestStreak: this.player.bestStreak,
+        accuracy: this.getAccuracyPercent(),
+        survivalSec: Math.round(this.nowMs / 1000)
+      };
+    }
+  }
+
+  if (typeof module !== 'undefined' && module.exports) {
+    module.exports = { GameEngine };
+  } else {
+    root.WebCOD = root.WebCOD || {};
+    root.WebCOD.GameEngine = GameEngine;
+  }
+})(typeof globalThis !== 'undefined' ? globalThis : window);
+
+
+// ===== Module: src/audio.js =====
+/**
+ * Web COD — Operation Ironline
+ * Procedural Web Audio API sound synthesizer (zero external audio files).
+ */
+(function (root) {
+  'use strict';
+
+  class SoundEngine {
+    constructor() {
+      this.ctx = null;
+      this.muted = false;
+      this.noiseBuffer = null;
+    }
+
+    init() {
+      if (this.ctx) {
+        if (this.ctx.state === 'suspended') {
+          this.ctx.resume().catch(() => {});
+        }
+        return;
+      }
+      const AudioCtx =
+        typeof window !== 'undefined' &&
+        (window.AudioContext || window.webkitAudioContext);
+      if (!AudioCtx) return;
+
+      this.ctx = new AudioCtx();
+      // Pre-generate 1 second of white noise for gunshots & explosions
+      const sampleRate = this.ctx.sampleRate;
+      const buffer = this.ctx.createBuffer(1, sampleRate, sampleRate);
+      const data = buffer.getChannelData(0);
+      for (let i = 0; i < sampleRate; i++) {
+        data[i] = Math.random() * 2 - 1;
+      }
+      this.noiseBuffer = buffer;
+    }
+
+    toggleMute() {
+      this.muted = !this.muted;
+      return this.muted;
+    }
+
+    playGunshot(weaponId) {
+      if (this.muted || !this.ctx || !this.noiseBuffer) return;
+      const now = this.ctx.currentTime;
+
+      const profiles = {
+        m4a1: { dur: 0.13, freq: 1400, punch: 150, gain: 0.28 },
+        mp5: { dur: 0.085, freq: 2100, punch: 210, gain: 0.22 },
+        m870: { dur: 0.26, freq: 850, punch: 95, gain: 0.38 },
+        awp: { dur: 0.34, freq: 1100, punch: 75, gain: 0.42 }
+      };
+      const p = profiles[weaponId] || profiles.m4a1;
+
+      // Noise crack
+      const noise = this.ctx.createBufferSource();
+      noise.buffer = this.noiseBuffer;
+      const filter = this.ctx.createBiquadFilter();
+      filter.type = 'bandpass';
+      filter.frequency.setValueAtTime(p.freq, now);
+      filter.frequency.exponentialRampToValueAtTime(220, now + p.dur);
+
+      const nGain = this.ctx.createGain();
+      nGain.gain.setValueAtTime(p.gain, now);
+      nGain.gain.exponentialRampToValueAtTime(0.001, now + p.dur);
+
+      noise.connect(filter);
+      filter.connect(nGain);
+      nGain.connect(this.ctx.destination);
+      noise.start(now);
+      noise.stop(now + p.dur);
+
+      // Low-end mechanical thump
+      const osc = this.ctx.createOscillator();
+      osc.type = 'triangle';
+      osc.frequency.setValueAtTime(p.punch, now);
+      osc.frequency.exponentialRampToValueAtTime(36, now + p.dur * 0.7);
+      const oGain = this.ctx.createGain();
+      oGain.gain.setValueAtTime(p.gain * 0.8, now);
+      oGain.gain.exponentialRampToValueAtTime(0.001, now + p.dur * 0.7);
+      osc.connect(oGain);
+      oGain.connect(this.ctx.destination);
+      osc.start(now);
+      osc.stop(now + p.dur * 0.75);
+    }
+
+    playHitmarker(type = 'normal') {
+      if (this.muted || !this.ctx) return;
+      const now = this.ctx.currentTime;
+      const osc = this.ctx.createOscillator();
+      const gain = this.ctx.createGain();
+      osc.type = type === 'kill' ? 'sine' : 'triangle';
+      const baseFreq = type === 'headshot' ? 1850 : type === 'kill' ? 1320 : 1150;
+      osc.frequency.setValueAtTime(baseFreq, now);
+      osc.frequency.exponentialRampToValueAtTime(baseFreq * 1.35, now + 0.055);
+      gain.gain.setValueAtTime(0.18, now);
+      gain.gain.exponentialRampToValueAtTime(0.001, now + 0.075);
+      osc.connect(gain);
+      gain.connect(this.ctx.destination);
+      osc.start(now);
+      osc.stop(now + 0.08);
+    }
+
+    playReload() {
+      if (this.muted || !this.ctx) return;
+      const now = this.ctx.currentTime;
+      [0, 0.14].forEach((offset, idx) => {
+        const osc = this.ctx.createOscillator();
+        const gain = this.ctx.createGain();
+        osc.type = 'square';
+        osc.frequency.setValueAtTime(idx === 0 ? 420 : 680, now + offset);
+        gain.gain.setValueAtTime(0.08, now + offset);
+        gain.gain.exponentialRampToValueAtTime(0.001, now + offset + 0.055);
+        osc.connect(gain);
+        gain.connect(this.ctx.destination);
+        osc.start(now + offset);
+        osc.stop(now + offset + 0.06);
+      });
+    }
+
+    playPlayerHit() {
+      if (this.muted || !this.ctx) return;
+      const now = this.ctx.currentTime;
+      const osc = this.ctx.createOscillator();
+      const gain = this.ctx.createGain();
+      osc.type = 'sawtooth';
+      osc.frequency.setValueAtTime(120, now);
+      osc.frequency.exponentialRampToValueAtTime(42, now + 0.16);
+      gain.gain.setValueAtTime(0.22, now);
+      gain.gain.exponentialRampToValueAtTime(0.001, now + 0.18);
+      osc.connect(gain);
+      gain.connect(this.ctx.destination);
+      osc.start(now);
+      osc.stop(now + 0.19);
+    }
+
+    playUavPing() {
+      if (this.muted || !this.ctx) return;
+      const now = this.ctx.currentTime;
+      const osc = this.ctx.createOscillator();
+      const gain = this.ctx.createGain();
+      osc.type = 'sine';
+      osc.frequency.setValueAtTime(880, now);
+      osc.frequency.setValueAtTime(1320, now + 0.1);
+      gain.gain.setValueAtTime(0.14, now);
+      gain.gain.exponentialRampToValueAtTime(0.001, now + 0.35);
+      osc.connect(gain);
+      gain.connect(this.ctx.destination);
+      osc.start(now);
+      osc.stop(now + 0.36);
+    }
+
+    playAirstrike() {
+      if (this.muted || !this.ctx || !this.noiseBuffer) return;
+      const now = this.ctx.currentTime;
+      // Explosion rumble
+      const noise = this.ctx.createBufferSource();
+      noise.buffer = this.noiseBuffer;
+      const filter = this.ctx.createBiquadFilter();
+      filter.type = 'lowpass';
+      filter.frequency.setValueAtTime(420, now);
+      filter.frequency.exponentialRampToValueAtTime(60, now + 0.85);
+      const gain = this.ctx.createGain();
+      gain.gain.setValueAtTime(0.45, now);
+      gain.gain.exponentialRampToValueAtTime(0.001, now + 0.9);
+      noise.connect(filter);
+      filter.connect(gain);
+      gain.connect(this.ctx.destination);
+      noise.start(now);
+      noise.stop(now + 0.92);
+    }
+
+    playPickup() {
+      if (this.muted || !this.ctx) return;
+      const now = this.ctx.currentTime;
+      const osc = this.ctx.createOscillator();
+      const gain = this.ctx.createGain();
+      osc.type = 'sine';
+      osc.frequency.setValueAtTime(520, now);
+      osc.frequency.setValueAtTime(780, now + 0.08);
+      gain.gain.setValueAtTime(0.12, now);
+      gain.gain.exponentialRampToValueAtTime(0.001, now + 0.22);
+      osc.connect(gain);
+      gain.connect(this.ctx.destination);
+      osc.start(now);
+      osc.stop(now + 0.23);
+    }
+
+    handleEvents(events) {
+      for (const ev of events) {
+        switch (ev.type) {
+          case 'weapon_fire':
+            this.playGunshot(ev.payload.weaponId);
+            break;
+          case 'hitmarker':
+            this.playHitmarker(ev.payload.type);
+            break;
+          case 'reload_start':
+            this.playReload();
+            break;
+          case 'player_hit':
+            this.playPlayerHit();
+            break;
+          case 'uav_activated':
+            this.playUavPing();
+            break;
+          case 'airstrike':
+            this.playAirstrike();
+            break;
+          case 'pickup':
+            this.playPickup();
+            break;
+          default:
+            break;
+        }
+      }
+    }
+  }
+
+  if (typeof module !== 'undefined' && module.exports) {
+    module.exports = { SoundEngine };
+  } else {
+    root.WebCOD = root.WebCOD || {};
+    root.WebCOD.SoundEngine = SoundEngine;
+  }
+})(typeof globalThis !== 'undefined' ? globalThis : window);
+
+
+// ===== Module: src/renderer.js =====
+/**
+ * Web COD — Operation Ironline
+ * 2.5D/3D Textured Raycasting Renderer, Z-Buffered Tactical Entities,
+ * Procedural First-Person Weapon Models, Sniper Scope, and Tactical HUD.
+ */
+(function (root) {
+  'use strict';
+
+  const Config =
+    root.WebCOD.Config;
+
+  class TacticalRenderer {
+    constructor(canvas) {
+      this.canvas = canvas;
+      this.ctx = canvas.getContext('2d');
+      this.textures = this.generateTextures();
+      this.zBuffer = [];
+      this.airstrikeFlash = 0;
+    }
+
+    generateTextures() {
+      const size = 64;
+      const makeTex = (drawFn) => {
+        const c = document.createElement('canvas');
+        c.width = size;
+        c.height = size;
+        const g = c.getContext('2d');
+        drawFn(g, size);
+        return c;
+      };
+
+      return {
+        // 1: Concrete bunker wall
+        1: makeTex((g, s) => {
+          g.fillStyle = '#575c63';
+          g.fillRect(0, 0, s, s);
+          for (let y = 0; y < s; y += 16) {
+            g.fillStyle = '#3f444a';
+            g.fillRect(0, y, s, 2);
+            const offset = (y / 16) % 2 === 0 ? 0 : 16;
+            for (let x = offset; x < s; x += 32) {
+              g.fillRect(x, y, 2, 16);
+            }
+          }
+          // Grit speckles
+          for (let i = 0; i < 120; i++) {
+            const x = (i * 37) % s;
+            const y = (i * 53) % s;
+            g.fillStyle = i % 2 === 0 ? 'rgba(255,255,255,0.06)' : 'rgba(0,0,0,0.12)';
+            g.fillRect(x, y, 2, 2);
+          }
+        }),
+        // 2: Corrugated shipping container
+        2: makeTex((g, s) => {
+          g.fillStyle = '#7c3a25';
+          g.fillRect(0, 0, s, s);
+          for (let x = 0; x < s; x += 8) {
+            g.fillStyle = '#5c2818';
+            g.fillRect(x, 0, 3, s);
+            g.fillStyle = '#994c33';
+            g.fillRect(x + 3, 0, 2, s);
+          }
+          g.fillStyle = '#3b190f';
+          g.fillRect(0, 0, s, 4);
+          g.fillRect(0, s - 4, s, 4);
+        }),
+        // 3: Tactical hazard barricade
+        3: makeTex((g, s) => {
+          g.fillStyle = '#333840';
+          g.fillRect(0, 0, s, s);
+          g.fillStyle = '#d97706';
+          g.fillRect(0, 22, s, 18);
+          g.fillStyle = '#18181b';
+          for (let i = -s; i < s * 2; i += 16) {
+            g.beginPath();
+            g.moveTo(i, 22);
+            g.lineTo(i + 8, 22);
+            g.lineTo(i - 4, 40);
+            g.lineTo(i - 12, 40);
+            g.closePath();
+            g.fill();
+          }
+          g.strokeStyle = '#525866';
+          g.lineWidth = 2;
+          g.strokeRect(2, 2, s - 4, s - 4);
+        }),
+        // 4: Reinforced dark steel perimeter
+        4: makeTex((g, s) => {
+          g.fillStyle = '#272d36';
+          g.fillRect(0, 0, s, s);
+          g.strokeStyle = '#3b4452';
+          g.lineWidth = 2;
+          g.strokeRect(3, 3, s - 6, s - 6);
+          g.fillStyle = '#1a1f26';
+          g.fillRect(0, s / 2 - 1, s, 2);
+          // Corner rivets
+          g.fillStyle = '#64748b';
+          [8, s - 10].forEach((rx) => {
+            [8, s - 10].forEach((ry) => {
+              g.fillRect(rx, ry, 3, 3);
+            });
+          });
+        })
+      };
+    }
+
+    notifyAirstrike() {
+      this.airstrikeFlash = 0.7;
+    }
+
+    render(engine, dtSec = 0.016) {
+      const ctx = this.ctx;
+      const w = this.canvas.width;
+      const h = this.canvas.height;
+      if (w <= 0 || h <= 0) return;
+
+      this.airstrikeFlash = Math.max(0, this.airstrikeFlash - dtSec * 1.4);
+
+      const player = engine.player;
+      const weaponSpec = engine.weapons.getCurrentSpec();
+      const ads = engine.weapons.adsProgress;
+
+      const baseFov = Config.PLAYER_DEFAULTS.baseFov;
+      const fov = baseFov * (1 - ads * (1 - weaponSpec.adsFovFactor));
+
+      const shakeX = (Math.random() - 0.5) * engine.screenShake * 10;
+      const shakeY = (Math.random() - 0.5) * engine.screenShake * 10;
+      const crouchOffset = player.isCrouching ? -h * 0.055 : 0;
+      const bobY = Math.sin(player.bobPhase) * 5 * player.moveIntensity;
+      const horizonY = Math.round(h * 0.5 + player.pitch * h * 0.45 + crouchOffset + bobY + shakeY);
+
+      ctx.save();
+      ctx.translate(shakeX, 0);
+
+      // 1. Sky & Ground
+      const skyGrad = ctx.createLinearGradient(0, 0, 0, Math.max(1, horizonY));
+      skyGrad.addColorStop(0, '#0f172a');
+      skyGrad.addColorStop(0.65, '#1e293b');
+      skyGrad.addColorStop(1, '#334155');
+      ctx.fillStyle = skyGrad;
+      ctx.fillRect(-16, 0, w + 32, Math.max(0, horizonY));
+
+      const floorGrad = ctx.createLinearGradient(0, Math.max(0, horizonY), 0, h);
+      floorGrad.addColorStop(0, '#1e2228');
+      floorGrad.addColorStop(0.4, '#2a2f36');
+      floorGrad.addColorStop(1, '#14171c');
+      ctx.fillStyle = floorGrad;
+      ctx.fillRect(-16, Math.max(0, horizonY), w + 32, h - Math.max(0, horizonY));
+
+      // 2. Raycast Textured Walls
+      const rayCount = Math.min(w, Math.max(180, Math.floor(w / 2)));
+      const stripWidth = w / rayCount;
+      this.zBuffer.length = rayCount;
+
+      for (let i = 0; i < rayCount; i++) {
+        const cameraX = (i / rayCount) - 0.5;
+        const rayAngle = player.angle + cameraX * fov;
+        const hit = engine.map.castRay(player.x, player.y, rayAngle, 34);
+        const correctedDist = Math.max(0.08, hit.dist * Math.cos(rayAngle - player.angle));
+        this.zBuffer[i] = correctedDist;
+
+        if (!hit.hit) continue;
+
+        const wallHeight = (h * 0.92) / correctedDist;
+        const drawTop = horizonY - wallHeight * 0.5;
+        const tex = this.textures[hit.tile] || this.textures[1];
+        const texX = Math.floor(hit.wallX * 64) & 63;
+
+        ctx.drawImage(
+          tex,
+          texX,
+          0,
+          1,
+          64,
+          i * stripWidth,
+          drawTop,
+          stripWidth + 0.8,
+          wallHeight
+        );
+
+        // Directional shading + atmospheric fog
+        const fog = Math.min(0.82, correctedDist / 22);
+        const sideDark = hit.side === 1 ? 0.22 : 0.0;
+        const shadeAlpha = Math.min(0.88, fog + sideDark);
+        if (shadeAlpha > 0.02) {
+          ctx.fillStyle = `rgba(10, 14, 20, ${shadeAlpha.toFixed(3)})`;
+          ctx.fillRect(i * stripWidth, drawTop, stripWidth + 0.8, wallHeight);
+        }
+      }
+
+      // 3. Z-Buffered Sprites (Enemies + Tactical Pickups)
+      const sprites = [];
+      for (const enemy of engine.enemies) {
+        if (!enemy.alive) continue;
+        const dx = enemy.x - player.x;
+        const dy = enemy.y - player.y;
+        sprites.push({
+          kind: 'enemy',
+          ref: enemy,
+          dist: Math.hypot(dx, dy),
+          angle: Math.atan2(dy, dx)
+        });
+      }
+      for (const p of engine.pickups) {
+        const dx = p.x - player.x;
+        const dy = p.y - player.y;
+        sprites.push({
+          kind: 'pickup',
+          ref: p,
+          dist: Math.hypot(dx, dy),
+          angle: Math.atan2(dy, dx)
+        });
+      }
+      sprites.sort((a, b) => b.dist - a.dist);
+
+      for (const sp of sprites) {
+        let relAngle = sp.angle - player.angle;
+        while (relAngle < -Math.PI) relAngle += Math.PI * 2;
+        while (relAngle > Math.PI) relAngle -= Math.PI * 2;
+        if (Math.abs(relAngle) > fov * 0.72 || sp.dist < 0.25) continue;
+
+        const screenX = (0.5 + relAngle / fov) * w;
+        const perpDist = sp.dist * Math.cos(relAngle);
+        if (perpDist <= 0.15) continue;
+
+        const rayIdx = Math.floor((screenX / w) * rayCount);
+        if (rayIdx >= 0 && rayIdx < rayCount && perpDist > this.zBuffer[rayIdx] + 0.15) {
+          continue; // Occluded by wall
+        }
+
+        if (sp.kind === 'enemy') {
+          this.drawEnemySprite(ctx, sp.ref, screenX, horizonY, h, perpDist);
+        } else {
+          this.drawPickupSprite(ctx, sp.ref, screenX, horizonY, h, perpDist, engine.nowMs);
+        }
+      }
+
+      ctx.restore();
+
+      // 4. First-Person Weapon or Sniper Scope
+      if (weaponSpec.scoped && ads > 0.65) {
+        this.drawSniperScope(ctx, w, h, engine);
+      } else {
+        this.drawFirstPersonWeapon(ctx, w, h, engine);
+        this.drawCrosshair(ctx, w, h, engine);
+      }
+
+      // 5. Hitmarker & Damage Indicators
+      this.drawHitmarker(ctx, w, h, engine.hitmarker);
+      this.drawDamageEffects(ctx, w, h, player);
+
+      if (this.airstrikeFlash > 0) {
+        ctx.fillStyle = `rgba(255, 210, 120, ${(this.airstrikeFlash * 0.45).toFixed(2)})`;
+        ctx.fillRect(0, 0, w, h);
+      }
+
+      // 6. Tactical Minimap Radar
+      this.drawMinimap(ctx, engine);
+    }
+
+    drawEnemySprite(ctx, enemy, screenX, horizonY, h, perpDist) {
+      const spriteH = (h * 0.84) / perpDist;
+      const spriteW = spriteH * 0.56;
+      const top = horizonY - spriteH * 0.48;
+      const left = screenX - spriteW * 0.5;
+
+      const flash = enemy.hitFlash > 0;
+      const fogFactor = Math.max(0.25, 1 - perpDist / 24);
+
+      ctx.save();
+      ctx.globalAlpha = Math.min(1, fogFactor + 0.2);
+
+      // Shadow under boots
+      ctx.fillStyle = 'rgba(0,0,0,0.45)';
+      ctx.beginPath();
+      ctx.ellipse(screenX, top + spriteH * 0.96, spriteW * 0.4, spriteH * 0.045, 0, 0, Math.PI * 2);
+      ctx.fill();
+
+      // Legs
+      ctx.fillStyle = flash ? '#ffffff' : '#1e293b';
+      ctx.fillRect(left + spriteW * 0.24, top + spriteH * 0.62, spriteW * 0.2, spriteH * 0.34);
+      ctx.fillRect(left + spriteW * 0.56, top + spriteH * 0.62, spriteW * 0.2, spriteH * 0.34);
+
+      // Torso / Ballistic Vest
+      ctx.fillStyle = flash ? '#fca5a5' : enemy.bodyColor;
+      ctx.fillRect(left + spriteW * 0.16, top + spriteH * 0.26, spriteW * 0.68, spriteH * 0.38);
+      ctx.fillStyle = flash ? '#ffffff' : enemy.armorColor;
+      ctx.fillRect(left + spriteW * 0.24, top + spriteH * 0.3, spriteW * 0.52, spriteH * 0.28);
+
+      // Tactical Helmet & Visor
+      ctx.fillStyle = flash ? '#ffffff' : '#0f172a';
+      ctx.beginPath();
+      ctx.arc(screenX, top + spriteH * 0.16, spriteW * 0.24, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.fillStyle = enemy.visorColor;
+      ctx.fillRect(screenX - spriteW * 0.14, top + spriteH * 0.13, spriteW * 0.28, spriteH * 0.05);
+
+      // Rifle silhouette
+      ctx.fillStyle = '#111827';
+      ctx.fillRect(left + spriteW * 0.62, top + spriteH * 0.38, spriteW * 0.36, spriteH * 0.065);
+
+      // Enemy muzzle flash
+      if (enemy.muzzleFlash > 0) {
+        ctx.fillStyle = '#fde047';
+        ctx.beginPath();
+        ctx.arc(left + spriteW * 0.98, top + spriteH * 0.41, spriteW * 0.14, 0, Math.PI * 2);
+        ctx.fill();
+      }
+
+      // Floating HP bar when damaged
+      if (enemy.hp < enemy.maxHp) {
+        const barW = Math.max(26, spriteW * 0.85);
+        const barH = 4;
+        const bx = screenX - barW / 2;
+        const by = top - 10;
+        ctx.fillStyle = 'rgba(0,0,0,0.65)';
+        ctx.fillRect(bx, by, barW, barH);
+        ctx.fillStyle = '#ef4444';
+        ctx.fillRect(bx, by, barW * (enemy.hp / enemy.maxHp), barH);
+      }
+
+      ctx.restore();
+    }
+
+    drawPickupSprite(ctx, pickup, screenX, horizonY, h, perpDist, nowMs) {
+      const size = (h * 0.26) / perpDist;
+      const bob = Math.sin(nowMs * 0.005) * (size * 0.12);
+      const y = horizonY + (h * 0.25) / perpDist + bob;
+      const isMed = pickup.type === 'medkit';
+
+      ctx.save();
+      ctx.fillStyle = isMed ? '#16a34a' : '#d97706';
+      ctx.fillRect(screenX - size * 0.5, y - size * 0.5, size, size * 0.75);
+      ctx.strokeStyle = '#f8fafc';
+      ctx.lineWidth = Math.max(1, size * 0.06);
+      ctx.strokeRect(screenX - size * 0.5, y - size * 0.5, size, size * 0.75);
+
+      ctx.fillStyle = '#ffffff';
+      if (isMed) {
+        ctx.fillRect(screenX - size * 0.08, y - size * 0.34, size * 0.16, size * 0.42);
+        ctx.fillRect(screenX - size * 0.22, y - size * 0.2, size * 0.44, size * 0.14);
+      } else {
+        ctx.fillRect(screenX - size * 0.22, y - size * 0.26, size * 0.44, size * 0.1);
+        ctx.fillRect(screenX - size * 0.22, y - size * 0.08, size * 0.44, size * 0.1);
+      }
+      ctx.restore();
+    }
+
+    drawFirstPersonWeapon(ctx, w, h, engine) {
+      const spec = engine.weapons.getCurrentSpec();
+      const ads = engine.weapons.adsProgress;
+      const recoil = engine.weapons.recoilOffset;
+      const reloadDrop = engine.weapons.reloading ? h * 0.16 : 0;
+
+      const bobX = Math.cos(engine.player.bobPhase * 0.5) * 10 * engine.player.moveIntensity * (1 - ads * 0.75);
+      const bobY = Math.abs(Math.sin(engine.player.bobPhase * 0.5)) * 8 * engine.player.moveIntensity * (1 - ads * 0.75);
+
+      const baseX = w * (0.66 - ads * 0.16) + bobX;
+      const baseY = h * (0.82 - ads * 0.06) + bobY + recoil * h * 0.6 + reloadDrop;
+
+      ctx.save();
+      ctx.translate(baseX, baseY);
+
+      // Muzzle flash
+      if (engine.weapons.muzzleFlashTimer > 0) {
+        const grad = ctx.createRadialGradient(-20, -95, 4, -20, -95, 58);
+        grad.addColorStop(0, 'rgba(255, 250, 205, 0.95)');
+        grad.addColorStop(0.45, 'rgba(251, 146, 60, 0.75)');
+        grad.addColorStop(1, 'rgba(251, 146, 60, 0)');
+        ctx.fillStyle = grad;
+        ctx.beginPath();
+        ctx.arc(-20, -95, 58, 0, Math.PI * 2);
+        ctx.fill();
+      }
+
+      // Receiver / barrel body
+      ctx.fillStyle = '#18181b';
+      ctx.fillRect(-34, -108, 22, 85); // barrel shroud
+      ctx.fillStyle = spec.color;
+      ctx.fillRect(-46, -42, 68, 92); // upper receiver
+      ctx.fillStyle = '#09090b';
+      ctx.fillRect(-32, -58, 34, 18); // rail mount
+
+      // Tactical red-dot optic
+      ctx.strokeStyle = '#3f3f46';
+      ctx.lineWidth = 4;
+      ctx.strokeRect(-28, -84, 26, 24);
+      ctx.fillStyle = spec.accent;
+      ctx.beginPath();
+      ctx.arc(-15, -72, 2.5, 0, Math.PI * 2);
+      ctx.fill();
+
+      // Side tactical stripe
+      ctx.fillStyle = spec.accent;
+      ctx.fillRect(-42, -14, 58, 5);
+
+      ctx.restore();
+    }
+
+    drawSniperScope(ctx, w, h, engine) {
+      const cx = w / 2;
+      const cy = h / 2;
+      const radius = Math.min(w, h) * 0.39;
+
+      ctx.save();
+      ctx.fillStyle = 'rgba(4, 7, 12, 0.95)';
+      ctx.beginPath();
+      ctx.rect(0, 0, w, h);
+      ctx.arc(cx, cy, radius, 0, Math.PI * 2, true);
+      ctx.fill();
+
+      // Crosshair mil-dots
+      ctx.strokeStyle = 'rgba(15, 23, 42, 0.9)';
+      ctx.lineWidth = 2;
+      ctx.beginPath();
+      ctx.moveTo(cx - radius, cy);
+      ctx.lineTo(cx + radius, cy);
+      ctx.moveTo(cx, cy - radius);
+      ctx.lineTo(cx, cy + radius);
+      ctx.stroke();
+
+      ctx.fillStyle = '#ef4444';
+      ctx.beginPath();
+      ctx.arc(cx, cy, 3, 0, Math.PI * 2);
+      ctx.fill();
+
+      ctx.strokeStyle = '#334155';
+      ctx.lineWidth = 5;
+      ctx.beginPath();
+      ctx.arc(cx, cy, radius, 0, Math.PI * 2);
+      ctx.stroke();
+      ctx.restore();
+    }
+
+    drawCrosshair(ctx, w, h, engine) {
+      const cx = w / 2;
+      const cy = h / 2;
+      const ads = engine.weapons.adsProgress;
+      const gap = Math.max(4, (14 - ads * 9) + engine.weapons.recoilOffset * 140 + engine.player.moveIntensity * 6);
+      const len = ads > 0.5 ? 7 : 10;
+
+      ctx.save();
+      ctx.strokeStyle = 'rgba(248, 250, 252, 0.9)';
+      ctx.lineWidth = 2;
+      ctx.beginPath();
+      ctx.moveTo(cx - gap - len, cy);
+      ctx.lineTo(cx - gap, cy);
+      ctx.moveTo(cx + gap, cy);
+      ctx.lineTo(cx + gap + len, cy);
+      ctx.moveTo(cx, cy - gap - len);
+      ctx.lineTo(cx, cy - gap);
+      ctx.moveTo(cx, cy + gap);
+      ctx.lineTo(cx, cy + gap + len);
+      ctx.stroke();
+
+      ctx.fillStyle = '#f59e0b';
+      ctx.fillRect(cx - 1, cy - 1, 2, 2);
+      ctx.restore();
+    }
+
+    drawHitmarker(ctx, w, h, hitmarker) {
+      if (hitmarker.timer <= 0) return;
+      const cx = w / 2;
+      const cy = h / 2;
+      const alpha = Math.min(1, hitmarker.timer / 0.16);
+      const color =
+        hitmarker.type === 'kill'
+          ? `rgba(250, 204, 21, ${alpha})`
+          : hitmarker.type === 'headshot'
+          ? `rgba(239, 68, 68, ${alpha})`
+          : `rgba(255, 255, 255, ${alpha})`;
+
+      ctx.save();
+      ctx.strokeStyle = color;
+      ctx.lineWidth = 2.5;
+      const a = 6;
+      const b = 15;
+      ctx.beginPath();
+      ctx.moveTo(cx - b, cy - b); ctx.lineTo(cx - a, cy - a);
+      ctx.moveTo(cx + b, cy - b); ctx.lineTo(cx + a, cy - a);
+      ctx.moveTo(cx - b, cy + b); ctx.lineTo(cx - a, cy + a);
+      ctx.moveTo(cx + b, cy + b); ctx.lineTo(cx + a, cy + a);
+      ctx.stroke();
+      ctx.restore();
+    }
+
+    drawDamageEffects(ctx, w, h, player) {
+      const lowHpRatio = Math.max(0, (55 - player.hp) / 55);
+      const flashAlpha = Math.max(player.damageFlash * 0.38, lowHpRatio * 0.45);
+      if (flashAlpha > 0.01) {
+        const grad = ctx.createRadialGradient(
+          w / 2, h / 2, Math.min(w, h) * 0.28,
+          w / 2, h / 2, Math.max(w, h) * 0.65
+        );
+        grad.addColorStop(0, 'rgba(185, 28, 28, 0)');
+        grad.addColorStop(1, `rgba(185, 28, 28, ${flashAlpha.toFixed(2)})`);
+        ctx.fillStyle = grad;
+        ctx.fillRect(0, 0, w, h);
+      }
+
+      // Directional hit indicator arc
+      if (player.damageFlash > 0.05 && player.lastHitAngle !== null) {
+        const rel = player.lastHitAngle - player.angle;
+        ctx.save();
+        ctx.translate(w / 2, h / 2);
+        ctx.rotate(rel - Math.PI / 2);
+        ctx.strokeStyle = `rgba(239, 68, 68, ${player.damageFlash.toFixed(2)})`;
+        ctx.lineWidth = 5;
+        ctx.beginPath();
+        ctx.arc(0, 0, 68, -0.35, 0.35);
+        ctx.stroke();
+        ctx.restore();
+      }
+    }
+
+    drawMinimap(ctx, engine) {
+      const map = engine.map;
+      const pad = 14;
+      const size = Math.min(136, Math.floor(this.canvas.width * 0.22));
+      if (size < 72) return;
+      const cell = size / map.width;
+
+      ctx.save();
+      ctx.translate(pad, pad);
+
+      ctx.fillStyle = 'rgba(9, 13, 20, 0.78)';
+      ctx.fillRect(0, 0, size, size);
+      ctx.strokeStyle = engine.player.isUavActive(engine.nowMs)
+        ? '#22d3ee'
+        : 'rgba(148, 163, 184, 0.45)';
+      ctx.lineWidth = 1.5;
+      ctx.strokeRect(0, 0, size, size);
+
+      for (let y = 0; y < map.height; y++) {
+        for (let x = 0; x < map.width; x++) {
+          if (map.grid[y][x] > 0) {
+            ctx.fillStyle = 'rgba(100, 116, 139, 0.75)';
+            ctx.fillRect(x * cell, y * cell, cell, cell);
+          }
+        }
+      }
+
+      // Pickups
+      for (const p of engine.pickups) {
+        ctx.fillStyle = p.type === 'medkit' ? '#22c55e' : '#f59e0b';
+        ctx.fillRect(p.x * cell - 2, p.y * cell - 2, 4, 4);
+      }
+
+      // Enemies (visible when UAV active or within close radar range / recently fired)
+      const uavOn = engine.player.isUavActive(engine.nowMs);
+      for (const e of engine.enemies) {
+        if (!e.alive) continue;
+        const dist = Math.hypot(e.x - engine.player.x, e.y - engine.player.y);
+        if (uavOn || dist < 6.5 || e.muzzleFlash > 0) {
+          ctx.fillStyle = '#ef4444';
+          ctx.beginPath();
+          ctx.arc(e.x * cell, e.y * cell, 3, 0, Math.PI * 2);
+          ctx.fill();
+        }
+      }
+
+      // Player position + FOV cone
+      const px = engine.player.x * cell;
+      const py = engine.player.y * cell;
+      ctx.fillStyle = 'rgba(56, 189, 248, 0.25)';
+      ctx.beginPath();
+      ctx.moveTo(px, py);
+      ctx.arc(px, py, cell * 3.2, engine.player.angle - 0.5, engine.player.angle + 0.5);
+      ctx.closePath();
+      ctx.fill();
+
+      ctx.fillStyle = '#38bdf8';
+      ctx.beginPath();
+      ctx.arc(px, py, 3.2, 0, Math.PI * 2);
+      ctx.fill();
+
+      ctx.restore();
+    }
+  }
+
+  if (typeof module !== 'undefined' && module.exports) {
+    module.exports = { TacticalRenderer };
+  } else {
+    root.WebCOD = root.WebCOD || {};
+    root.WebCOD.TacticalRenderer = TacticalRenderer;
+  }
+})(typeof globalThis !== 'undefined' ? globalThis : window);
+
+
+// ===== Module: src/main.js =====
+/**
+ * Web COD — Operation Ironline
+ * Main browser entry point: DOM bindings, Pointer Lock + drag/touch controls,
+ * HUD synchronization, and animation loop.
+ */
+(function (root) {
+  'use strict';
+
+  function initWebCOD() {
+    const { Config, GameEngine, TacticalRenderer, SoundEngine } = root.WebCOD;
+
+    const canvas = document.getElementById('game-canvas');
+    const stage = document.getElementById('game-stage');
+    if (!canvas || !stage) return;
+
+    const engine = new GameEngine({ mapId: 'killhouse' });
+    const renderer = new TacticalRenderer(canvas);
+    const sound = new SoundEngine();
+
+    // DOM elements
+    const startOverlay = document.getElementById('start-overlay');
+    const pauseOverlay = document.getElementById('pause-overlay');
+    const gameoverOverlay = document.getElementById('gameover-overlay');
+    const waveBanner = document.getElementById('wave-banner');
+    const killFeedEl = document.getElementById('kill-feed');
+    const hudHp = document.getElementById('hud-hp');
+    const hudHpBar = document.getElementById('hud-hp-bar');
+    const hudArmor = document.getElementById('hud-armor');
+    const hudArmorBar = document.getElementById('hud-armor-bar');
+    const hudWave = document.getElementById('hud-wave');
+    const hudEnemies = document.getElementById('hud-enemies');
+    const hudScore = document.getElementById('hud-score');
+    const hudStreak = document.getElementById('hud-streak');
+    const hudWeaponName = document.getElementById('hud-weapon-name');
+    const hudAmmo = document.getElementById('hud-ammo');
+    const hudReserve = document.getElementById('hud-reserve');
+    const hudReloading = document.getElementById('hud-reloading');
+    const btnUav = document.getElementById('btn-uav');
+    const btnAirstrike = document.getElementById('btn-airstrike');
+    const btnMute = document.getElementById('btn-mute');
+    const btnPause = document.getElementById('btn-pause');
+    const toastEl = document.getElementById('tactical-toast');
+
+    let selectedMapId = 'killhouse';
+    let rafId = null;
+    let lastTs = 0;
+    let isPointerLocked = false;
+    let dragLookActive = false;
+    let lastDragX = 0;
+    let lastDragY = 0;
+    let toastTimer = null;
+
+    const keys = {};
+    const mouse = { left: false, right: false, justPressed: false };
+    const touchState = { forward: 0, strafe: 0, turn: 0, fire: false, ads: false };
+
+    function showToast(msg) {
+      if (!toastEl) return;
+      toastEl.textContent = msg;
+      toastEl.classList.add('visible');
+      if (toastTimer) clearTimeout(toastTimer);
+      toastTimer = setTimeout(() => toastEl.classList.remove('visible'), 2200);
+    }
+
+    function resizeCanvas() {
+      const rect = stage.getBoundingClientRect();
+      const dpr = Math.min(window.devicePixelRatio || 1, 1.5);
+      canvas.width = Math.max(320, Math.floor(rect.width * dpr));
+      canvas.height = Math.max(200, Math.floor(rect.height * dpr));
+      renderer.render(engine, 0);
+    }
+
+    function selectMap(mapId) {
+      selectedMapId = mapId;
+      document.querySelectorAll('[data-map-btn]').forEach((btn) => {
+        btn.classList.toggle('active', btn.dataset.mapBtn === mapId);
+      });
+    }
+
+    function startMatch() {
+      sound.init();
+      engine.startGame(selectedMapId);
+      startOverlay.classList.add('hidden');
+      pauseOverlay.classList.add('hidden');
+      gameoverOverlay.classList.add('hidden');
+      syncWeaponBar();
+      showToast(`已部署至 ${engine.map.name}`);
+      try {
+        if (canvas.requestPointerLock) {
+          canvas.requestPointerLock();
+        }
+      } catch (_) {}
+    }
+
+    function togglePause() {
+      if (engine.status === 'MENU' || engine.status === 'GAMEOVER') return;
+      const paused = engine.togglePause();
+      pauseOverlay.classList.toggle('hidden', !paused);
+      if (paused && document.pointerLockElement && document.exitPointerLock) {
+        try { document.exitPointerLock(); } catch (_) {}
+      }
+    }
+
+    function syncWeaponBar() {
+      document.querySelectorAll('[data-weapon-slot]').forEach((btn) => {
+        btn.classList.toggle('active', btn.dataset.weaponSlot === engine.weapons.currentId);
+      });
+    }
+
+    function updateHud() {
+      const p = engine.player;
+      const wSpec = engine.weapons.getCurrentSpec();
+      const wSlot = engine.weapons.getCurrentSlot();
+      const aliveEnemies = engine.enemies.filter((e) => e.alive).length + engine.waveQueue.length;
+
+      hudHp.textContent = Math.ceil(p.hp);
+      hudHpBar.style.width = `${(p.hp / p.maxHp) * 100}%`;
+      hudArmor.textContent = Math.ceil(p.armor);
+      hudArmorBar.style.width = `${(p.armor / p.maxArmor) * 100}%`;
+
+      hudWave.textContent = `WAVE ${engine.wave}`;
+      hudEnemies.textContent = aliveEnemies;
+      hudScore.textContent = p.score;
+      hudStreak.textContent = p.currentStreak;
+
+      hudWeaponName.textContent = wSpec.name;
+      hudAmmo.textContent = wSlot.ammo;
+      hudReserve.textContent = `/ ${wSlot.reserve}`;
+      hudReloading.classList.toggle('hidden', !engine.weapons.reloading);
+
+      btnUav.disabled = !p.uavReady;
+      btnUav.classList.toggle('ready', p.uavReady);
+      btnUav.classList.toggle('active-ks', p.isUavActive(engine.nowMs));
+
+      btnAirstrike.disabled = !p.airstrikeReady;
+      btnAirstrike.classList.toggle('ready', p.airstrikeReady);
+
+      if (engine.waveBannerTimer > 0) {
+        waveBanner.textContent = `第 ${engine.wave} 波敌军来袭 — 消灭所有目标`;
+        waveBanner.classList.remove('hidden');
+      } else {
+        waveBanner.classList.add('hidden');
+      }
+
+      // Kill feed
+      killFeedEl.innerHTML = engine.killFeed
+        .map(
+          (item) =>
+            `<div class="kf-item ${item.isHeadshot ? 'kf-hs' : ''}">${item.text}</div>`
+        )
+        .join('');
+    }
+
+    function showGameOver() {
+      const stats = engine.getSummaryStats();
+      document.getElementById('go-score').textContent = stats.score;
+      document.getElementById('go-wave').textContent = stats.wave;
+      document.getElementById('go-kills').textContent = stats.kills;
+      document.getElementById('go-headshots').textContent = stats.headshots;
+      document.getElementById('go-accuracy').textContent = `${stats.accuracy}%`;
+      document.getElementById('go-streak').textContent = stats.bestStreak;
+      gameoverOverlay.classList.remove('hidden');
+      if (document.pointerLockElement && document.exitPointerLock) {
+        try { document.exitPointerLock(); } catch (_) {}
+      }
+    }
+
+    // Bind UI buttons
+    document.querySelectorAll('[data-map-btn]').forEach((btn) => {
+      btn.addEventListener('click', () => selectMap(btn.dataset.mapBtn));
+    });
+    document.getElementById('btn-deploy').addEventListener('click', startMatch);
+    document.getElementById('btn-resume').addEventListener('click', togglePause);
+    document.getElementById('btn-restart-pause').addEventListener('click', startMatch);
+    document.getElementById('btn-restart-go').addEventListener('click', startMatch);
+    document.getElementById('btn-menu-go').addEventListener('click', () => {
+      engine.reset(selectedMapId);
+      gameoverOverlay.classList.add('hidden');
+      startOverlay.classList.remove('hidden');
+    });
+
+    btnPause.addEventListener('click', togglePause);
+    btnMute.addEventListener('click', () => {
+      sound.init();
+      const m = sound.toggleMute();
+      btnMute.textContent = m ? '🔇 静音' : '🔊 音效';
+    });
+
+    btnUav.addEventListener('click', () => {
+      sound.init();
+      if (engine.triggerUav()) {
+        showToast('UAV 战术侦察机已升空！雷达全图扫描 15 秒');
+      }
+    });
+    btnAirstrike.addEventListener('click', () => {
+      sound.init();
+      if (engine.triggerAirstrike()) {
+        renderer.notifyAirstrike();
+        showToast('精确空袭已命中敌军集群！');
+      }
+    });
+
+    document.querySelectorAll('[data-weapon-slot]').forEach((btn) => {
+      btn.addEventListener('click', () => {
+        if (engine.weapons.switchWeapon(btn.dataset.weaponSlot)) {
+          syncWeaponBar();
+        }
+      });
+    });
+
+    // On-screen mobile / fallback tactical buttons
+    const bindHold = (id, onDown, onUp) => {
+      const el = document.getElementById(id);
+      if (!el) return;
+      const start = (e) => { e.preventDefault(); sound.init(); onDown(); };
+      const end = (e) => { e.preventDefault(); onUp(); };
+      el.addEventListener('pointerdown', start);
+      el.addEventListener('pointerup', end);
+      el.addEventListener('pointerleave', end);
+      el.addEventListener('pointercancel', end);
+    };
+
+    bindHold('touch-up', () => { touchState.forward = 1; }, () => { touchState.forward = 0; });
+    bindHold('touch-down', () => { touchState.forward = -1; }, () => { touchState.forward = 0; });
+    bindHold('touch-left', () => { touchState.turn = -1; }, () => { touchState.turn = 0; });
+    bindHold('touch-right', () => { touchState.turn = 1; }, () => { touchState.turn = 0; });
+    bindHold(
+      'touch-fire',
+      () => { touchState.fire = true; mouse.justPressed = true; },
+      () => { touchState.fire = false; }
+    );
+
+    const touchAdsBtn = document.getElementById('touch-ads');
+    if (touchAdsBtn) {
+      touchAdsBtn.addEventListener('click', () => {
+        touchState.ads = !touchState.ads;
+        touchAdsBtn.classList.toggle('active', touchState.ads);
+      });
+    }
+    const touchReloadBtn = document.getElementById('touch-reload');
+    if (touchReloadBtn) {
+      touchReloadBtn.addEventListener('click', () => {
+        sound.init();
+        if (engine.weapons.startReload(engine.nowMs)) {
+          sound.playReload();
+        }
+      });
+    }
+
+    // Keyboard controls
+    window.addEventListener('keydown', (e) => {
+      const code = e.code;
+      keys[code] = true;
+      if (['Space', 'ArrowUp', 'ArrowDown', 'ArrowLeft', 'ArrowRight'].includes(code)) {
+        e.preventDefault();
+      }
+      if (code === 'Escape' || code === 'KeyP') {
+        togglePause();
+        return;
+      }
+      if (engine.status !== 'PLAYING') return;
+
+      if (code === 'KeyR') {
+        if (engine.weapons.startReload(engine.nowMs)) {
+          sound.playReload();
+        }
+      } else if (code === 'Digit1') {
+        engine.weapons.switchByIndex(0); syncWeaponBar();
+      } else if (code === 'Digit2') {
+        engine.weapons.switchByIndex(1); syncWeaponBar();
+      } else if (code === 'Digit3') {
+        engine.weapons.switchByIndex(2); syncWeaponBar();
+      } else if (code === 'Digit4') {
+        engine.weapons.switchByIndex(3); syncWeaponBar();
+      } else if (code === 'KeyQ') {
+        if (engine.triggerUav()) showToast('UAV 战术侦察机已升空！');
+      } else if (code === 'KeyE') {
+        if (engine.triggerAirstrike()) {
+          renderer.notifyAirstrike();
+          showToast('精确空袭已命中目标！');
+        }
+      }
+    });
+
+    window.addEventListener('keyup', (e) => {
+      keys[e.code] = false;
+    });
+
+    // Pointer lock & mouse controls
+    document.addEventListener('pointerlockchange', () => {
+      isPointerLocked = document.pointerLockElement === canvas;
+    });
+
+    canvas.addEventListener('mousedown', (e) => {
+      if (engine.status !== 'PLAYING') return;
+      sound.init();
+      if (e.button === 0) {
+        mouse.left = true;
+        mouse.justPressed = true;
+        if (!isPointerLocked) {
+          dragLookActive = true;
+          lastDragX = e.clientX;
+          lastDragY = e.clientY;
+        }
+      } else if (e.button === 2) {
+        mouse.right = true;
+      }
+    });
+
+    window.addEventListener('mouseup', (e) => {
+      if (e.button === 0) {
+        mouse.left = false;
+        dragLookActive = false;
+      } else if (e.button === 2) {
+        mouse.right = false;
+      }
+    });
+
+    canvas.addEventListener('contextmenu', (e) => e.preventDefault());
+
+    window.addEventListener('mousemove', (e) => {
+      if (engine.status !== 'PLAYING') return;
+      const sens = engine.weapons.isAds ? 0.0014 : 0.0026;
+      if (isPointerLocked) {
+        engine.player.rotate(e.movementX * sens, -e.movementY * sens * 0.45);
+      } else if (dragLookActive) {
+        const dx = e.clientX - lastDragX;
+        const dy = e.clientY - lastDragY;
+        lastDragX = e.clientX;
+        lastDragY = e.clientY;
+        engine.player.rotate(dx * sens * 1.4, -dy * sens * 0.5);
+      }
+    });
+
+    canvas.addEventListener('wheel', (e) => {
+      if (engine.status !== 'PLAYING') return;
+      e.preventDefault();
+      engine.weapons.cycleWeapon(e.deltaY > 0 ? 1 : -1);
+      syncWeaponBar();
+    }, { passive: false });
+
+    function tick(ts) {
+      const dt = lastTs ? Math.min(0.05, (ts - lastTs) / 1000) : 0.016;
+      lastTs = ts;
+
+      if (engine.status === 'PLAYING') {
+        const forward =
+          (keys.KeyW || keys.ArrowUp ? 1 : 0) -
+          (keys.KeyS || keys.ArrowDown ? 1 : 0) +
+          touchState.forward;
+        const strafe =
+          (keys.KeyD ? 1 : 0) - (keys.KeyA ? 1 : 0) + touchState.strafe;
+        const turn =
+          (keys.ArrowRight ? 1 : 0) - (keys.ArrowLeft ? 1 : 0) + touchState.turn;
+
+        engine.update(dt, {
+          forward: Math.max(-1, Math.min(1, forward)),
+          strafe: Math.max(-1, Math.min(1, strafe)),
+          turn: Math.max(-1, Math.min(1, turn)),
+          sprint: Boolean(keys.ShiftLeft || keys.ShiftRight),
+          crouch: Boolean(keys.KeyC || keys.ControlLeft),
+          ads: mouse.right || Boolean(keys.KeyF) || touchState.ads,
+          fire: mouse.left || Boolean(keys.Space) || touchState.fire,
+          fireJustPressed: mouse.justPressed
+        });
+        mouse.justPressed = false;
+
+        const events = engine.consumeEvents();
+        sound.handleEvents(events);
+        for (const ev of events) {
+          if (ev.type === 'killstreak_unlocked') {
+            const label = ev.payload.killstreak === 'uav' ? 'UAV 侦察机 (Q)' : '精确空袭 (E)';
+            showToast(`连杀奖励解锁：${label}`);
+          } else if (ev.type === 'airstrike') {
+            renderer.notifyAirstrike();
+          } else if (ev.type === 'game_over') {
+            showGameOver();
+          }
+        }
+        updateHud();
+      }
+
+      renderer.render(engine, dt);
+      rafId = requestAnimationFrame(tick);
+    }
+
+    window.addEventListener('resize', resizeCanvas);
+    selectMap('killhouse');
+    resizeCanvas();
+    updateHud();
+
+    if (rafId) cancelAnimationFrame(rafId);
+    rafId = requestAnimationFrame(tick);
+  }
+
+  if (typeof window !== 'undefined') {
+    window.addEventListener('load', initWebCOD);
+  }
+})(typeof globalThis !== 'undefined' ? globalThis : window);
+
+  </script>
+</body>
+</html>

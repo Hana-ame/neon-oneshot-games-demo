@@ -1,0 +1,3328 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
+  <title>NEON VICE — 网页版 GTA 霓虹罪恶都市</title>
+  <style>
+    :root {
+      --bg: #0b0e17;
+      --panel: rgba(13, 18, 30, 0.84);
+      --border: rgba(0, 240, 255, 0.28);
+      --cyan: #00f0ff;
+      --pink: #ff2e93;
+      --green: #39ff14;
+      --gold: #ffe600;
+      --danger: #ff2e63;
+      --text: #f1f5f9;
+      --muted: #94a3b8;
+    }
+    * { box-sizing: border-box; margin: 0; padding: 0; user-select: none; -webkit-user-select: none; }
+    html, body {
+      width: 100%;
+      height: 100%;
+      overflow: hidden;
+      background: var(--bg);
+      color: var(--text);
+      font-family: Inter, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+    }
+    #app {
+      position: relative;
+      width: 100%;
+      height: 100dvh;
+      overflow: hidden;
+    }
+    #gameCanvas {
+      display: block;
+      width: 100%;
+      height: 100%;
+      cursor: crosshair;
+      touch-action: none;
+    }
+    .hud-layer {
+      position: absolute;
+      inset: 0;
+      pointer-events: none;
+      display: flex;
+      flex-direction: column;
+      justify-content: space-between;
+      padding: 12px;
+      gap: 8px;
+    }
+    .hud-top {
+      display: flex;
+      justify-content: space-between;
+      align-items: flex-start;
+      gap: 10px;
+    }
+    .card {
+      background: var(--panel);
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      backdrop-filter: blur(8px);
+      -webkit-backdrop-filter: blur(8px);
+      box-shadow: 0 8px 24px rgba(0, 0, 0, 0.45);
+      pointer-events: auto;
+    }
+    .left-cluster {
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+    }
+    .minimap-wrap {
+      padding: 6px;
+      width: 152px;
+    }
+    #minimapCanvas {
+      display: block;
+      width: 138px;
+      height: 138px;
+      border-radius: 8px;
+      border: 1px solid rgba(255, 255, 255, 0.14);
+      background: #090d16;
+    }
+    .district-row {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-top: 5px;
+      font-size: 11px;
+      color: var(--cyan);
+      font-weight: 700;
+      letter-spacing: 0.3px;
+    }
+    .speed-card {
+      padding: 7px 10px;
+      font-size: 12px;
+      display: flex;
+      flex-direction: column;
+      gap: 4px;
+    }
+    .speed-line {
+      display: flex;
+      justify-content: space-between;
+      align-items: baseline;
+      gap: 8px;
+    }
+    .speed-val {
+      font-size: 18px;
+      font-weight: 800;
+      color: var(--gold);
+      font-variant-numeric: tabular-nums;
+    }
+    .mission-bar {
+      padding: 8px 14px;
+      max-width: 420px;
+      text-align: center;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 4px;
+    }
+    .mission-title {
+      font-size: 13px;
+      font-weight: 800;
+      color: var(--gold);
+      letter-spacing: 0.4px;
+    }
+    .mission-sub {
+      font-size: 11px;
+      color: var(--text);
+      opacity: 0.9;
+    }
+    .right-cluster {
+      padding: 10px 12px;
+      min-width: 196px;
+      display: flex;
+      flex-direction: column;
+      gap: 7px;
+    }
+    .stars-row {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      gap: 8px;
+    }
+    .stars {
+      font-size: 17px;
+      letter-spacing: 2px;
+      color: rgba(255, 255, 255, 0.18);
+    }
+    .stars .lit {
+      color: var(--gold);
+      text-shadow: 0 0 8px rgba(255, 46, 99, 0.9);
+    }
+    .cash {
+      font-size: 18px;
+      font-weight: 800;
+      color: var(--green);
+      font-variant-numeric: tabular-nums;
+    }
+    .bar-row {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      font-size: 11px;
+      color: var(--muted);
+    }
+    .bar-track {
+      flex: 1;
+      height: 7px;
+      background: rgba(255, 255, 255, 0.12);
+      border-radius: 99px;
+      overflow: hidden;
+    }
+    .bar-fill {
+      height: 100%;
+      border-radius: 99px;
+      transition: width 0.12s ease;
+    }
+    .hp-fill { background: linear-gradient(90deg, #16a34a, #39ff14); }
+    .armor-fill { background: linear-gradient(90deg, #0284c7, #00f0ff); }
+    .car-fill { background: linear-gradient(90deg, #f59e0b, #ffe600); }
+    .weapon-row {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      font-size: 12px;
+      padding-top: 4px;
+      border-top: 1px solid rgba(255, 255, 255, 0.1);
+    }
+    .weapon-name { font-weight: 700; color: var(--cyan); }
+    .ammo-val { font-weight: 700; color: var(--gold); font-variant-numeric: tabular-nums; }
+    .radio-pill {
+      font-size: 11px;
+      color: var(--pink);
+      font-weight: 600;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      max-width: 180px;
+    }
+    .hud-bottom {
+      display: flex;
+      justify-content: space-between;
+      align-items: flex-end;
+      gap: 10px;
+      flex-wrap: wrap;
+    }
+    .toolbar {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 6px;
+      padding: 6px;
+    }
+    .btn {
+      pointer-events: auto;
+      appearance: none;
+      border: 1px solid rgba(255, 255, 255, 0.18);
+      background: rgba(20, 28, 46, 0.9);
+      color: var(--text);
+      font-size: 12px;
+      font-weight: 600;
+      padding: 6px 10px;
+      border-radius: 8px;
+      cursor: pointer;
+      transition: transform 0.08s ease, border-color 0.15s ease, background 0.15s ease;
+    }
+    .btn:hover { border-color: var(--cyan); background: rgba(0, 240, 255, 0.16); }
+    .btn:active { transform: scale(0.96); }
+    .btn-primary {
+      border-color: var(--pink);
+      background: linear-gradient(135deg, rgba(255, 46, 147, 0.35), rgba(0, 240, 255, 0.2));
+    }
+    .btn-gold {
+      border-color: var(--gold);
+      color: var(--gold);
+    }
+    .touch-controls {
+      display: none;
+      pointer-events: auto;
+      gap: 8px;
+      align-items: center;
+    }
+    .touch-controls.visible { display: flex; }
+    .dpad {
+      display: grid;
+      grid-template-columns: repeat(3, 42px);
+      grid-template-rows: repeat(2, 42px);
+      gap: 4px;
+    }
+    .pad-btn {
+      border: 1px solid rgba(0, 240, 255, 0.4);
+      background: rgba(13, 18, 30, 0.85);
+      color: var(--text);
+      border-radius: 10px;
+      font-size: 15px;
+      font-weight: 800;
+      cursor: pointer;
+      touch-action: none;
+    }
+    .pad-btn:active { background: rgba(0, 240, 255, 0.35); }
+    .action-pads {
+      display: flex;
+      flex-direction: column;
+      gap: 6px;
+    }
+    .banner-overlay {
+      position: absolute;
+      top: 22%;
+      left: 50%;
+      transform: translateX(-50%);
+      text-align: center;
+      pointer-events: none;
+      padding: 14px 28px;
+      border-radius: 14px;
+      background: rgba(10, 14, 24, 0.88);
+      border: 2px solid var(--cyan);
+      box-shadow: 0 0 32px rgba(0, 240, 255, 0.35);
+      opacity: 0;
+      transition: opacity 0.2s ease;
+      max-width: 90%;
+    }
+    .banner-overlay.show { opacity: 1; }
+    .banner-title { font-size: 26px; font-weight: 900; letter-spacing: 1.5px; }
+    .banner-sub { font-size: 13px; color: var(--text); margin-top: 4px; }
+    .toast-stack {
+      position: absolute;
+      bottom: 72px;
+      left: 50%;
+      transform: translateX(-50%);
+      display: flex;
+      flex-direction: column;
+      gap: 6px;
+      pointer-events: none;
+      align-items: center;
+    }
+    .toast {
+      background: rgba(13, 18, 30, 0.9);
+      border: 1px solid rgba(255, 255, 255, 0.16);
+      padding: 6px 14px;
+      border-radius: 99px;
+      font-size: 12px;
+      font-weight: 600;
+      white-space: nowrap;
+    }
+    .modal-backdrop {
+      position: absolute;
+      inset: 0;
+      background: rgba(5, 8, 15, 0.78);
+      backdrop-filter: blur(6px);
+      display: none;
+      align-items: center;
+      justify-content: center;
+      padding: 16px;
+      z-index: 30;
+    }
+    .modal-backdrop.open { display: flex; }
+    .modal-box {
+      width: 100%;
+      max-width: 520px;
+      max-height: 86dvh;
+      overflow-y: auto;
+      background: #111827;
+      border: 1px solid var(--cyan);
+      border-radius: 16px;
+      padding: 18px;
+      box-shadow: 0 20px 50px rgba(0, 0, 0, 0.65);
+    }
+    .modal-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 12px;
+    }
+    .modal-header h2 { font-size: 18px; color: var(--cyan); }
+    .mission-item {
+      border: 1px solid rgba(255, 255, 255, 0.12);
+      border-radius: 10px;
+      padding: 10px 12px;
+      margin-bottom: 8px;
+      background: rgba(255, 255, 255, 0.03);
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      gap: 10px;
+    }
+    .mission-item h3 { font-size: 14px; color: var(--text); }
+    .mission-item p { font-size: 12px; color: var(--muted); margin-top: 2px; }
+    .key-grid {
+      display: grid;
+      grid-template-columns: auto 1fr;
+      gap: 8px 14px;
+      font-size: 13px;
+      align-items: center;
+    }
+    kbd {
+      background: #1e293b;
+      border: 1px solid rgba(255, 255, 255, 0.25);
+      border-radius: 6px;
+      padding: 3px 7px;
+      font-size: 12px;
+      font-weight: 700;
+      color: var(--cyan);
+      text-align: center;
+    }
+    @media (max-width: 720px) {
+      .minimap-wrap { width: 112px; padding: 4px; }
+      #minimapCanvas { width: 102px; height: 102px; }
+      .right-cluster { min-width: 158px; padding: 8px; }
+      .mission-bar { display: none; }
+      .touch-controls { display: flex; }
+    }
+  </style>
+</head>
+<body>
+  <div id="app">
+    <canvas id="gameCanvas"></canvas>
+
+    <div class="hud-layer">
+      <div class="hud-top">
+        <div class="left-cluster">
+          <div class="card minimap-wrap">
+            <canvas id="minimapCanvas" width="144" height="144"></canvas>
+            <div class="district-row">
+              <span id="districtName">霓虹市中心</span>
+              <span id="missionCount">0/5</span>
+            </div>
+          </div>
+          <div class="card speed-card">
+            <div class="speed-line">
+              <span id="vehicleName" style="color:#94a3b8">步行状态</span>
+              <span><span id="speedVal" class="speed-val">0</span> <small>KM/H</small></span>
+            </div>
+            <div class="bar-row" id="carHpRow" style="display:none">
+              <span>车况</span>
+              <div class="bar-track"><div id="carHpBar" class="bar-fill car-fill" style="width:100%"></div></div>
+            </div>
+          </div>
+        </div>
+
+        <div class="card mission-bar">
+          <div id="missionTitle" class="mission-title">自由探索模式</div>
+          <div id="missionSub" class="mission-sub">按 M 接取街头任务，按 E 抢夺/驾驶附近车辆</div>
+          <button id="quickMissionBtn" class="btn btn-gold" style="margin-top:2px;padding:3px 10px;font-size:11px">接取下一任务 (M)</button>
+        </div>
+
+        <div class="card right-cluster">
+          <div class="stars-row">
+            <div id="wantedStars" class="stars">★★★★★</div>
+            <div id="cashVal" class="cash">$500</div>
+          </div>
+          <div class="bar-row">
+            <span>生命</span>
+            <div class="bar-track"><div id="hpBar" class="bar-fill hp-fill" style="width:100%"></div></div>
+          </div>
+          <div class="bar-row">
+            <span>护甲</span>
+            <div class="bar-track"><div id="armorBar" class="bar-fill armor-fill" style="width:50%"></div></div>
+          </div>
+          <div class="weapon-row">
+            <span id="weaponName" class="weapon-name">9mm 战术手枪</span>
+            <span id="ammoVal" class="ammo-val">48</span>
+          </div>
+          <div id="radioName" class="radio-pill">📻 VICE FM 98.3</div>
+        </div>
+      </div>
+
+      <div class="hud-bottom">
+        <div class="card toolbar">
+          <button id="btnMission" class="btn btn-primary">任务 (M)</button>
+          <button id="btnVehicle" class="btn">上/下车 (E)</button>
+          <button id="btnWeapon" class="btn">换枪 (Q)</button>
+          <button id="btnRadio" class="btn">电台 (R)</button>
+          <button id="btnMute" class="btn">音效: 开</button>
+          <button id="btnTouch" class="btn">触控键</button>
+          <button id="btnPause" class="btn">暂停 (P)</button>
+          <button id="btnHelp" class="btn">指南 (?)</button>
+        </div>
+
+        <div id="touchControls" class="touch-controls">
+          <div class="dpad">
+            <div></div>
+            <button class="pad-btn" data-key="up">▲</button>
+            <div></div>
+            <button class="pad-btn" data-key="left">◀</button>
+            <button class="pad-btn" data-key="down">▼</button>
+            <button class="pad-btn" data-key="right">▶</button>
+          </div>
+          <div class="action-pads">
+            <button class="pad-btn" style="padding:8px 12px;font-size:12px" data-key="fire">开火</button>
+            <button class="pad-btn" style="padding:8px 12px;font-size:12px" data-key="handbrake">漂移</button>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div id="bannerOverlay" class="banner-overlay">
+      <div id="bannerTitle" class="banner-title"></div>
+      <div id="bannerSub" class="banner-sub"></div>
+    </div>
+    <div id="toastStack" class="toast-stack"></div>
+
+    <div id="missionModal" class="modal-backdrop">
+      <div class="modal-box">
+        <div class="modal-header">
+          <h2>霓虹都市任务面板</h2>
+          <button id="closeMissionModal" class="btn">关闭</button>
+        </div>
+        <div id="missionList"></div>
+      </div>
+    </div>
+
+    <div id="helpModal" class="modal-backdrop">
+      <div class="modal-box">
+        <div class="modal-header">
+          <h2>NEON VICE 操作指南</h2>
+          <button id="closeHelpModal" class="btn">关闭</button>
+        </div>
+        <div class="key-grid">
+          <kbd>W A S D / 方向键</kbd><div>步行移动 / 驾驶加速、刹车、转向</div>
+          <kbd>E / F</kbd><div>上车 / 抢车 / 下车</div>
+          <kbd>鼠标左键</kbd><div>瞄准并射击（支持车内扫射）</div>
+          <kbd>Space</kbd><div>驾驶手刹漂移 / 步行开火</div>
+          <kbd>Shift</kbd><div>步行冲刺</div>
+          <kbd>1 - 4 / Q</kbd><div>切换武器（格斗 / 手枪 / 冲锋枪 / 霰弹枪）</div>
+          <kbd>M</kbd><div>打开任务面板</div>
+          <kbd>R</kbd><div>切换车载电台频道</div>
+          <kbd>P</kbd><div>暂停 / 恢复游戏</div>
+        </div>
+        <div style="margin-top:14px;display:flex;justify-content:flex-end;gap:8px">
+          <button id="restartGameBtn" class="btn btn-primary">重置存档并重新开始</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <script>
+// ===== config.js =====
+(function (root, factory) {
+  
+    root.GTAConfig = factory();
+  
+})(typeof globalThis !== 'undefined' ? globalThis : this, function () {
+  'use strict';
+
+  const TILE_SIZE = 64;
+  const BLOCK_TILES = 4; // 4x4 building block
+  const ROAD_TILES = 2;  // 2-tile wide two-way road
+  const STRIDE_TILES = BLOCK_TILES + ROAD_TILES; // 6 tiles per city cell
+  const GRID_CELLS = 7;  // 7x7 city blocks => 44x44 tiles => 2816x2816 px world
+  const MAP_TILES = GRID_CELLS * STRIDE_TILES + ROAD_TILES;
+  const WORLD_SIZE = MAP_TILES * TILE_SIZE;
+
+  const DISTRICTS = [
+    { name: '霓虹市中心', en: 'Neon Downtown', minX: 0, maxX: 0.5, minY: 0, maxY: 0.5, accent: '#00f0ff' },
+    { name: '日落大道', en: 'Sunset Strip', minX: 0.5, maxX: 1.0, minY: 0, maxY: 0.5, accent: '#ff2e93' },
+    { name: '工业港区', en: 'Harbor Docks', minX: 0, maxX: 0.5, minY: 0.5, maxY: 1.0, accent: '#ffaa00' },
+    { name: '棕榈湾畔', en: 'Palm Bay', minX: 0.5, maxX: 1.0, minY: 0.5, maxY: 1.0, accent: '#39ff14' }
+  ];
+
+  const VEHICLE_TYPES = {
+    sports: {
+      id: 'sports',
+      name: '幻影 GT 跑车',
+      width: 24,
+      length: 46,
+      maxSpeed: 540,
+      reverseSpeed: 170,
+      accel: 460,
+      brake: 560,
+      turnRate: 3.1,
+      driftGrip: 0.88,
+      normalGrip: 0.72,
+      mass: 1.1,
+      maxHp: 130,
+      colors: ['#ff2e63', '#00f0ff', '#ffe600', '#b829ff', '#ff6b00']
+    },
+    muscle: {
+      id: 'muscle',
+      name: '狂怒 V8 肌肉车',
+      width: 26,
+      length: 48,
+      maxSpeed: 470,
+      reverseSpeed: 160,
+      accel: 410,
+      brake: 480,
+      turnRate: 2.75,
+      driftGrip: 0.91,
+      normalGrip: 0.76,
+      mass: 1.45,
+      maxHp: 170,
+      colors: ['#ff5500', '#cc1133', '#22cc88', '#3366ff']
+    },
+    taxi: {
+      id: 'taxi',
+      name: '都市出租车',
+      width: 24,
+      length: 44,
+      maxSpeed: 390,
+      reverseSpeed: 145,
+      accel: 330,
+      brake: 440,
+      turnRate: 2.85,
+      driftGrip: 0.85,
+      normalGrip: 0.70,
+      mass: 1.2,
+      maxHp: 140,
+      colors: ['#f5c400']
+    },
+    van: {
+      id: 'van',
+      name: '重型厢式货车',
+      width: 28,
+      length: 54,
+      maxSpeed: 320,
+      reverseSpeed: 120,
+      accel: 250,
+      brake: 380,
+      turnRate: 2.2,
+      driftGrip: 0.82,
+      normalGrip: 0.68,
+      mass: 2.1,
+      maxHp: 240,
+      colors: ['#d8e2ec', '#4a607a', '#3d5a45']
+    },
+    police: {
+      id: 'police',
+      name: '特警截击巡逻车',
+      width: 25,
+      length: 47,
+      maxSpeed: 525,
+      reverseSpeed: 175,
+      accel: 450,
+      brake: 540,
+      turnRate: 3.05,
+      driftGrip: 0.87,
+      normalGrip: 0.71,
+      mass: 1.5,
+      maxHp: 185,
+      colors: ['#161d2b']
+    }
+  };
+
+  const WEAPONS = [
+    {
+      id: 'fist',
+      name: '徒手格斗',
+      key: '1',
+      damage: 20,
+      fireRate: 0.35,
+      range: 42,
+      speed: 0,
+      pellets: 1,
+      spread: 0,
+      ammoCost: 0,
+      color: '#ffffff',
+      melee: true
+    },
+    {
+      id: 'pistol',
+      name: '9mm 战术手枪',
+      key: '2',
+      damage: 28,
+      fireRate: 0.28,
+      range: 420,
+      speed: 980,
+      pellets: 1,
+      spread: 0.04,
+      ammoCost: 1,
+      color: '#ffe066',
+      melee: false
+    },
+    {
+      id: 'smg',
+      name: '微型冲锋枪',
+      key: '3',
+      damage: 16,
+      fireRate: 0.095,
+      range: 360,
+      speed: 1050,
+      pellets: 1,
+      spread: 0.11,
+      ammoCost: 1,
+      color: '#00f0ff',
+      melee: false
+    },
+    {
+      id: 'shotgun',
+      name: '战术霰弹枪',
+      key: '4',
+      damage: 18,
+      fireRate: 0.68,
+      range: 250,
+      speed: 880,
+      pellets: 6,
+      spread: 0.28,
+      ammoCost: 1,
+      color: '#ff6b35',
+      melee: false
+    }
+  ];
+
+  const RADIO_STATIONS = [
+    { id: 0, name: 'VICE FM 98.3', genre: '合成器浪潮 Synthwave', bpm: 112 },
+    { id: 1, name: 'NEON PULSE 104.7', genre: '赛博电音 Outrun', bpm: 128 },
+    { id: 2, name: 'HARBOR FUNK 89.1', genre: '复古放克 Electro Funk', bpm: 102 },
+    { id: 3, name: 'OFF', genre: '关闭电台', bpm: 0 }
+  ];
+
+  return {
+    TILE_SIZE,
+    BLOCK_TILES,
+    ROAD_TILES,
+    STRIDE_TILES,
+    GRID_CELLS,
+    MAP_TILES,
+    WORLD_SIZE,
+    DISTRICTS,
+    VEHICLE_TYPES,
+    WEAPONS,
+    RADIO_STATIONS,
+    PLAYER_SPEED: 165,
+    PLAYER_SPRINT_SPEED: 235,
+    PLAYER_RADIUS: 11,
+    NPC_RADIUS: 10,
+    ENTER_VEHICLE_RADIUS: 58,
+    WANTED_MAX_STARS: 5,
+    WANTED_DECAY_DELAY: 12.0,
+    WANTED_DECAY_RATE: 14.0
+  };
+});
+
+
+// ===== world.js =====
+(function (root, factory) {
+  
+    root.GTAWorld = factory(root.GTAConfig);
+  
+})(typeof globalThis !== 'undefined' ? globalThis : this, function (Config) {
+  'use strict';
+
+  function mulberry32(seed) {
+    let a = seed >>> 0;
+    return function () {
+      a |= 0;
+      a = (a + 0x6D2B79F5) | 0;
+      let t = Math.imul(a ^ (a >>> 15), 1 | a);
+      t = (t + Math.imul(t ^ (t >>> 7), 61 | t)) ^ t;
+      return ((t ^ (t >>> 14)) >>> 0) / 4294967296;
+    };
+  }
+
+  class CityWorld {
+    constructor(seed = 2026) {
+      this.seed = seed;
+      this.rng = mulberry32(seed);
+      this.tileSize = Config.TILE_SIZE;
+      this.mapTiles = Config.MAP_TILES;
+      this.size = Config.WORLD_SIZE;
+      this.tiles = new Uint8Array(this.mapTiles * this.mapTiles); // 0=road, 1=sidewalk, 2=building, 3=park
+      this.buildings = [];
+      this.parks = [];
+      this.intersections = [];
+      this.roadCenters = [];
+      this.pickups = [];
+      this._generate();
+    }
+
+    _generate() {
+      const { STRIDE_TILES, ROAD_TILES, BLOCK_TILES, GRID_CELLS, TILE_SIZE, MAP_TILES } = Config;
+
+      // Default everything to sidewalk, then carve roads and blocks
+      this.tiles.fill(1);
+
+      // Compute road center lines (each road spans 2 tiles: r and r+1)
+      const roadStarts = [];
+      for (let c = 0; c <= GRID_CELLS; c++) {
+        roadStarts.push(c * STRIDE_TILES);
+      }
+
+      for (let ty = 0; ty < MAP_TILES; ty++) {
+        for (let tx = 0; tx < MAP_TILES; tx++) {
+          const onVertRoad = (tx % STRIDE_TILES) < ROAD_TILES;
+          const onHorzRoad = (ty % STRIDE_TILES) < ROAD_TILES;
+          if (onVertRoad || onHorzRoad) {
+            this.tiles[ty * MAP_TILES + tx] = 0;
+          }
+        }
+      }
+
+      // Build intersection graph for traffic AI
+      for (let iy = 0; iy < roadStarts.length; iy++) {
+        for (let ix = 0; ix < roadStarts.length; ix++) {
+          const cx = (roadStarts[ix] + ROAD_TILES * 0.5) * TILE_SIZE;
+          const cy = (roadStarts[iy] + ROAD_TILES * 0.5) * TILE_SIZE;
+          this.intersections.push({
+            id: iy * roadStarts.length + ix,
+            gx: ix,
+            gy: iy,
+            x: cx,
+            y: cy
+          });
+        }
+      }
+      this.roadStarts = roadStarts;
+      this.roadCenters = roadStarts.map(t => (t + ROAD_TILES * 0.5) * TILE_SIZE);
+
+      // Populate city blocks with buildings or parks
+      const roofPalettes = [
+        { base: '#1e2738', roof: '#2a364d', trim: '#00f0ff' },
+        { base: '#251e36', roof: '#342a4d', trim: '#ff2e93' },
+        { base: '#1d2b2e', roof: '#293e42', trim: '#39ff14' },
+        { base: '#2c241e', roof: '#3d3129', trim: '#ffaa00' },
+        { base: '#202633', roof: '#2e374a', trim: '#7c5cff' }
+      ];
+      const neonTexts = ['CLUB', 'HOTEL', 'DINER', 'ARCADE', 'PAWN', 'CYBER', 'BAR', 'MOTEL', 'LOAN', 'TECH'];
+
+      for (let by = 0; by < GRID_CELLS; by++) {
+        for (let bx = 0; bx < GRID_CELLS; bx++) {
+          const startTx = bx * STRIDE_TILES + ROAD_TILES;
+          const startTy = by * STRIDE_TILES + ROAD_TILES;
+          const blockX = startTx * TILE_SIZE;
+          const blockY = startTy * TILE_SIZE;
+          const blockW = BLOCK_TILES * TILE_SIZE;
+          const blockH = BLOCK_TILES * TILE_SIZE;
+
+          // Make center-ish block and a couple others parks for open visual variety
+          const isPark = (bx === 3 && by === 3) || (bx === 5 && by === 5) || (bx === 1 && by === 4);
+          if (isPark) {
+            for (let ty = startTy; ty < startTy + BLOCK_TILES; ty++) {
+              for (let tx = startTx; tx < startTx + BLOCK_TILES; tx++) {
+                this.tiles[ty * MAP_TILES + tx] = 3;
+              }
+            }
+            const trees = [];
+            for (let i = 0; i < 6; i++) {
+              trees.push({
+                x: blockX + 34 + this.rng() * (blockW - 68),
+                y: blockY + 34 + this.rng() * (blockH - 68),
+                r: 14 + this.rng() * 10
+              });
+            }
+            this.parks.push({ x: blockX + 12, y: blockY + 12, w: blockW - 24, h: blockH - 24, trees });
+            continue;
+          }
+
+          // Mark interior tiles as building footprint (leave 14px sidewalk apron around block)
+          for (let ty = startTy; ty < startTy + BLOCK_TILES; ty++) {
+            for (let tx = startTx; tx < startTx + BLOCK_TILES; tx++) {
+              this.tiles[ty * MAP_TILES + tx] = 2;
+            }
+          }
+
+          const margin = 16;
+          const splitMode = this.rng();
+          const subRects = [];
+          if (splitMode < 0.35) {
+            // Single large skyscraper / landmark building
+            subRects.push({
+              x: blockX + margin,
+              y: blockY + margin,
+              w: blockW - margin * 2,
+              h: blockH - margin * 2
+            });
+          } else if (splitMode < 0.7) {
+            // Two buildings split horizontally with an alley
+            const gap = 14;
+            const halfW = (blockW - margin * 2 - gap) / 2;
+            subRects.push({ x: blockX + margin, y: blockY + margin, w: halfW, h: blockH - margin * 2 });
+            subRects.push({ x: blockX + margin + halfW + gap, y: blockY + margin, w: halfW, h: blockH - margin * 2 });
+          } else {
+            // Two buildings split vertically with an alley
+            const gap = 14;
+            const halfH = (blockH - margin * 2 - gap) / 2;
+            subRects.push({ x: blockX + margin, y: blockY + margin, w: blockW - margin * 2, h: halfH });
+            subRects.push({ x: blockX + margin, y: blockY + margin + halfH + gap, w: blockW - margin * 2, h: halfH });
+          }
+
+          for (const rect of subRects) {
+            const palette = roofPalettes[Math.floor(this.rng() * roofPalettes.length)];
+            const height = 28 + Math.floor(this.rng() * 56);
+            const hasNeon = this.rng() > 0.45;
+            this.buildings.push({
+              id: this.buildings.length,
+              x: rect.x,
+              y: rect.y,
+              w: rect.w,
+              h: rect.h,
+              height,
+              baseColor: palette.base,
+              roofColor: palette.roof,
+              trimColor: palette.trim,
+              neon: hasNeon ? neonTexts[Math.floor(this.rng() * neonTexts.length)] : null,
+              hasHelipad: rect.w > 180 && rect.h > 180 && this.rng() > 0.5
+            });
+          }
+        }
+      }
+
+      // Generate static pickups (health, armor, ammo, cash stashes)
+      const pickupTypes = ['health', 'armor', 'ammo', 'cash'];
+      for (let i = 0; i < 16; i++) {
+        const pt = this.getRandomSidewalkPoint();
+        this.pickups.push({
+          id: i,
+          type: pickupTypes[i % pickupTypes.length],
+          x: pt.x,
+          y: pt.y,
+          active: true,
+          respawnTimer: 0
+        });
+      }
+    }
+
+    getTileAt(x, y) {
+      const tx = Math.floor(x / this.tileSize);
+      const ty = Math.floor(y / this.tileSize);
+      if (tx < 0 || ty < 0 || tx >= this.mapTiles || ty >= this.mapTiles) return 2;
+      return this.tiles[ty * this.mapTiles + tx];
+    }
+
+    isOnRoad(x, y) {
+      return this.getTileAt(x, y) === 0;
+    }
+
+    getDistrictAt(x, y) {
+      const nx = Math.max(0, Math.min(0.999, x / this.size));
+      const ny = Math.max(0, Math.min(0.999, y / this.size));
+      for (const d of Config.DISTRICTS) {
+        if (nx >= d.minX && nx < d.maxX && ny >= d.minY && ny < d.maxY) {
+          return d;
+        }
+      }
+      return Config.DISTRICTS[0];
+    }
+
+    pointInBuilding(x, y, padding = 0) {
+      for (let i = 0; i < this.buildings.length; i++) {
+        const b = this.buildings[i];
+        if (
+          x >= b.x - padding &&
+          x <= b.x + b.w + padding &&
+          y >= b.y - padding &&
+          y <= b.y + b.h + padding
+        ) {
+          return b;
+        }
+      }
+      return null;
+    }
+
+    getRandomRoadPoint() {
+      const inter = this.intersections[Math.floor(this.rng() * this.intersections.length)];
+      const laneOffset = (this.rng() > 0.5 ? 1 : -1) * (this.tileSize * 0.42);
+      const horiz = this.rng() > 0.5;
+      const x = Math.max(64, Math.min(this.size - 64, inter.x + (horiz ? (this.rng() - 0.5) * 180 : laneOffset)));
+      const y = Math.max(64, Math.min(this.size - 64, inter.y + (horiz ? laneOffset : (this.rng() - 0.5) * 180)));
+      return { x, y, angle: horiz ? (laneOffset > 0 ? 0 : Math.PI) : (laneOffset > 0 ? -Math.PI / 2 : Math.PI / 2) };
+    }
+
+    getRandomSidewalkPoint() {
+      for (let tries = 0; tries < 50; tries++) {
+        const inter = this.intersections[Math.floor(this.rng() * this.intersections.length)];
+        const sx = (this.rng() > 0.5 ? 1 : -1) * (this.tileSize + 8);
+        const sy = (this.rng() > 0.5 ? 1 : -1) * (this.tileSize + 8);
+        const x = Math.max(40, Math.min(this.size - 40, inter.x + sx));
+        const y = Math.max(40, Math.min(this.size - 40, inter.y + sy));
+        if (!this.pointInBuilding(x, y, 14)) {
+          return { x, y };
+        }
+      }
+      return { x: this.roadCenters[1], y: this.roadCenters[1] };
+    }
+
+    getSafeSpawnPoint() {
+      // Spawn near central intersection next to the central park
+      const cx = this.roadCenters[3];
+      const cy = this.roadCenters[3];
+      return { x: cx + this.tileSize * 0.4, y: cy + this.tileSize * 0.4 };
+    }
+  }
+
+  return { CityWorld, mulberry32 };
+});
+
+
+// ===== physics.js =====
+(function (root, factory) {
+  
+    root.GTAPhysics = factory(root.GTAConfig);
+  
+})(typeof globalThis !== 'undefined' ? globalThis : this, function (Config) {
+  'use strict';
+
+  function clamp(v, min, max) {
+    return v < min ? min : v > max ? max : v;
+  }
+
+  function normalizeAngle(a) {
+    while (a > Math.PI) a -= Math.PI * 2;
+    while (a < -Math.PI) a += Math.PI * 2;
+    return a;
+  }
+
+  function distSq(ax, ay, bx, by) {
+    const dx = ax - bx;
+    const dy = ay - by;
+    return dx * dx + dy * dy;
+  }
+
+  function dist(ax, ay, bx, by) {
+    return Math.hypot(ax - bx, ay - by);
+  }
+
+  /**
+   * Resolve circle vs AABB building collision.
+   * Returns { hit, nx, ny, penetration } and mutates entity x, y.
+   */
+  function resolveCircleAABB(entity, radius, rect) {
+    const closestX = clamp(entity.x, rect.x, rect.x + rect.w);
+    const closestY = clamp(entity.y, rect.y, rect.y + rect.h);
+    const dx = entity.x - closestX;
+    const dy = entity.y - closestY;
+    const d2 = dx * dx + dy * dy;
+
+    if (d2 >= radius * radius) {
+      return { hit: false, nx: 0, ny: 0, penetration: 0 };
+    }
+
+    const d = Math.sqrt(d2);
+    let nx = 0;
+    let ny = 0;
+    let penetration = 0;
+
+    if (d > 0.0001) {
+      nx = dx / d;
+      ny = dy / d;
+      penetration = radius - d;
+    } else {
+      // Center is inside rect — push out along shallowest axis
+      const leftPen = entity.x - rect.x;
+      const rightPen = rect.x + rect.w - entity.x;
+      const topPen = entity.y - rect.y;
+      const bottomPen = rect.y + rect.h - entity.y;
+      const minPen = Math.min(leftPen, rightPen, topPen, bottomPen);
+      if (minPen === leftPen) { nx = -1; ny = 0; penetration = leftPen + radius; }
+      else if (minPen === rightPen) { nx = 1; ny = 0; penetration = rightPen + radius; }
+      else if (minPen === topPen) { nx = 0; ny = -1; penetration = topPen + radius; }
+      else { nx = 0; ny = 1; penetration = bottomPen + radius; }
+    }
+
+    entity.x += nx * penetration;
+    entity.y += ny * penetration;
+    return { hit: true, nx, ny, penetration };
+  }
+
+  /**
+   * Resolve circle vs world boundaries and all buildings.
+   */
+  function resolveWorldCollisions(entity, radius, world, restitution = 0.25) {
+    let collided = false;
+    let impactSpeed = 0;
+
+    // World boundary clamp
+    const pad = radius + 8;
+    if (entity.x < pad) {
+      entity.x = pad;
+      if (entity.vx < 0) { impactSpeed = Math.max(impactSpeed, -entity.vx); entity.vx = -entity.vx * restitution; }
+      collided = true;
+    } else if (entity.x > world.size - pad) {
+      entity.x = world.size - pad;
+      if (entity.vx > 0) { impactSpeed = Math.max(impactSpeed, entity.vx); entity.vx = -entity.vx * restitution; }
+      collided = true;
+    }
+
+    if (entity.y < pad) {
+      entity.y = pad;
+      if (entity.vy < 0) { impactSpeed = Math.max(impactSpeed, -entity.vy); entity.vy = -entity.vy * restitution; }
+      collided = true;
+    } else if (entity.y > world.size - pad) {
+      entity.y = world.size - pad;
+      if (entity.vy > 0) { impactSpeed = Math.max(impactSpeed, entity.vy); entity.vy = -entity.vy * restitution; }
+      collided = true;
+    }
+
+    // Building collisions
+    const buildings = world.buildings;
+    for (let i = 0; i < buildings.length; i++) {
+      const b = buildings[i];
+      if (
+        entity.x + radius < b.x ||
+        entity.x - radius > b.x + b.w ||
+        entity.y + radius < b.y ||
+        entity.y - radius > b.y + b.h
+      ) {
+        continue;
+      }
+      const res = resolveCircleAABB(entity, radius, b);
+      if (res.hit) {
+        collided = true;
+        if (typeof entity.vx === 'number' && typeof entity.vy === 'number') {
+          const vn = entity.vx * res.nx + entity.vy * res.ny;
+          if (vn < 0) {
+            impactSpeed = Math.max(impactSpeed, -vn);
+            entity.vx -= (1 + restitution) * vn * res.nx;
+            entity.vy -= (1 + restitution) * vn * res.ny;
+          }
+        }
+      }
+    }
+
+    return { collided, impactSpeed };
+  }
+
+  /**
+   * 2D arcade-realistic vehicle dynamics with forward/lateral velocity decomposition and drifting.
+   */
+  function stepVehiclePhysics(car, input, dt, world) {
+    const spec = car.spec;
+    const cos = Math.cos(car.angle);
+    const sin = Math.sin(car.angle);
+
+    // Decompose velocity into forward & lateral components
+    let forwardVel = car.vx * cos + car.vy * sin;
+    let lateralVel = -car.vx * sin + car.vy * cos;
+
+    // Throttle / Brake / Reverse
+    const throttle = input.throttle || 0; // -1..1
+    const steer = input.steer || 0;       // -1..1
+    const handbrake = !!input.handbrake;
+
+    if (throttle > 0) {
+      if (forwardVel < -10) {
+        forwardVel += spec.brake * throttle * dt;
+      } else {
+        forwardVel += spec.accel * throttle * dt;
+      }
+    } else if (throttle < 0) {
+      if (forwardVel > 10) {
+        forwardVel += spec.brake * throttle * dt;
+      } else {
+        forwardVel += spec.accel * 0.65 * throttle * dt;
+      }
+    } else {
+      // Natural rolling resistance
+      const drag = Math.pow(0.28, dt);
+      forwardVel *= drag;
+      if (Math.abs(forwardVel) < 4) forwardVel = 0;
+    }
+
+    if (handbrake) {
+      forwardVel *= Math.pow(0.18, dt);
+    }
+
+    forwardVel = clamp(forwardVel, -spec.reverseSpeed, spec.maxSpeed);
+
+    // Speed-dependent steering
+    const speedRatio = clamp(Math.abs(forwardVel) / 140, 0, 1);
+    const dirSign = forwardVel >= -1 ? 1 : -1;
+    const turnMult = handbrake ? 1.38 : 1.0;
+    car.angle = normalizeAngle(car.angle + steer * spec.turnRate * speedRatio * turnMult * dirSign * dt);
+
+    // Recompute basis after turning
+    const nCos = Math.cos(car.angle);
+    const nSin = Math.sin(car.angle);
+
+    // Lateral friction (lower grip during handbrake => drift)
+    const grip = handbrake ? spec.driftGrip : spec.normalGrip;
+    lateralVel *= Math.pow(grip, dt * 60 * 0.16);
+    if (Math.abs(lateralVel) < 1.5) lateralVel = 0;
+
+    car.vx = nCos * forwardVel - nSin * lateralVel;
+    car.vy = nSin * forwardVel + nCos * lateralVel;
+    car.speed = Math.hypot(car.vx, car.vy);
+    car.forwardSpeed = forwardVel;
+    car.drifting = (handbrake && car.speed > 130) || Math.abs(lateralVel) > 85;
+
+    car.x += car.vx * dt;
+    car.y += car.vy * dt;
+
+    const col = resolveWorldCollisions(car, car.radius, world, 0.3);
+    if (col.collided && col.impactSpeed > 150) {
+      const dmg = (col.impactSpeed - 150) * 0.11;
+      car.hp = Math.max(0, car.hp - dmg);
+    }
+    return col;
+  }
+
+  /**
+   * Resolve elastic-ish collision between two vehicles.
+   */
+  function resolveVehiclePair(a, b) {
+    const dx = b.x - a.x;
+    const dy = b.y - a.y;
+    const minDist = a.radius + b.radius;
+    const d2 = dx * dx + dy * dy;
+    if (d2 >= minDist * minDist || d2 === 0) {
+      return { hit: false, impactSpeed: 0 };
+    }
+
+    const d = Math.sqrt(d2);
+    const nx = dx / d;
+    const ny = dy / d;
+    const overlap = minDist - d;
+
+    const totalMass = a.spec.mass + b.spec.mass;
+    const aShare = b.spec.mass / totalMass;
+    const bShare = a.spec.mass / totalMass;
+
+    a.x -= nx * overlap * aShare;
+    a.y -= ny * overlap * aShare;
+    b.x += nx * overlap * bShare;
+    b.y += ny * overlap * bShare;
+
+    const rvx = b.vx - a.vx;
+    const rvy = b.vy - a.vy;
+    const velAlongNormal = rvx * nx + rvy * ny;
+    if (velAlongNormal > 0) {
+      return { hit: true, impactSpeed: 0 };
+    }
+
+    const restitution = 0.35;
+    const j = (-(1 + restitution) * velAlongNormal) / (1 / a.spec.mass + 1 / b.spec.mass);
+    const ix = j * nx;
+    const iy = j * ny;
+
+    a.vx -= ix / a.spec.mass;
+    a.vy -= iy / a.spec.mass;
+    b.vx += ix / b.spec.mass;
+    b.vy += iy / b.spec.mass;
+
+    const impactSpeed = Math.abs(velAlongNormal);
+    if (impactSpeed > 130) {
+      const dmg = (impactSpeed - 130) * 0.12;
+      a.hp = Math.max(0, a.hp - dmg * aShare * 1.4);
+      b.hp = Math.max(0, b.hp - dmg * bShare * 1.4);
+    }
+
+    return { hit: true, impactSpeed };
+  }
+
+  return {
+    clamp,
+    normalizeAngle,
+    distSq,
+    dist,
+    resolveCircleAABB,
+    resolveWorldCollisions,
+    stepVehiclePhysics,
+    resolveVehiclePair
+  };
+});
+
+
+// ===== ai.js =====
+(function (root, factory) {
+  
+    root.GTAAI = factory(root.GTAConfig, root.GTAPhysics);
+  
+})(typeof globalThis !== 'undefined' ? globalThis : this, function (Config, Physics) {
+  'use strict';
+
+  /**
+   * Steer an AI vehicle toward a target coordinate (tx, ty).
+   */
+  function computeSteeringToPoint(car, tx, ty, desiredSpeed) {
+    const dx = tx - car.x;
+    const dy = ty - car.y;
+    const targetAngle = Math.atan2(dy, dx);
+    const diff = Physics.normalizeAngle(targetAngle - car.angle);
+
+    let steer = Physics.clamp(diff * 2.2, -1, 1);
+    let throttle = 0;
+
+    if (Math.abs(diff) > 2.2 && car.speed < 80) {
+      // Stuck facing away — briefly reverse while turning
+      throttle = -0.6;
+      steer = -Math.sign(diff || 1);
+    } else {
+      const turnSlowdown = Math.abs(diff) > 0.7 ? 0.55 : 1.0;
+      const targetV = desiredSpeed * turnSlowdown;
+      if (car.forwardSpeed < targetV) {
+        throttle = Physics.clamp((targetV - car.forwardSpeed) / 120, 0.25, 1.0);
+      } else {
+        throttle = -0.25;
+      }
+    }
+
+    return { throttle, steer, handbrake: Math.abs(diff) > 1.35 && car.speed > 260 };
+  }
+
+  /**
+   * Update civilian traffic car AI along road grid waypoints.
+   */
+  function updateTrafficCarAI(car, world, allVehicles, dt, rng) {
+    if (!car.targetInter || Physics.dist(car.x, car.y, car.targetInter.x, car.targetInter.y) < 72) {
+      // Pick next adjacent intersection
+      const centers = world.roadStarts.length;
+      let gx = car.targetInter ? car.targetInter.gx : Math.floor(rng() * centers);
+      let gy = car.targetInter ? car.targetInter.gy : Math.floor(rng() * centers);
+
+      const candidates = [];
+      const dirs = [
+        { dx: 1, dy: 0 },
+        { dx: -1, dy: 0 },
+        { dx: 0, dy: 1 },
+        { dx: 0, dy: -1 }
+      ];
+      for (const d of dirs) {
+        const ngx = gx + d.dx;
+        const ngy = gy + d.dy;
+        if (ngx >= 0 && ngx < centers && ngy >= 0 && ngy < centers) {
+          // Prefer not immediately reversing
+          if (car.prevInter && car.prevInter.gx === ngx && car.prevInter.gy === ngy && centers > 2) {
+            continue;
+          }
+          candidates.push(world.intersections[ngy * centers + ngx]);
+        }
+      }
+      car.prevInter = car.targetInter || null;
+      car.targetInter = candidates.length > 0
+        ? candidates[Math.floor(rng() * candidates.length)]
+        : world.intersections[0];
+    }
+
+    // Check for vehicle directly ahead to avoid pileups
+    let blockedAhead = false;
+    const fx = Math.cos(car.angle);
+    const fy = Math.sin(car.angle);
+    for (let i = 0; i < allVehicles.length; i++) {
+      const other = allVehicles[i];
+      if (other.id === car.id) continue;
+      const dx = other.x - car.x;
+      const dy = other.y - car.y;
+      const d = Math.hypot(dx, dy);
+      if (d < 95 && d > 1) {
+        const dot = (dx * fx + dy * fy) / d;
+        if (dot > 0.72) {
+          blockedAhead = true;
+          break;
+        }
+      }
+    }
+
+    if (blockedAhead) {
+      return { throttle: -0.6, steer: 0, handbrake: true };
+    }
+
+    const cruiseSpeed = Math.min(car.spec.maxSpeed * 0.48, 210);
+    return computeSteeringToPoint(car, car.targetInter.x, car.targetInter.y, cruiseSpeed);
+  }
+
+  /**
+   * Update police cruiser pursuit AI based on player position & wanted level.
+   */
+  function updatePoliceCarAI(car, targetPos, wantedStars, dt) {
+    if (wantedStars <= 0) {
+      car.siren = false;
+      return { throttle: 0, steer: 0, handbrake: true };
+    }
+    car.siren = true;
+
+    const d = Physics.dist(car.x, car.y, targetPos.x, targetPos.y);
+    // Lead target slightly when chasing
+    const desiredSpeed = Math.min(
+      car.spec.maxSpeed,
+      260 + wantedStars * 55 + (d > 300 ? 60 : 0)
+    );
+
+    // Anti-stuck timer
+    if (car.speed < 25) {
+      car.stuckTimer = (car.stuckTimer || 0) + dt;
+    } else {
+      car.stuckTimer = 0;
+    }
+
+    if (car.stuckTimer > 1.2) {
+      if (car.stuckTimer > 2.2) car.stuckTimer = 0;
+      return { throttle: -0.8, steer: 0.9, handbrake: false };
+    }
+
+    return computeSteeringToPoint(car, targetPos.x, targetPos.y, desiredSpeed);
+  }
+
+  /**
+   * Update pedestrian AI: wander sidewalks, panic/flee from gunfire or threats.
+   */
+  function updatePedestrianAI(ped, world, dangerPos, dt, rng) {
+    if (!ped.alive) return;
+
+    if (ped.panicTimer > 0) {
+      ped.panicTimer = Math.max(0, ped.panicTimer - dt);
+    }
+
+    if (dangerPos) {
+      const d = Physics.dist(ped.x, ped.y, dangerPos.x, dangerPos.y);
+      if (d < 260) {
+        ped.panicTimer = 4.5;
+        ped.angle = Math.atan2(ped.y - dangerPos.y, ped.x - dangerPos.x) + (rng() - 0.5) * 0.4;
+      }
+    }
+
+    ped.changeDirTimer -= dt;
+    if (ped.changeDirTimer <= 0 && ped.panicTimer <= 0) {
+      ped.angle += (rng() - 0.5) * Math.PI * 0.9;
+      ped.changeDirTimer = 1.8 + rng() * 3.0;
+    }
+
+    const speed = ped.panicTimer > 0 ? 135 : 48;
+    ped.vx = Math.cos(ped.angle) * speed;
+    ped.vy = Math.sin(ped.angle) * speed;
+    ped.x += ped.vx * dt;
+    ped.y += ped.vy * dt;
+
+    const col = Physics.resolveWorldCollisions(ped, Config.NPC_RADIUS, world, 0.1);
+    if (col.collided) {
+      ped.angle = Physics.normalizeAngle(ped.angle + Math.PI * 0.75);
+    }
+  }
+
+  return {
+    computeSteeringToPoint,
+    updateTrafficCarAI,
+    updatePoliceCarAI,
+    updatePedestrianAI
+  };
+});
+
+
+// ===== missions.js =====
+(function (root, factory) {
+  
+    root.GTAMissions = factory(root.GTAPhysics);
+  
+})(typeof globalThis !== 'undefined' ? globalThis : this, function (Physics) {
+  'use strict';
+
+  function createMissionCatalog(world) {
+    const rc = world.roadCenters;
+    const maxIdx = rc.length - 1;
+    return [
+      {
+        id: 'm1_pickup',
+        title: '霓虹黑市取货',
+        subtitle: '前往日落大道指定接头点取回加密箱，并送回中心安全屋',
+        type: 'delivery',
+        reward: 1500,
+        timeLimit: 75,
+        wantedBonus: 1,
+        waypoints: [
+          { x: rc[maxIdx - 1], y: rc[1], label: '日落大道接头点' },
+          { x: rc[3], y: rc[3], label: '中心安全屋' }
+        ]
+      },
+      {
+        id: 'm2_race',
+        title: '港区极速狂飙',
+        subtitle: '驾驶任意载具在限时内依次穿过 4 个港区检查点',
+        type: 'checkpoints',
+        requireVehicle: true,
+        reward: 2500,
+        timeLimit: 65,
+        wantedBonus: 0,
+        waypoints: [
+          { x: rc[1], y: rc[maxIdx - 2], label: '检查点 1' },
+          { x: rc[1], y: rc[maxIdx - 1], label: '检查点 2' },
+          { x: rc[3], y: rc[maxIdx - 1], label: '检查点 3' },
+          { x: rc[4], y: rc[maxIdx - 2], label: '终点线' }
+        ]
+      },
+      {
+        id: 'm3_heist',
+        title: '棕榈湾现金劫案',
+        subtitle: '抢夺金库包裹后触发 3 星通缉，将赃款送至工业港区码头',
+        type: 'delivery',
+        reward: 4000,
+        timeLimit: 90,
+        wantedBonus: 3,
+        waypoints: [
+          { x: rc[maxIdx - 1], y: rc[maxIdx - 1], label: '棕榈湾金库' },
+          { x: rc[1], y: rc[maxIdx - 1], label: '工业港区接应船' }
+        ]
+      },
+      {
+        id: 'm4_evade',
+        title: '甩掉热力追捕',
+        subtitle: '警方已锁定你的行踪！甩掉所有通缉星级即可完成任务',
+        type: 'evade',
+        reward: 3500,
+        timeLimit: 110,
+        initialWanted: 3,
+        waypoints: []
+      },
+      {
+        id: 'm5_grand_tour',
+        title: '全城霓虹大满贯',
+        subtitle: '横跨四大城区，高速打卡全城 4 座地标路口',
+        type: 'checkpoints',
+        requireVehicle: false,
+        reward: 6000,
+        timeLimit: 100,
+        wantedBonus: 2,
+        waypoints: [
+          { x: rc[1], y: rc[1], label: '市中心北站' },
+          { x: rc[maxIdx - 1], y: rc[1], label: '日落广场' },
+          { x: rc[maxIdx - 1], y: rc[maxIdx - 1], label: '棕榈海湾' },
+          { x: rc[1], y: rc[maxIdx - 1], label: '港区灯塔' }
+        ]
+      }
+    ];
+  }
+
+  class MissionManager {
+    constructor(world) {
+      this.world = world;
+      this.catalog = createMissionCatalog(world);
+      this.active = null;
+      this.completedIds = new Set();
+      this.nextIndex = 0;
+    }
+
+    startMission(indexOrId, engine) {
+      let template = null;
+      if (typeof indexOrId === 'number') {
+        template = this.catalog[indexOrId % this.catalog.length];
+      } else if (typeof indexOrId === 'string') {
+        template = this.catalog.find(m => m.id === indexOrId);
+      } else {
+        template = this.catalog[this.nextIndex % this.catalog.length];
+      }
+      if (!template) return null;
+
+      this.active = {
+        ...template,
+        waypointIndex: 0,
+        timeLeft: template.timeLimit,
+        status: 'active'
+      };
+
+      if (template.initialWanted && engine) {
+        engine.addWantedHeat(template.initialWanted * 100, true);
+      }
+      if (engine) {
+        engine.pushBanner('任务开始', `${template.title} — ${template.subtitle}`, '#00f0ff');
+        engine.emitSound('missionStart');
+      }
+      return this.active;
+    }
+
+    getCurrentWaypoint() {
+      if (!this.active || this.active.status !== 'active') return null;
+      if (!this.active.waypoints || this.active.waypoints.length === 0) return null;
+      return this.active.waypoints[this.active.waypointIndex] || null;
+    }
+
+    update(dt, engine) {
+      if (!this.active || this.active.status !== 'active') return;
+
+      this.active.timeLeft -= dt;
+      if (this.active.timeLeft <= 0) {
+        this.failMission(engine, '任务超时');
+        return;
+      }
+
+      if (this.active.type === 'evade') {
+        if (engine.wantedStars === 0) {
+          this.completeMission(engine);
+        }
+        return;
+      }
+
+      const wp = this.getCurrentWaypoint();
+      if (!wp) return;
+
+      const pos = engine.getPlayerPosition();
+      const hitRadius = engine.player.vehicle ? 62 : 42;
+      if (Physics.dist(pos.x, pos.y, wp.x, wp.y) <= hitRadius) {
+        if (this.active.requireVehicle && !engine.player.vehicle) {
+          engine.pushToast('需要驾驶载具通过检查点！', '#ffaa00');
+          return;
+        }
+
+        // First waypoint in delivery mission may trigger wanted stars
+        if (this.active.waypointIndex === 0 && this.active.wantedBonus > 0) {
+          engine.addWantedHeat(this.active.wantedBonus * 100, false);
+        }
+
+        this.active.waypointIndex++;
+        engine.emitSound('checkpoint');
+
+        if (this.active.waypointIndex >= this.active.waypoints.length) {
+          this.completeMission(engine);
+        } else {
+          const nextWp = this.getCurrentWaypoint();
+          engine.pushToast(`已抵达 ${wp.label}！下一目标：${nextWp.label}`, '#39ff14');
+        }
+      }
+    }
+
+    completeMission(engine) {
+      if (!this.active) return;
+      const finished = this.active;
+      finished.status = 'completed';
+      this.completedIds.add(finished.id);
+      this.nextIndex = (this.catalog.findIndex(m => m.id === finished.id) + 1) % this.catalog.length;
+      engine.player.cash += finished.reward;
+      engine.stats.missionsCompleted += 1;
+      engine.pushBanner('任务完成 +$' + finished.reward, finished.title, '#39ff14');
+      engine.emitSound('missionComplete');
+      this.active = null;
+    }
+
+    failMission(engine, reason) {
+      if (!this.active) return;
+      const failed = this.active;
+      failed.status = 'failed';
+      engine.pushBanner('任务失败', `${failed.title} (${reason})`, '#ff2e63');
+      engine.emitSound('missionFail');
+      this.active = null;
+    }
+
+    abandonMission(engine) {
+      if (this.active) {
+        this.failMission(engine, '已放弃');
+      }
+    }
+  }
+
+  return { MissionManager, createMissionCatalog };
+});
+
+
+// ===== engine.js =====
+(function (root, factory) {
+  
+    root.GTAEngine = factory(
+      root.GTAConfig,
+      root.GTAWorld,
+      root.GTAPhysics,
+      root.GTAAI,
+      root.GTAMissions
+    );
+  
+})(typeof globalThis !== 'undefined' ? globalThis : this, function (Config, WorldMod, Physics, AI, MissionsMod) {
+  'use strict';
+
+  class GameEngine {
+    constructor(options = {}) {
+      this.seed = options.seed || 2026;
+      this.rng = WorldMod.mulberry32(this.seed + 77);
+      this.world = new WorldMod.CityWorld(this.seed);
+      this.missions = new MissionsMod.MissionManager(this.world);
+      this.onSound = options.onSound || null;
+
+      this.time = 0;
+      this.paused = false;
+      this.nextEntityId = 1;
+
+      this.vehicles = [];
+      this.pedestrians = [];
+      this.projectiles = [];
+      this.particles = [];
+      this.skidMarks = [];
+      this.floatingTexts = [];
+
+      this.wantedHeat = 0;   // 0..500 => 0..5 stars
+      this.wantedStars = 0;
+      this.timeSinceCrime = 999;
+      this.bustedTimer = 0;
+
+      this.radioIndex = 0;
+      this.banner = null;
+      this.toasts = [];
+      this.dangerPos = null;
+      this.dangerTimer = 0;
+
+      this.stats = {
+        missionsCompleted: 0,
+        carsHijacked: 0,
+        vehiclesDestroyed: 0,
+        distanceDriven: 0,
+        maxWantedReached: 0
+      };
+
+      this._initPlayer();
+      this._spawnInitialEntities();
+    }
+
+    _initPlayer() {
+      const spawn = this.world.getSafeSpawnPoint();
+      this.player = {
+        x: spawn.x,
+        y: spawn.y,
+        vx: 0,
+        vy: 0,
+        angle: 0,
+        hp: 100,
+        maxHp: 100,
+        armor: 50,
+        maxArmor: 100,
+        cash: 500,
+        weaponIndex: 1, // Pistol by default
+        ammo: { fist: Infinity, pistol: 48, smg: 90, shotgun: 18 },
+        fireCooldown: 0,
+        vehicle: null,
+        state: 'alive', // 'alive' | 'wasted' | 'busted'
+        respawnTimer: 0
+      };
+    }
+
+    _spawnInitialEntities() {
+      // Spawn a starter sports car right next to player
+      const spawn = this.world.getSafeSpawnPoint();
+      const starter1 = this.spawnVehicle('sports', spawn.x + 52, spawn.y - 18, 0, '#ff2e63');
+      starter1.driver = null;
+      const starter2 = this.spawnVehicle('muscle', spawn.x - 68, spawn.y + 44, Math.PI / 2, '#00f0ff');
+      starter2.driver = null;
+
+      // Spawn ambient traffic vehicles
+      const types = ['sports', 'muscle', 'taxi', 'van'];
+      for (let i = 0; i < 16; i++) {
+        const pt = this.world.getRandomRoadPoint();
+        const type = types[Math.floor(this.rng() * types.length)];
+        this.spawnVehicle(type, pt.x, pt.y, pt.angle);
+      }
+
+      // Spawn pedestrians on sidewalks
+      const shirtColors = ['#ff5e7e', '#4cc9f0', '#f7b801', '#72efdd', '#c77dff', '#ffffff', '#ff9f1c'];
+      for (let i = 0; i < 28; i++) {
+        const pt = this.world.getRandomSidewalkPoint();
+        this.pedestrians.push({
+          id: this.nextEntityId++,
+          x: pt.x,
+          y: pt.y,
+          vx: 0,
+          vy: 0,
+          angle: this.rng() * Math.PI * 2,
+          hp: 40,
+          alive: true,
+          panicTimer: 0,
+          changeDirTimer: 1 + this.rng() * 3,
+          color: shirtColors[i % shirtColors.length]
+        });
+      }
+    }
+
+    spawnVehicle(typeId, x, y, angle = 0, customColor = null) {
+      const spec = Config.VEHICLE_TYPES[typeId] || Config.VEHICLE_TYPES.taxi;
+      const color = customColor || spec.colors[Math.floor(this.rng() * spec.colors.length)];
+      const car = {
+        id: this.nextEntityId++,
+        type: spec.id,
+        spec,
+        x,
+        y,
+        vx: 0,
+        vy: 0,
+        angle,
+        speed: 0,
+        forwardSpeed: 0,
+        drifting: false,
+        radius: Math.max(spec.width, spec.length) * 0.42,
+        hp: spec.maxHp,
+        maxHp: spec.maxHp,
+        color,
+        driver: typeId === 'police' ? 'police' : 'ai', // 'player' | 'ai' | 'police' | null
+        siren: typeId === 'police',
+        targetInter: null,
+        prevInter: null,
+        stuckTimer: 0,
+        destroyed: false
+      };
+      this.vehicles.push(car);
+      return car;
+    }
+
+    emitSound(name, payload) {
+      if (this.onSound) {
+        try { this.onSound(name, payload); } catch (_) {}
+      }
+    }
+
+    pushBanner(title, subtitle, color = '#00f0ff') {
+      this.banner = { title, subtitle, color, timer: 3.4 };
+    }
+
+    pushToast(text, color = '#ffffff') {
+      this.toasts.push({ text, color, timer: 2.8 });
+      if (this.toasts.length > 4) this.toasts.shift();
+    }
+
+    addFloatingText(x, y, text, color = '#39ff14') {
+      this.floatingTexts.push({ x, y, text, color, timer: 1.2 });
+    }
+
+    getPlayerPosition() {
+      if (this.player.vehicle) {
+        return { x: this.player.vehicle.x, y: this.player.vehicle.y };
+      }
+      return { x: this.player.x, y: this.player.y };
+    }
+
+    getCurrentWeapon() {
+      return Config.WEAPONS[this.player.weaponIndex] || Config.WEAPONS[0];
+    }
+
+    selectWeapon(index) {
+      const clamped = ((index % Config.WEAPONS.length) + Config.WEAPONS.length) % Config.WEAPONS.length;
+      this.player.weaponIndex = clamped;
+      this.emitSound('click');
+      return Config.WEAPONS[clamped];
+    }
+
+    cycleRadio() {
+      this.radioIndex = (this.radioIndex + 1) % Config.RADIO_STATIONS.length;
+      const station = Config.RADIO_STATIONS[this.radioIndex];
+      this.pushToast(`电台切换：${station.name} (${station.genre})`, '#ff2e93');
+      this.emitSound('radio', station);
+      return station;
+    }
+
+    addWantedHeat(amount, silent = false) {
+      const prevStars = this.wantedStars;
+      this.wantedHeat = Physics.clamp(this.wantedHeat + amount, 0, Config.WANTED_MAX_STARS * 100);
+      this.wantedStars = Math.min(Config.WANTED_MAX_STARS, Math.ceil(this.wantedHeat / 100));
+      this.timeSinceCrime = 0;
+      if (this.wantedStars > this.stats.maxWantedReached) {
+        this.stats.maxWantedReached = this.wantedStars;
+      }
+      if (!silent && this.wantedStars > prevStars) {
+        this.pushToast(`通缉等级提升至 ${this.wantedStars} 星！`, '#ff2e63');
+        this.emitSound('siren');
+      }
+    }
+
+    toggleVehicleEntry() {
+      if (this.player.state !== 'alive') return false;
+
+      if (this.player.vehicle) {
+        // Exit vehicle to left side
+        const car = this.player.vehicle;
+        const sideAngle = car.angle - Math.PI / 2;
+        const ex = car.x + Math.cos(sideAngle) * (car.radius + 16);
+        const ey = car.y + Math.sin(sideAngle) * (car.radius + 16);
+        this.player.x = Physics.clamp(ex, 24, this.world.size - 24);
+        this.player.y = Physics.clamp(ey, 24, this.world.size - 24);
+        this.player.angle = car.angle;
+        car.driver = null;
+        this.player.vehicle = null;
+        this.emitSound('door');
+        return true;
+      }
+
+      // Find nearest intact vehicle within radius
+      let best = null;
+      let bestDist = Config.ENTER_VEHICLE_RADIUS;
+      for (let i = 0; i < this.vehicles.length; i++) {
+        const v = this.vehicles[i];
+        if (v.destroyed) continue;
+        const d = Physics.dist(this.player.x, this.player.y, v.x, v.y);
+        if (d < bestDist) {
+          bestDist = d;
+          best = v;
+        }
+      }
+
+      if (!best) return false;
+
+      const wasOccupied = best.driver === 'ai' || best.driver === 'police';
+      const wasPolice = best.type === 'police';
+      best.driver = 'player';
+      this.player.vehicle = best;
+      this.player.x = best.x;
+      this.player.y = best.y;
+      this.stats.carsHijacked += 1;
+
+      if (wasPolice) {
+        this.addWantedHeat(150);
+      } else if (wasOccupied) {
+        this.addWantedHeat(60);
+      }
+      this.pushToast(`已驾驶：${best.spec.name}`, '#00f0ff');
+      this.emitSound('door');
+      return true;
+    }
+
+    fireWeapon(aimAngle) {
+      if (this.player.state !== 'alive') return false;
+      if (this.player.fireCooldown > 0) return false;
+
+      const weapon = this.getCurrentWeapon();
+      const ammoCount = this.player.ammo[weapon.id];
+      if (!weapon.melee && ammoCount < weapon.ammoCost) {
+        this.pushToast(`${weapon.name} 弹药耗尽！`, '#ffaa00');
+        this.player.fireCooldown = 0.25;
+        return false;
+      }
+
+      const pos = this.getPlayerPosition();
+      const angle = typeof aimAngle === 'number' ? aimAngle : this.player.angle;
+      this.player.angle = angle;
+      this.player.fireCooldown = weapon.fireRate;
+      if (!weapon.melee) {
+        this.player.ammo[weapon.id] -= weapon.ammoCost;
+      }
+
+      this.dangerPos = { x: pos.x, y: pos.y };
+      this.dangerTimer = 2.0;
+
+      if (weapon.melee) {
+        // Melee arc hit check
+        this.emitSound('melee');
+        for (const ped of this.pedestrians) {
+          if (!ped.alive) continue;
+          const d = Physics.dist(pos.x, pos.y, ped.x, ped.y);
+          if (d <= weapon.range + Config.NPC_RADIUS) {
+            this._damagePedestrian(ped, weapon.damage);
+          }
+        }
+        return true;
+      }
+
+      for (let i = 0; i < weapon.pellets; i++) {
+        const spreadOffset = (this.rng() - 0.5) * weapon.spread;
+        const shotAngle = angle + spreadOffset;
+        const muzzleDist = this.player.vehicle ? 28 : 16;
+        this.projectiles.push({
+          id: this.nextEntityId++,
+          x: pos.x + Math.cos(shotAngle) * muzzleDist,
+          y: pos.y + Math.sin(shotAngle) * muzzleDist,
+          vx: Math.cos(shotAngle) * weapon.speed,
+          vy: Math.sin(shotAngle) * weapon.speed,
+          damage: weapon.damage,
+          life: weapon.range / weapon.speed,
+          color: weapon.color,
+          owner: 'player'
+        });
+      }
+
+      // Muzzle flash particles
+      this._spawnParticles(
+        pos.x + Math.cos(angle) * 18,
+        pos.y + Math.sin(angle) * 18,
+        4,
+        weapon.color,
+        120,
+        0.16
+      );
+      this.emitSound('shoot', weapon.id);
+      this.addWantedHeat(18);
+      return true;
+    }
+
+    _damagePedestrian(ped, damage) {
+      if (!ped.alive) return;
+      ped.hp -= damage;
+      this._spawnParticles(ped.x, ped.y, 5, '#ff2e63', 90, 0.35);
+      if (ped.hp <= 0) {
+        ped.alive = false;
+        const drop = 25 + Math.floor(this.rng() * 60);
+        this.player.cash += drop;
+        this.addFloatingText(ped.x, ped.y - 10, `+$${drop}`, '#39ff14');
+        this.addWantedHeat(85);
+      }
+    }
+
+    _explodeVehicle(car) {
+      if (car.destroyed) return;
+      car.destroyed = true;
+      car.hp = 0;
+      car.vx *= 0.2;
+      car.vy *= 0.2;
+      car.driver = null;
+      this.stats.vehiclesDestroyed += 1;
+      this._spawnParticles(car.x, car.y, 28, '#ff6b00', 260, 0.75);
+      this._spawnParticles(car.x, car.y, 16, '#ffe600', 180, 0.5);
+      this.emitSound('explosion');
+      this.dangerPos = { x: car.x, y: car.y };
+      this.dangerTimer = 3.0;
+      this.addWantedHeat(120);
+
+      // Splash damage
+      if (this.player.vehicle === car) {
+        this.player.vehicle = null;
+        this.player.x = car.x;
+        this.player.y = car.y;
+        this.damagePlayer(85);
+      } else {
+        const pos = this.getPlayerPosition();
+        const d = Physics.dist(pos.x, pos.y, car.x, car.y);
+        if (d < 110) {
+          this.damagePlayer((1 - d / 110) * 65);
+        }
+      }
+    }
+
+    damagePlayer(amount) {
+      if (this.player.state !== 'alive') return;
+      let remaining = amount;
+      if (this.player.armor > 0) {
+        const absorbed = Math.min(this.player.armor, remaining * 0.7);
+        this.player.armor -= absorbed;
+        remaining -= absorbed;
+      }
+      this.player.hp = Math.max(0, this.player.hp - remaining);
+      if (this.player.hp <= 0) {
+        this._triggerDownState('wasted');
+      }
+    }
+
+    _triggerDownState(mode) {
+      this.player.state = mode;
+      this.player.respawnTimer = 3.2;
+      if (this.player.vehicle) {
+        this.player.vehicle.driver = null;
+        this.player.vehicle = null;
+      }
+      const penalty = Math.min(this.player.cash, mode === 'wasted' ? 200 : 300);
+      this.player.cash -= penalty;
+      if (this.missions.active) {
+        this.missions.failMission(this, mode === 'wasted' ? '角色阵亡' : '被警方逮捕');
+      }
+      this.pushBanner(
+        mode === 'wasted' ? 'WASTED 阵亡' : 'BUSTED 被捕',
+        mode === 'wasted' ? `医疗账单 -$${penalty}，正在送往中心医院` : `保释金 -$${penalty}，武器已重置`,
+        '#ff2e63'
+      );
+      this.emitSound(mode);
+    }
+
+    respawnPlayer() {
+      const spawn = this.world.getSafeSpawnPoint();
+      this.player.x = spawn.x;
+      this.player.y = spawn.y;
+      this.player.vx = 0;
+      this.player.vy = 0;
+      this.player.hp = this.player.maxHp;
+      this.player.armor = 50;
+      this.player.state = 'alive';
+      this.player.respawnTimer = 0;
+      this.wantedHeat = 0;
+      this.wantedStars = 0;
+      this.bustedTimer = 0;
+      // Clear pursuing police near spawn
+      this.vehicles = this.vehicles.filter(v => v.type !== 'police');
+      // Ensure a ride is available near hospital spawn
+      const nearbyCar = this.vehicles.find(v => !v.destroyed && Physics.dist(v.x, v.y, spawn.x, spawn.y) < 180);
+      if (!nearbyCar) {
+        this.spawnVehicle('sports', spawn.x + 56, spawn.y - 16, 0, '#00f0ff');
+      }
+    }
+
+    _spawnParticles(x, y, count, color, maxSpeed, life) {
+      for (let i = 0; i < count; i++) {
+        const a = this.rng() * Math.PI * 2;
+        const sp = 20 + this.rng() * maxSpeed;
+        this.particles.push({
+          x,
+          y,
+          vx: Math.cos(a) * sp,
+          vy: Math.sin(a) * sp,
+          life,
+          maxLife: life,
+          size: 2 + this.rng() * 4,
+          color
+        });
+      }
+      if (this.particles.length > 220) {
+        this.particles.splice(0, this.particles.length - 220);
+      }
+    }
+
+    _managePoliceSpawns() {
+      const targetPoliceCount = this.wantedStars === 0 ? 0 : Math.min(5, this.wantedStars + 1);
+      const activePolice = this.vehicles.filter(v => v.type === 'police' && !v.destroyed);
+      if (activePolice.length < targetPoliceCount) {
+        const pos = this.getPlayerPosition();
+        // Pick an intersection 420..850px away from player
+        const candidates = this.world.intersections.filter(inter => {
+          const d = Physics.dist(inter.x, inter.y, pos.x, pos.y);
+          return d >= 420 && d <= 900;
+        });
+        const chosen = candidates.length > 0
+          ? candidates[Math.floor(this.rng() * candidates.length)]
+          : this.world.intersections[0];
+        this.spawnVehicle('police', chosen.x, chosen.y, Math.atan2(pos.y - chosen.y, pos.x - chosen.x));
+      }
+    }
+
+    step(dt, input = {}) {
+      if (this.paused) return;
+      const safeDt = Math.min(0.05, Math.max(0.001, dt));
+      this.time += safeDt;
+
+      // Update UI timers
+      if (this.banner) {
+        this.banner.timer -= safeDt;
+        if (this.banner.timer <= 0) this.banner = null;
+      }
+      for (let i = this.toasts.length - 1; i >= 0; i--) {
+        this.toasts[i].timer -= safeDt;
+        if (this.toasts[i].timer <= 0) this.toasts.splice(i, 1);
+      }
+      for (let i = this.floatingTexts.length - 1; i >= 0; i--) {
+        this.floatingTexts[i].y -= 28 * safeDt;
+        this.floatingTexts[i].timer -= safeDt;
+        if (this.floatingTexts[i].timer <= 0) this.floatingTexts.splice(i, 1);
+      }
+      if (this.dangerTimer > 0) {
+        this.dangerTimer -= safeDt;
+        if (this.dangerTimer <= 0) this.dangerPos = null;
+      }
+
+      // Handle WASTED / BUSTED respawn countdown
+      if (this.player.state !== 'alive') {
+        this.player.respawnTimer -= safeDt;
+        if (this.player.respawnTimer <= 0) {
+          this.respawnPlayer();
+        }
+        this._updateParticles(safeDt);
+        return;
+      }
+
+      if (this.player.fireCooldown > 0) {
+        this.player.fireCooldown = Math.max(0, this.player.fireCooldown - safeDt);
+      }
+
+      // 1. Update player (on foot vs in vehicle)
+      if (!this.player.vehicle) {
+        const mx = (input.right ? 1 : 0) - (input.left ? 1 : 0);
+        const my = (input.down ? 1 : 0) - (input.up ? 1 : 0);
+        const len = Math.hypot(mx, my);
+        const speed = input.sprint ? Config.PLAYER_SPRINT_SPEED : Config.PLAYER_SPEED;
+        if (len > 0) {
+          this.player.vx = (mx / len) * speed;
+          this.player.vy = (my / len) * speed;
+          this.player.angle = Math.atan2(my, mx);
+        } else {
+          this.player.vx = 0;
+          this.player.vy = 0;
+        }
+        this.player.x += this.player.vx * safeDt;
+        this.player.y += this.player.vy * safeDt;
+        Physics.resolveWorldCollisions(this.player, Config.PLAYER_RADIUS, this.world, 0.05);
+      }
+
+      // Handle firing
+      if (input.fire) {
+        this.fireWeapon(typeof input.aimAngle === 'number' ? input.aimAngle : this.player.angle);
+      }
+
+      // 2. Update vehicles
+      const playerPos = this.getPlayerPosition();
+      for (let i = 0; i < this.vehicles.length; i++) {
+        const car = this.vehicles[i];
+        if (car.destroyed) continue;
+
+        let carInput = { throttle: 0, steer: 0, handbrake: true };
+        if (car.driver === 'player') {
+          const throttle = (input.up ? 1 : 0) - (input.down ? 1 : 0);
+          const steer = (input.right ? 1 : 0) - (input.left ? 1 : 0);
+          carInput = { throttle, steer, handbrake: !!input.handbrake };
+        } else if (car.driver === 'police') {
+          carInput = AI.updatePoliceCarAI(car, playerPos, this.wantedStars, safeDt);
+        } else if (car.driver === 'ai') {
+          carInput = AI.updateTrafficCarAI(car, this.world, this.vehicles, safeDt, this.rng);
+        }
+
+        const prevX = car.x;
+        const prevY = car.y;
+        const col = Physics.stepVehiclePhysics(car, carInput, safeDt, this.world);
+        if (car.driver === 'player') {
+          this.player.x = car.x;
+          this.player.y = car.y;
+          this.player.angle = car.angle;
+          this.stats.distanceDriven += Math.hypot(car.x - prevX, car.y - prevY);
+          if (col.collided && col.impactSpeed > 180) {
+            this.emitSound('crash');
+          }
+          if (car.drifting) {
+            this.skidMarks.push({ x: car.x, y: car.y, angle: car.angle, alpha: 0.45 });
+            if (this.skidMarks.length > 260) this.skidMarks.shift();
+          }
+        }
+        if (car.hp <= 0) {
+          this._explodeVehicle(car);
+        }
+      }
+
+      // Vehicle-to-vehicle collisions
+      for (let i = 0; i < this.vehicles.length; i++) {
+        for (let j = i + 1; j < this.vehicles.length; j++) {
+          const a = this.vehicles[i];
+          const b = this.vehicles[j];
+          const hit = Physics.resolveVehiclePair(a, b);
+          if (hit.hit && hit.impactSpeed > 140) {
+            if (a.driver === 'player' || b.driver === 'player') {
+              this.emitSound('crash');
+              if (a.type === 'police' || b.type === 'police') {
+                this.addWantedHeat(55);
+              }
+            }
+          }
+        }
+      }
+
+      // 3. Update pedestrians & vehicle-pedestrian hits
+      for (let i = 0; i < this.pedestrians.length; i++) {
+        const ped = this.pedestrians[i];
+        if (!ped.alive) continue;
+        AI.updatePedestrianAI(ped, this.world, this.dangerPos, safeDt, this.rng);
+
+        // Check if struck by fast player car
+        if (this.player.vehicle && this.player.vehicle.speed > 120) {
+          const d = Physics.dist(ped.x, ped.y, this.player.vehicle.x, this.player.vehicle.y);
+          if (d < this.player.vehicle.radius + Config.NPC_RADIUS) {
+            this._damagePedestrian(ped, 100);
+          }
+        }
+      }
+
+      // 4. Update projectiles
+      for (let i = this.projectiles.length - 1; i >= 0; i--) {
+        const p = this.projectiles[i];
+        p.x += p.vx * safeDt;
+        p.y += p.vy * safeDt;
+        p.life -= safeDt;
+
+        let remove = p.life <= 0 || this.world.pointInBuilding(p.x, p.y, 0) !== null;
+
+        if (!remove) {
+          // Hit pedestrians
+          for (const ped of this.pedestrians) {
+            if (!ped.alive) continue;
+            if (Physics.dist(p.x, p.y, ped.x, ped.y) <= Config.NPC_RADIUS + 4) {
+              this._damagePedestrian(ped, p.damage);
+              remove = true;
+              break;
+            }
+          }
+        }
+
+        if (!remove) {
+          // Hit vehicles (excluding player's own vehicle)
+          for (const v of this.vehicles) {
+            if (v.destroyed || v === this.player.vehicle) continue;
+            if (Physics.dist(p.x, p.y, v.x, v.y) <= v.radius) {
+              v.hp = Math.max(0, v.hp - p.damage);
+              this._spawnParticles(p.x, p.y, 4, '#ffaa00', 100, 0.25);
+              if (v.type === 'police') this.addWantedHeat(45);
+              if (v.hp <= 0) this._explodeVehicle(v);
+              remove = true;
+              break;
+            }
+          }
+        }
+
+        if (remove) this.projectiles.splice(i, 1);
+      }
+
+      // 5. Pickups
+      const curPos = this.getPlayerPosition();
+      for (const pk of this.world.pickups) {
+        if (!pk.active) {
+          pk.respawnTimer -= safeDt;
+          if (pk.respawnTimer <= 0) pk.active = true;
+          continue;
+        }
+        if (Physics.dist(curPos.x, curPos.y, pk.x, pk.y) < 30) {
+          pk.active = false;
+          pk.respawnTimer = 35;
+          if (pk.type === 'health') {
+            this.player.hp = Math.min(this.player.maxHp, this.player.hp + 45);
+            this.addFloatingText(pk.x, pk.y, '+45 生命', '#39ff14');
+          } else if (pk.type === 'armor') {
+            this.player.armor = Math.min(this.player.maxArmor, this.player.armor + 50);
+            this.addFloatingText(pk.x, pk.y, '+50 护甲', '#00f0ff');
+          } else if (pk.type === 'ammo') {
+            this.player.ammo.pistol += 24;
+            this.player.ammo.smg += 45;
+            this.player.ammo.shotgun += 8;
+            this.addFloatingText(pk.x, pk.y, '+弹药补给', '#ffe600');
+          } else if (pk.type === 'cash') {
+            this.player.cash += 300;
+            this.addFloatingText(pk.x, pk.y, '+$300', '#39ff14');
+          }
+          this.emitSound('pickup');
+        }
+      }
+
+      // 6. Wanted system decay & police arrest check
+      this.timeSinceCrime += safeDt;
+      if (this.wantedStars > 0) {
+        this._managePoliceSpawns();
+
+        let policeNearby = false;
+        let policeArrestRange = false;
+        for (const v of this.vehicles) {
+          if (v.type === 'police' && !v.destroyed) {
+            const d = Physics.dist(curPos.x, curPos.y, v.x, v.y);
+            if (d < 460) policeNearby = true;
+            if (d < 72 && (!this.player.vehicle || this.player.vehicle.speed < 55)) {
+              policeArrestRange = true;
+            }
+          }
+        }
+
+        if (policeArrestRange) {
+          this.bustedTimer += safeDt;
+          if (this.bustedTimer >= 2.2) {
+            this._triggerDownState('busted');
+            return;
+          }
+        } else {
+          this.bustedTimer = Math.max(0, this.bustedTimer - safeDt * 1.5);
+        }
+
+        if (!policeNearby && this.timeSinceCrime > Config.WANTED_DECAY_DELAY) {
+          this.wantedHeat = Math.max(0, this.wantedHeat - Config.WANTED_DECAY_RATE * safeDt);
+          this.wantedStars = this.wantedHeat <= 0 ? 0 : Math.ceil(this.wantedHeat / 100);
+          if (this.wantedStars === 0) {
+            this.pushToast('已成功甩掉警方通缉！', '#39ff14');
+          }
+        }
+      }
+
+      // 7. Missions & particles
+      this.missions.update(safeDt, this);
+      this._updateParticles(safeDt);
+    }
+
+    _updateParticles(dt) {
+      for (let i = this.particles.length - 1; i >= 0; i--) {
+        const pt = this.particles[i];
+        pt.x += pt.vx * dt;
+        pt.y += pt.vy * dt;
+        pt.vx *= Math.pow(0.15, dt);
+        pt.vy *= Math.pow(0.15, dt);
+        pt.life -= dt;
+        if (pt.life <= 0) this.particles.splice(i, 1);
+      }
+    }
+  }
+
+  return { GameEngine };
+});
+
+
+// ===== audio.js =====
+(function (root, factory) {
+  
+    root.GTAAudio = factory();
+  
+})(typeof globalThis !== 'undefined' ? globalThis : this, function () {
+  'use strict';
+
+  class SoundSynth {
+    constructor() {
+      this.ctx = null;
+      this.muted = false;
+      this.engineOsc = null;
+      this.engineGain = null;
+    }
+
+    unlock() {
+      if (this.ctx) {
+        if (this.ctx.state === 'suspended') {
+          this.ctx.resume().catch(() => {});
+        }
+        return;
+      }
+      const AudioCtx = (typeof window !== 'undefined') && (window.AudioContext || window.webkitAudioContext);
+      if (!AudioCtx) return;
+      try {
+        this.ctx = new AudioCtx();
+        this._initEngineLoop();
+      } catch (_) {
+        this.ctx = null;
+      }
+    }
+
+    _initEngineLoop() {
+      if (!this.ctx) return;
+      const osc = this.ctx.createOscillator();
+      const gain = this.ctx.createGain();
+      osc.type = 'sawtooth';
+      osc.frequency.value = 55;
+      gain.gain.value = 0;
+
+      const filter = this.ctx.createBiquadFilter();
+      filter.type = 'lowpass';
+      filter.frequency.value = 260;
+
+      osc.connect(filter);
+      filter.connect(gain);
+      gain.connect(this.ctx.destination);
+      osc.start();
+      this.engineOsc = osc;
+      this.engineGain = gain;
+    }
+
+    setMuted(flag) {
+      this.muted = !!flag;
+      if (this.engineGain && this.ctx) {
+        this.engineGain.gain.setTargetAtTime(0, this.ctx.currentTime, 0.05);
+      }
+    }
+
+    updateEngine(speed, active) {
+      if (!this.ctx || !this.engineOsc || !this.engineGain) return;
+      const now = this.ctx.currentTime;
+      if (this.muted || !active) {
+        this.engineGain.gain.setTargetAtTime(0, now, 0.08);
+        return;
+      }
+      const pitch = 52 + Math.min(480, speed) * 0.24;
+      const vol = 0.025 + Math.min(1, speed / 450) * 0.035;
+      this.engineOsc.frequency.setTargetAtTime(pitch, now, 0.05);
+      this.engineGain.gain.setTargetAtTime(vol, now, 0.06);
+    }
+
+    play(name, payload) {
+      if (this.muted || !this.ctx) return;
+      const now = this.ctx.currentTime;
+
+      if (name === 'shoot') {
+        const dur = payload === 'shotgun' ? 0.16 : payload === 'smg' ? 0.06 : 0.09;
+        this._noiseBurst(now, dur, payload === 'shotgun' ? 0.22 : 0.12, payload === 'smg' ? 1400 : 800);
+      } else if (name === 'explosion') {
+        this._noiseBurst(now, 0.55, 0.3, 240);
+        this._tone(now, 'sine', 95, 28, 0.5, 0.24);
+      } else if (name === 'crash') {
+        this._noiseBurst(now, 0.18, 0.16, 420);
+      } else if (name === 'door' || name === 'click') {
+        this._tone(now, 'triangle', 320, 140, 0.07, 0.09);
+      } else if (name === 'pickup' || name === 'checkpoint') {
+        this._tone(now, 'sine', 520, 880, 0.14, 0.11);
+      } else if (name === 'missionStart') {
+        this._tone(now, 'triangle', 330, 440, 0.14, 0.11);
+        this._tone(now + 0.14, 'triangle', 440, 660, 0.2, 0.11);
+      } else if (name === 'missionComplete') {
+        this._tone(now, 'sine', 523, 523, 0.12, 0.12);
+        this._tone(now + 0.12, 'sine', 659, 659, 0.12, 0.12);
+        this._tone(now + 0.24, 'sine', 784, 1046, 0.26, 0.14);
+      } else if (name === 'missionFail' || name === 'wasted' || name === 'busted') {
+        this._tone(now, 'sawtooth', 240, 90, 0.45, 0.14);
+      } else if (name === 'siren') {
+        this._tone(now, 'sine', 640, 960, 0.22, 0.08);
+        this._tone(now + 0.22, 'sine', 960, 640, 0.22, 0.08);
+      } else if (name === 'melee') {
+        this._noiseBurst(now, 0.08, 0.1, 600);
+      } else if (name === 'radio') {
+        this._tone(now, 'square', 420, 620, 0.08, 0.05);
+      }
+    }
+
+    _tone(startTime, type, freqStart, freqEnd, duration, gainVal) {
+      const osc = this.ctx.createOscillator();
+      const g = this.ctx.createGain();
+      osc.type = type;
+      osc.frequency.setValueAtTime(freqStart, startTime);
+      osc.frequency.exponentialRampToValueAtTime(Math.max(20, freqEnd), startTime + duration);
+      g.gain.setValueAtTime(gainVal, startTime);
+      g.gain.exponentialRampToValueAtTime(0.001, startTime + duration);
+      osc.connect(g);
+      g.connect(this.ctx.destination);
+      osc.start(startTime);
+      osc.stop(startTime + duration + 0.02);
+    }
+
+    _noiseBurst(startTime, duration, gainVal, cutoffHz) {
+      const sampleRate = this.ctx.sampleRate;
+      const frameCount = Math.floor(sampleRate * duration);
+      const buffer = this.ctx.createBuffer(1, frameCount, sampleRate);
+      const data = buffer.getChannelData(0);
+      for (let i = 0; i < frameCount; i++) {
+        data[i] = (Math.random() * 2 - 1) * Math.exp(-i / (frameCount * 0.4));
+      }
+      const src = this.ctx.createBufferSource();
+      src.buffer = buffer;
+      const filter = this.ctx.createBiquadFilter();
+      filter.type = 'lowpass';
+      filter.frequency.value = cutoffHz;
+      const g = this.ctx.createGain();
+      g.gain.setValueAtTime(gainVal, startTime);
+      g.gain.exponentialRampToValueAtTime(0.001, startTime + duration);
+      src.connect(filter);
+      filter.connect(g);
+      g.connect(this.ctx.destination);
+      src.start(startTime);
+    }
+  }
+
+  return { SoundSynth };
+});
+
+
+// ===== renderer.js =====
+(function (root, factory) {
+  
+    root.GTARenderer = factory(root.GTAConfig);
+  
+})(typeof globalThis !== 'undefined' ? globalThis : this, function (Config) {
+  'use strict';
+
+  class GameRenderer {
+    constructor(canvas, minimapCanvas) {
+      this.canvas = canvas;
+      this.ctx = canvas.getContext('2d');
+      this.minimapCanvas = minimapCanvas;
+      this.mctx = minimapCanvas ? minimapCanvas.getContext('2d') : null;
+      this.camX = 0;
+      this.camY = 0;
+      this.camZoom = 1.0;
+    }
+
+    resize() {
+      const parent = this.canvas.parentElement;
+      if (!parent) return;
+      const rect = parent.getBoundingClientRect();
+      const dpr = Math.min(window.devicePixelRatio || 1, 2);
+      const w = Math.max(320, Math.floor(rect.width));
+      const h = Math.max(240, Math.floor(rect.height));
+      this.canvas.width = Math.floor(w * dpr);
+      this.canvas.height = Math.floor(h * dpr);
+      this.ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+      this.viewW = w;
+      this.viewH = h;
+    }
+
+    render(engine) {
+      const ctx = this.ctx;
+      const w = this.viewW || this.canvas.width;
+      const h = this.viewH || this.canvas.height;
+      const target = engine.getPlayerPosition();
+
+      // Smooth camera follow + speed-based dynamic zoom out
+      const speed = engine.player.vehicle ? engine.player.vehicle.speed : 0;
+      const targetZoom = engine.player.vehicle ? Math.max(0.76, 0.96 - (speed / 550) * 0.2) : 1.05;
+      this.camZoom += (targetZoom - this.camZoom) * 0.08;
+
+      const leadX = engine.player.vehicle ? engine.player.vehicle.vx * 0.22 : 0;
+      const leadY = engine.player.vehicle ? engine.player.vehicle.vy * 0.22 : 0;
+      if (this.camX === 0 && this.camY === 0) {
+        this.camX = target.x;
+        this.camY = target.y;
+      } else {
+        this.camX += (target.x + leadX - this.camX) * 0.14;
+        this.camY += (target.y + leadY - this.camY) * 0.14;
+      }
+
+      // Clear background
+      ctx.fillStyle = '#0b0e17';
+      ctx.fillRect(0, 0, w, h);
+
+      ctx.save();
+      ctx.translate(w / 2, h / 2);
+      ctx.scale(this.camZoom, this.camZoom);
+      ctx.translate(-this.camX, -this.camY);
+
+      const halfW = (w / 2) / this.camZoom + 120;
+      const halfH = (h / 2) / this.camZoom + 120;
+      const minX = this.camX - halfW;
+      const maxX = this.camX + halfW;
+      const minY = this.camY - halfH;
+      const maxY = this.camY + halfH;
+
+      this._drawGroundAndRoads(ctx, engine.world, minX, maxX, minY, maxY);
+      this._drawParks(ctx, engine.world, minX, maxX, minY, maxY);
+      this._drawSkidMarks(ctx, engine.skidMarks);
+      this._drawPickups(ctx, engine.world.pickups, engine.time);
+      this._drawMissionMarker(ctx, engine);
+      this._drawPedestrians(ctx, engine.pedestrians, minX, maxX, minY, maxY);
+      this._drawVehicles(ctx, engine.vehicles, engine.time, minX, maxX, minY, maxY);
+      if (!engine.player.vehicle && engine.player.state === 'alive') {
+        this._drawPlayerOnFoot(ctx, engine.player);
+      }
+      this._drawProjectiles(ctx, engine.projectiles);
+      this._drawParticles(ctx, engine.particles);
+      // Draw 2.5D extruded buildings on top so depth feels authentic
+      this._drawBuildings(ctx, engine.world.buildings, minX, maxX, minY, maxY, engine.time);
+      this._drawFloatingTexts(ctx, engine.floatingTexts);
+
+      ctx.restore();
+
+      if (this.mctx) {
+        this._drawMinimap(engine);
+      }
+    }
+
+    _drawGroundAndRoads(ctx, world, minX, maxX, minY, maxY) {
+      const ts = world.tileSize;
+      const startTx = Math.max(0, Math.floor(minX / ts));
+      const endTx = Math.min(world.mapTiles - 1, Math.ceil(maxX / ts));
+      const startTy = Math.max(0, Math.floor(minY / ts));
+      const endTy = Math.min(world.mapTiles - 1, Math.ceil(maxY / ts));
+
+      // Sidewalk base
+      ctx.fillStyle = '#232938';
+      ctx.fillRect(startTx * ts, startTy * ts, (endTx - startTx + 1) * ts, (endTy - startTy + 1) * ts);
+
+      // Asphalt roads
+      ctx.fillStyle = '#141822';
+      for (let ty = startTy; ty <= endTy; ty++) {
+        for (let tx = startTx; tx <= endTx; tx++) {
+          if (world.tiles[ty * world.mapTiles + tx] === 0) {
+            ctx.fillRect(tx * ts, ty * ts, ts + 0.5, ts + 0.5);
+          }
+        }
+      }
+
+      // Dashed yellow road centerlines
+      ctx.strokeStyle = 'rgba(255, 206, 68, 0.36)';
+      ctx.lineWidth = 2;
+      ctx.setLineDash([14, 14]);
+      for (const rc of world.roadCenters) {
+        if (rc >= minX - ts && rc <= maxX + ts) {
+          ctx.beginPath();
+          ctx.moveTo(rc, Math.max(0, minY));
+          ctx.lineTo(rc, Math.min(world.size, maxY));
+          ctx.stroke();
+        }
+        if (rc >= minY - ts && rc <= maxY + ts) {
+          ctx.beginPath();
+          ctx.moveTo(Math.max(0, minX), rc);
+          ctx.lineTo(Math.min(world.size, maxX), rc);
+          ctx.stroke();
+        }
+      }
+      ctx.setLineDash([]);
+
+      // World border neon barrier
+      ctx.strokeStyle = '#ff2e93';
+      ctx.lineWidth = 6;
+      ctx.strokeRect(3, 3, world.size - 6, world.size - 6);
+    }
+
+    _drawParks(ctx, world, minX, maxX, minY, maxY) {
+      for (const p of world.parks) {
+        if (p.x + p.w < minX || p.x > maxX || p.y + p.h < minY || p.y > maxY) continue;
+        ctx.fillStyle = '#163529';
+        ctx.fillRect(p.x, p.y, p.w, p.h);
+        ctx.strokeStyle = '#265944';
+        ctx.lineWidth = 3;
+        ctx.strokeRect(p.x + 6, p.y + 6, p.w - 12, p.h - 12);
+
+        // Central fountain
+        ctx.fillStyle = '#0e4c63';
+        ctx.beginPath();
+        ctx.arc(p.x + p.w / 2, p.y + p.h / 2, 22, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.strokeStyle = '#00f0ff';
+        ctx.lineWidth = 2;
+        ctx.stroke();
+
+        for (const t of p.trees) {
+          ctx.fillStyle = 'rgba(0,0,0,0.3)';
+          ctx.beginPath();
+          ctx.arc(t.x + 4, t.y + 5, t.r, 0, Math.PI * 2);
+          ctx.fill();
+          ctx.fillStyle = '#1f6e43';
+          ctx.beginPath();
+          ctx.arc(t.x, t.y, t.r, 0, Math.PI * 2);
+          ctx.fill();
+          ctx.fillStyle = '#2fa362';
+          ctx.beginPath();
+          ctx.arc(t.x - 3, t.y - 3, t.r * 0.65, 0, Math.PI * 2);
+          ctx.fill();
+        }
+      }
+    }
+
+    _drawSkidMarks(ctx, skids) {
+      ctx.fillStyle = 'rgba(8, 10, 14, 0.55)';
+      for (let i = 0; i < skids.length; i++) {
+        const s = skids[i];
+        ctx.save();
+        ctx.translate(s.x, s.y);
+        ctx.rotate(s.angle);
+        ctx.fillRect(-10, -8, 6, 3);
+        ctx.fillRect(-10, 5, 6, 3);
+        ctx.restore();
+      }
+    }
+
+    _drawPickups(ctx, pickups, time) {
+      const pulse = 1 + Math.sin(time * 5) * 0.16;
+      const styles = {
+        health: { color: '#39ff14', label: '+' },
+        armor: { color: '#00f0ff', label: 'A' },
+        ammo: { color: '#ffe600', label: '•' },
+        cash: { color: '#ff2e93', label: '$' }
+      };
+      for (const pk of pickups) {
+        if (!pk.active) continue;
+        const st = styles[pk.type] || styles.cash;
+        ctx.save();
+        ctx.translate(pk.x, pk.y);
+        ctx.fillStyle = st.color + '28';
+        ctx.beginPath();
+        ctx.arc(0, 0, 15 * pulse, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.fillStyle = st.color;
+        ctx.beginPath();
+        ctx.arc(0, 0, 9, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.fillStyle = '#0b0e17';
+        ctx.font = 'bold 11px Inter, sans-serif';
+        ctx.textAlign = 'center';
+        ctx.textBaseline = 'middle';
+        ctx.fillText(st.label, 0, 0.5);
+        ctx.restore();
+      }
+    }
+
+    _drawMissionMarker(ctx, engine) {
+      const wp = engine.missions.getCurrentWaypoint();
+      if (!wp) return;
+      const pulse = 26 + Math.sin(engine.time * 6) * 8;
+      ctx.save();
+      ctx.strokeStyle = '#ffe600';
+      ctx.lineWidth = 3;
+      ctx.beginPath();
+      ctx.arc(wp.x, wp.y, pulse, 0, Math.PI * 2);
+      ctx.stroke();
+
+      ctx.fillStyle = 'rgba(255, 230, 0, 0.18)';
+      ctx.beginPath();
+      ctx.arc(wp.x, wp.y, 20, 0, Math.PI * 2);
+      ctx.fill();
+
+      ctx.fillStyle = '#ffe600';
+      ctx.font = 'bold 12px Inter, sans-serif';
+      ctx.textAlign = 'center';
+      ctx.fillText(wp.label, wp.x, wp.y - 34);
+      ctx.restore();
+    }
+
+    _drawPedestrians(ctx, peds, minX, maxX, minY, maxY) {
+      for (const p of peds) {
+        if (p.x < minX || p.x > maxX || p.y < minY || p.y > maxY) continue;
+        ctx.save();
+        ctx.translate(p.x, p.y);
+        if (!p.alive) {
+          ctx.fillStyle = 'rgba(200, 30, 50, 0.45)';
+          ctx.beginPath();
+          ctx.arc(0, 0, 10, 0, Math.PI * 2);
+          ctx.fill();
+          ctx.restore();
+          continue;
+        }
+        ctx.rotate(p.angle);
+        ctx.fillStyle = p.color;
+        ctx.beginPath();
+        ctx.arc(0, 0, 7, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.fillStyle = '#ffd5b8';
+        ctx.beginPath();
+        ctx.arc(3, 0, 4.5, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.restore();
+      }
+    }
+
+    _drawPlayerOnFoot(ctx, player) {
+      ctx.save();
+      ctx.translate(player.x, player.y);
+      ctx.rotate(player.angle);
+      // Shadow
+      ctx.fillStyle = 'rgba(0,0,0,0.45)';
+      ctx.beginPath();
+      ctx.arc(2, 3, 11, 0, Math.PI * 2);
+      ctx.fill();
+      // Jacket
+      ctx.fillStyle = '#00f0ff';
+      ctx.beginPath();
+      ctx.arc(0, 0, 9.5, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.strokeStyle = '#ffffff';
+      ctx.lineWidth = 2;
+      ctx.stroke();
+      // Head
+      ctx.fillStyle = '#ffe0c2';
+      ctx.beginPath();
+      ctx.arc(3, 0, 5, 0, Math.PI * 2);
+      ctx.fill();
+      // Weapon barrel if armed
+      if (player.weaponIndex > 0) {
+        ctx.fillStyle = '#cbd5e1';
+        ctx.fillRect(6, 2, 11, 3);
+      }
+      ctx.restore();
+    }
+
+    _drawVehicles(ctx, vehicles, time, minX, maxX, minY, maxY) {
+      for (const v of vehicles) {
+        if (v.x < minX - 80 || v.x > maxX + 80 || v.y < minY - 80 || v.y > maxY + 80) continue;
+        const halfL = v.spec.length / 2;
+        const halfW = v.spec.width / 2;
+
+        ctx.save();
+        ctx.translate(v.x, v.y);
+        ctx.rotate(v.angle);
+
+        // Headlight beams when active
+        if (!v.destroyed && v.driver) {
+          const grad = ctx.createLinearGradient(halfL, 0, halfL + 95, 0);
+          grad.addColorStop(0, 'rgba(255, 250, 210, 0.28)');
+          grad.addColorStop(1, 'rgba(255, 250, 210, 0)');
+          ctx.fillStyle = grad;
+          ctx.beginPath();
+          ctx.moveTo(halfL, -halfW + 3);
+          ctx.lineTo(halfL + 95, -halfW - 22);
+          ctx.lineTo(halfL + 95, halfW + 22);
+          ctx.lineTo(halfL, halfW - 3);
+          ctx.closePath();
+          ctx.fill();
+        }
+
+        // Drop shadow
+        ctx.fillStyle = 'rgba(0,0,0,0.5)';
+        ctx.fillRect(-halfL + 4, -halfW + 5, v.spec.length, v.spec.width);
+
+        // Car body
+        ctx.fillStyle = v.destroyed ? '#222222' : v.color;
+        ctx.beginPath();
+        ctx.roundRect(-halfL, -halfW, v.spec.length, v.spec.width, 6);
+        ctx.fill();
+
+        // Police white doors / stripes
+        if (v.type === 'police' && !v.destroyed) {
+          ctx.fillStyle = '#f1f5f9';
+          ctx.fillRect(-halfL * 0.35, -halfW + 1, v.spec.length * 0.42, v.spec.width - 2);
+        }
+
+        // Windshield & cabin roof
+        ctx.fillStyle = v.destroyed ? '#111111' : '#0f172a';
+        ctx.fillRect(-halfL * 0.35, -halfW + 4, v.spec.length * 0.56, v.spec.width - 8);
+        ctx.fillStyle = v.destroyed ? '#1b1b1b' : 'rgba(255,255,255,0.16)';
+        ctx.fillRect(-halfL * 0.25, -halfW + 5, v.spec.length * 0.32, v.spec.width - 10);
+
+        // Headlights & Taillights
+        if (!v.destroyed) {
+          ctx.fillStyle = '#fff9c4';
+          ctx.fillRect(halfL - 3, -halfW + 3, 3, 5);
+          ctx.fillRect(halfL - 3, halfW - 8, 3, 5);
+          ctx.fillStyle = '#ff1744';
+          ctx.fillRect(-halfL, -halfW + 3, 3, 5);
+          ctx.fillRect(-halfL, halfW - 8, 3, 5);
+        }
+
+        // Police red/blue flashing lightbar
+        if (v.type === 'police' && !v.destroyed) {
+          const flash = Math.floor(time * 10) % 2 === 0;
+          ctx.fillStyle = flash ? '#ff1e56' : '#00b4ff';
+          ctx.fillRect(-3, -halfW + 5, 6, (v.spec.width - 10) / 2);
+          ctx.fillStyle = flash ? '#00b4ff' : '#ff1e56';
+          ctx.fillRect(-3, 0, 6, (v.spec.width - 10) / 2);
+          if (v.siren) {
+            ctx.fillStyle = flash ? 'rgba(255, 30, 86, 0.25)' : 'rgba(0, 180, 255, 0.25)';
+            ctx.beginPath();
+            ctx.arc(0, 0, 34, 0, Math.PI * 2);
+            ctx.fill();
+          }
+        }
+
+        // Player highlight outline
+        if (v.driver === 'player') {
+          ctx.strokeStyle = 'rgba(0, 240, 255, 0.85)';
+          ctx.lineWidth = 2;
+          ctx.beginPath();
+          ctx.roundRect(-halfL - 2, -halfW - 2, v.spec.length + 4, v.spec.width + 4, 7);
+          ctx.stroke();
+        }
+
+        ctx.restore();
+      }
+    }
+
+    _drawProjectiles(ctx, projectiles) {
+      ctx.lineWidth = 2.5;
+      for (const p of projectiles) {
+        ctx.strokeStyle = p.color;
+        ctx.beginPath();
+        ctx.moveTo(p.x, p.y);
+        ctx.lineTo(p.x - p.vx * 0.022, p.y - p.vy * 0.022);
+        ctx.stroke();
+      }
+    }
+
+    _drawParticles(ctx, particles) {
+      for (const pt of particles) {
+        const alpha = Math.max(0, pt.life / pt.maxLife);
+        ctx.globalAlpha = alpha;
+        ctx.fillStyle = pt.color;
+        ctx.beginPath();
+        ctx.arc(pt.x, pt.y, pt.size, 0, Math.PI * 2);
+        ctx.fill();
+      }
+      ctx.globalAlpha = 1;
+    }
+
+    _drawBuildings(ctx, buildings, minX, maxX, minY, maxY, time) {
+      for (let i = 0; i < buildings.length; i++) {
+        const b = buildings[i];
+        if (b.x + b.w < minX - 60 || b.x > maxX + 60 || b.y + b.h < minY - 60 || b.y > maxY + 60) {
+          continue;
+        }
+
+        // 2.5D top-down parallax roof offset relative to camera center
+        const cx = b.x + b.w / 2;
+        const cy = b.y + b.h / 2;
+        const factor = (b.height / 360) * 0.42;
+        const rx = b.x + (cx - this.camX) * factor;
+        const ry = b.y + (cy - this.camY) * factor;
+
+        // Footprint wall base
+        ctx.fillStyle = b.baseColor;
+        ctx.fillRect(b.x, b.y, b.w, b.h);
+
+        // Extruded side faces
+        ctx.fillStyle = '#151b28';
+        ctx.beginPath();
+        ctx.moveTo(b.x, b.y);
+        ctx.lineTo(rx, ry);
+        ctx.lineTo(rx + b.w, ry);
+        ctx.lineTo(b.x + b.w, b.y);
+        ctx.closePath();
+        ctx.fill();
+
+        ctx.beginPath();
+        ctx.moveTo(b.x, b.y + b.h);
+        ctx.lineTo(rx, ry + b.h);
+        ctx.lineTo(rx + b.w, ry + b.h);
+        ctx.lineTo(b.x + b.w, b.y + b.h);
+        ctx.closePath();
+        ctx.fill();
+
+        // Roof surface
+        ctx.fillStyle = b.roofColor;
+        ctx.fillRect(rx, ry, b.w, b.h);
+
+        // Neon trim border
+        ctx.strokeStyle = b.trimColor;
+        ctx.lineWidth = 2;
+        ctx.strokeRect(rx + 2, ry + 2, b.w - 4, b.h - 4);
+
+        // Rooftop AC units or helipad
+        if (b.hasHelipad) {
+          ctx.strokeStyle = 'rgba(255,255,255,0.45)';
+          ctx.lineWidth = 2;
+          ctx.beginPath();
+          ctx.arc(rx + b.w / 2, ry + b.h / 2, 26, 0, Math.PI * 2);
+          ctx.stroke();
+          ctx.fillStyle = 'rgba(255,255,255,0.6)';
+          ctx.font = 'bold 20px Inter, sans-serif';
+          ctx.textAlign = 'center';
+          ctx.textBaseline = 'middle';
+          ctx.fillText('H', rx + b.w / 2, ry + b.h / 2);
+        } else if (b.neon) {
+          const glow = 0.72 + Math.sin(time * 3 + b.id) * 0.25;
+          ctx.globalAlpha = glow;
+          ctx.fillStyle = b.trimColor;
+          ctx.font = 'bold 12px Inter, sans-serif';
+          ctx.textAlign = 'center';
+          ctx.textBaseline = 'middle';
+          ctx.fillText(b.neon, rx + b.w / 2, ry + b.h / 2);
+          ctx.globalAlpha = 1;
+        }
+      }
+    }
+
+    _drawFloatingTexts(ctx, texts) {
+      ctx.font = 'bold 14px Inter, sans-serif';
+      ctx.textAlign = 'center';
+      for (const ft of texts) {
+        ctx.globalAlpha = Math.min(1, ft.timer);
+        ctx.fillStyle = ft.color;
+        ctx.fillText(ft.text, ft.x, ft.y);
+      }
+      ctx.globalAlpha = 1;
+    }
+
+    _drawMinimap(engine) {
+      const mctx = this.mctx;
+      const mw = this.minimapCanvas.width;
+      const mh = this.minimapCanvas.height;
+      const scale = mw / engine.world.size;
+
+      mctx.fillStyle = '#090d16';
+      mctx.fillRect(0, 0, mw, mh);
+
+      // Roads
+      mctx.fillStyle = '#1f293d';
+      const ts = engine.world.tileSize * scale;
+      for (let ty = 0; ty < engine.world.mapTiles; ty++) {
+        for (let tx = 0; tx < engine.world.mapTiles; tx++) {
+          const t = engine.world.tiles[ty * engine.world.mapTiles + tx];
+          if (t === 0) {
+            mctx.fillRect(tx * ts, ty * ts, ts + 0.5, ts + 0.5);
+          } else if (t === 3) {
+            mctx.fillStyle = '#1b4332';
+            mctx.fillRect(tx * ts, ty * ts, ts + 0.5, ts + 0.5);
+            mctx.fillStyle = '#1f293d';
+          }
+        }
+      }
+
+      // Police blips
+      for (const v of engine.vehicles) {
+        if (v.type === 'police' && !v.destroyed) {
+          mctx.fillStyle = Math.floor(engine.time * 8) % 2 === 0 ? '#ff1e56' : '#00b4ff';
+          mctx.beginPath();
+          mctx.arc(v.x * scale, v.y * scale, 3, 0, Math.PI * 2);
+          mctx.fill();
+        }
+      }
+
+      // Mission waypoint
+      const wp = engine.missions.getCurrentWaypoint();
+      if (wp) {
+        mctx.fillStyle = '#ffe600';
+        mctx.beginPath();
+        mctx.arc(wp.x * scale, wp.y * scale, 4.2, 0, Math.PI * 2);
+        mctx.fill();
+      }
+
+      // Player blip
+      const pos = engine.getPlayerPosition();
+      mctx.fillStyle = '#00f0ff';
+      mctx.beginPath();
+      mctx.arc(pos.x * scale, pos.y * scale, 3.8, 0, Math.PI * 2);
+      mctx.fill();
+      mctx.strokeStyle = '#ffffff';
+      mctx.lineWidth = 1.2;
+      mctx.stroke();
+    }
+  }
+
+  return { GameRenderer };
+});
+
+
+// ===== Browser Bootstrap & HUD Controller =====
+(function () {
+  'use strict';
+
+  let engine = null;
+  let renderer = null;
+  let audio = null;
+  let rafId = null;
+  let lastTs = 0;
+
+  const keys = {
+    up: false, down: false, left: false, right: false,
+    handbrake: false, sprint: false, fire: false
+  };
+  let mouseX = 0;
+  let mouseY = 0;
+  let mouseDown = false;
+
+  const $ = id => document.getElementById(id);
+
+  function saveHighScore(cash) {
+    try {
+      const prev = Number(localStorage.getItem('neon_vice_best_cash') || 0);
+      if (cash > prev) localStorage.setItem('neon_vice_best_cash', String(cash));
+    } catch (_) {}
+  }
+
+  function unlockAudioOnce() {
+    if (audio) audio.unlock();
+  }
+
+  function renderMissionModal() {
+    const list = $('missionList');
+    list.innerHTML = '';
+    const activeId = engine.missions.active ? engine.missions.active.id : null;
+    engine.missions.catalog.forEach((m, idx) => {
+      const done = engine.missions.completedIds.has(m.id);
+      const isActive = activeId === m.id;
+      const row = document.createElement('div');
+      row.className = 'mission-item';
+      row.innerHTML =
+        '<div>' +
+          '<h3>' + (idx + 1) + '. ' + m.title + (done ? ' <span style="color:#39ff14">✓ 已完成</span>' : '') + '</h3>' +
+          '<p>' + m.subtitle + ' · 奖励 <strong style="color:#ffe600">$' + m.reward + '</strong> · 限时 ' + m.timeLimit + 's</p>' +
+        '</div>' +
+        '<button class="btn ' + (isActive ? 'btn-gold' : 'btn-primary') + '" data-mid="' + m.id + '">' +
+          (isActive ? '放弃任务' : '接取') +
+        '</button>';
+      list.appendChild(row);
+    });
+
+    list.querySelectorAll('button[data-mid]').forEach(btn => {
+      btn.addEventListener('click', () => {
+        unlockAudioOnce();
+        const mid = btn.getAttribute('data-mid');
+        if (engine.missions.active && engine.missions.active.id === mid) {
+          engine.missions.abandonMission(engine);
+        } else {
+          engine.missions.startMission(mid, engine);
+        }
+        $('missionModal').classList.remove('open');
+        engine.paused = false;
+      });
+    });
+  }
+
+  function toggleModal(modalId) {
+    const el = $(modalId);
+    const willOpen = !el.classList.contains('open');
+    $('missionModal').classList.remove('open');
+    $('helpModal').classList.remove('open');
+    if (willOpen) {
+      if (modalId === 'missionModal') renderMissionModal();
+      el.classList.add('open');
+      engine.paused = true;
+    } else {
+      engine.paused = false;
+    }
+  }
+
+  function updateHUD() {
+    const pos = engine.getPlayerPosition();
+    const district = engine.world.getDistrictAt(pos.x, pos.y);
+    $('districtName').textContent = district.name;
+    $('missionCount').textContent = engine.missions.completedIds.size + '/' + engine.missions.catalog.length;
+
+    const car = engine.player.vehicle;
+    if (car) {
+      $('vehicleName').textContent = car.spec.name;
+      $('vehicleName').style.color = '#00f0ff';
+      $('speedVal').textContent = String(Math.round(car.speed * 0.36));
+      $('carHpRow').style.display = 'flex';
+      $('carHpBar').style.width = Math.max(0, Math.round((car.hp / car.maxHp) * 100)) + '%';
+    } else {
+      $('vehicleName').textContent = '步行状态';
+      $('vehicleName').style.color = '#94a3b8';
+      $('speedVal').textContent = String(Math.round(Math.hypot(engine.player.vx, engine.player.vy) * 0.14));
+      $('carHpRow').style.display = 'none';
+    }
+
+    let starsHtml = '';
+    for (let i = 1; i <= 5; i++) {
+      starsHtml += i <= engine.wantedStars ? '<span class="lit">★</span>' : '★';
+    }
+    $('wantedStars').innerHTML = starsHtml;
+    $('cashVal').textContent = '$' + engine.player.cash;
+    $('hpBar').style.width = Math.max(0, Math.round((engine.player.hp / engine.player.maxHp) * 100)) + '%';
+    $('armorBar').style.width = Math.max(0, Math.round((engine.player.armor / engine.player.maxArmor) * 100)) + '%';
+
+    const w = engine.getCurrentWeapon();
+    $('weaponName').textContent = w.name;
+    $('ammoVal').textContent = w.melee ? '∞' : String(engine.player.ammo[w.id]);
+
+    const station = window.GTAConfig.RADIO_STATIONS[engine.radioIndex];
+    $('radioName').textContent = '📻 ' + station.name;
+
+    const m = engine.missions.active;
+    if (m) {
+      const wp = engine.missions.getCurrentWaypoint();
+      const distTxt = wp ? ' · 距离 ' + Math.round(window.GTAPhysics.dist(pos.x, pos.y, wp.x, wp.y) / 10) + 'm' : '';
+      $('missionTitle').textContent = m.title + ' (' + Math.ceil(m.timeLeft) + 's)';
+      $('missionSub').textContent = wp ? ('目标：' + wp.label + distTxt) : m.subtitle;
+      $('quickMissionBtn').textContent = '查看任务面板 (M)';
+    } else {
+      $('missionTitle').textContent = '自由探索模式';
+      $('missionSub').textContent = '按 M 接取任务，按 E 抢夺/驾驶附近载具';
+      $('quickMissionBtn').textContent = '接取下一任务 (M)';
+    }
+
+    const bannerEl = $('bannerOverlay');
+    if (engine.banner) {
+      $('bannerTitle').textContent = engine.banner.title;
+      $('bannerTitle').style.color = engine.banner.color;
+      $('bannerSub').textContent = engine.banner.subtitle;
+      bannerEl.style.borderColor = engine.banner.color;
+      bannerEl.classList.add('show');
+    } else {
+      bannerEl.classList.remove('show');
+    }
+
+    const stack = $('toastStack');
+    stack.innerHTML = engine.toasts.map(t =>
+      '<div class="toast" style="color:' + t.color + '">' + t.text + '</div>'
+    ).join('');
+
+    saveHighScore(engine.player.cash);
+  }
+
+  function computeAimAngle() {
+    const canvas = $('gameCanvas');
+    const rect = canvas.getBoundingClientRect();
+    const cx = rect.width / 2;
+    const cy = rect.height / 2;
+    const worldMouseX = renderer.camX + (mouseX - cx) / renderer.camZoom;
+    const worldMouseY = renderer.camY + (mouseY - cy) / renderer.camZoom;
+    const pos = engine.getPlayerPosition();
+    return Math.atan2(worldMouseY - pos.y, worldMouseX - pos.x);
+  }
+
+  function loop(ts) {
+    const dt = lastTs ? Math.min(0.05, (ts - lastTs) / 1000) : 0.016;
+    lastTs = ts;
+
+    const aimAngle = (mouseX || mouseY) ? computeAimAngle() : engine.player.angle;
+    const firing = mouseDown || keys.fire || (!engine.player.vehicle && keys.handbrake);
+
+    engine.step(dt, {
+      up: keys.up,
+      down: keys.down,
+      left: keys.left,
+      right: keys.right,
+      handbrake: keys.handbrake,
+      sprint: keys.sprint,
+      fire: firing,
+      aimAngle
+    });
+
+    if (audio) {
+      audio.updateEngine(
+        engine.player.vehicle ? engine.player.vehicle.speed : 0,
+        !!engine.player.vehicle && !engine.paused && engine.player.state === 'alive'
+      );
+    }
+
+    renderer.render(engine);
+    updateHUD();
+    rafId = window.requestAnimationFrame(loop);
+  }
+
+  function initGame() {
+    if (rafId) window.cancelAnimationFrame(rafId);
+    audio = audio || new window.GTAAudio.SoundSynth();
+    engine = new window.GTAEngine.GameEngine({
+      seed: 2026,
+      onSound: (name, payload) => audio.play(name, payload)
+    });
+    renderer = new window.GTARenderer.GameRenderer($('gameCanvas'), $('minimapCanvas'));
+    renderer.resize();
+    engine.pushBanner('NEON VICE 霓虹都市', '按 E 驾驶身边跑车，按 M 接取首个街头任务', '#00f0ff');
+    lastTs = 0;
+    rafId = window.requestAnimationFrame(loop);
+  }
+
+  function bindEvents() {
+    window.addEventListener('resize', () => {
+      if (renderer) {
+        renderer.resize();
+        renderer.render(engine);
+      }
+    });
+
+    const keyMap = {
+      KeyW: 'up', ArrowUp: 'up',
+      KeyS: 'down', ArrowDown: 'down',
+      KeyA: 'left', ArrowLeft: 'left',
+      KeyD: 'right', ArrowRight: 'right',
+      Space: 'handbrake',
+      ShiftLeft: 'sprint', ShiftRight: 'sprint'
+    };
+
+    window.addEventListener('keydown', e => {
+      unlockAudioOnce();
+      if (keyMap[e.code]) {
+        keys[keyMap[e.code]] = true;
+        if (e.code === 'Space' || e.code.startsWith('Arrow')) e.preventDefault();
+      } else if (e.code === 'KeyE' || e.code === 'KeyF') {
+        engine.toggleVehicleEntry();
+      } else if (e.code === 'KeyQ') {
+        engine.selectWeapon(engine.player.weaponIndex + 1);
+      } else if (e.code === 'Digit1') {
+        engine.selectWeapon(0);
+      } else if (e.code === 'Digit2') {
+        engine.selectWeapon(1);
+      } else if (e.code === 'Digit3') {
+        engine.selectWeapon(2);
+      } else if (e.code === 'Digit4') {
+        engine.selectWeapon(3);
+      } else if (e.code === 'KeyR') {
+        engine.cycleRadio();
+      } else if (e.code === 'KeyM') {
+        toggleModal('missionModal');
+      } else if (e.code === 'KeyP' || e.code === 'Escape') {
+        if ($('missionModal').classList.contains('open') || $('helpModal').classList.contains('open')) {
+          $('missionModal').classList.remove('open');
+          $('helpModal').classList.remove('open');
+          engine.paused = false;
+        } else {
+          engine.paused = !engine.paused;
+          $('btnPause').textContent = engine.paused ? '继续 (P)' : '暂停 (P)';
+        }
+      }
+    });
+
+    window.addEventListener('keyup', e => {
+      if (keyMap[e.code]) keys[keyMap[e.code]] = false;
+    });
+
+    const canvas = $('gameCanvas');
+    canvas.addEventListener('pointermove', e => {
+      const rect = canvas.getBoundingClientRect();
+      mouseX = e.clientX - rect.left;
+      mouseY = e.clientY - rect.top;
+    });
+    canvas.addEventListener('pointerdown', e => {
+      unlockAudioOnce();
+      if (e.button === 0) {
+        const rect = canvas.getBoundingClientRect();
+        mouseX = e.clientX - rect.left;
+        mouseY = e.clientY - rect.top;
+        mouseDown = true;
+      }
+    });
+    window.addEventListener('pointerup', () => { mouseDown = false; });
+
+    $('btnMission').addEventListener('click', () => { unlockAudioOnce(); toggleModal('missionModal'); });
+    $('quickMissionBtn').addEventListener('click', () => {
+      unlockAudioOnce();
+      if (!engine.missions.active) {
+        engine.missions.startMission(engine.missions.nextIndex, engine);
+      } else {
+        toggleModal('missionModal');
+      }
+    });
+    $('btnVehicle').addEventListener('click', () => { unlockAudioOnce(); engine.toggleVehicleEntry(); });
+    $('btnWeapon').addEventListener('click', () => { unlockAudioOnce(); engine.selectWeapon(engine.player.weaponIndex + 1); });
+    $('btnRadio').addEventListener('click', () => { unlockAudioOnce(); engine.cycleRadio(); });
+    $('btnMute').addEventListener('click', () => {
+      unlockAudioOnce();
+      audio.setMuted(!audio.muted);
+      $('btnMute').textContent = audio.muted ? '音效: 关' : '音效: 开';
+    });
+    $('btnTouch').addEventListener('click', () => {
+      $('touchControls').classList.toggle('visible');
+    });
+    $('btnPause').addEventListener('click', () => {
+      engine.paused = !engine.paused;
+      $('btnPause').textContent = engine.paused ? '继续 (P)' : '暂停 (P)';
+    });
+    $('btnHelp').addEventListener('click', () => { unlockAudioOnce(); toggleModal('helpModal'); });
+    $('closeMissionModal').addEventListener('click', () => { $('missionModal').classList.remove('open'); engine.paused = false; });
+    $('closeHelpModal').addEventListener('click', () => { $('helpModal').classList.remove('open'); engine.paused = false; });
+    $('restartGameBtn').addEventListener('click', () => {
+      $('helpModal').classList.remove('open');
+      initGame();
+    });
+
+    document.querySelectorAll('.pad-btn[data-key]').forEach(btn => {
+      const k = btn.getAttribute('data-key');
+      const down = e => { e.preventDefault(); unlockAudioOnce(); keys[k] = true; };
+      const up = e => { e.preventDefault(); keys[k] = false; };
+      btn.addEventListener('pointerdown', down);
+      btn.addEventListener('pointerup', up);
+      btn.addEventListener('pointerleave', up);
+      btn.addEventListener('pointercancel', up);
+    });
+  }
+
+  window.onload = function () {
+    bindEvents();
+    initGame();
+  };
+})();
+  </script>
+</body>
+</html>

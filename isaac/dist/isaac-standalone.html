@@ -1,0 +1,3572 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
+  <title>以撒的结合：泪之地下室 (Web Edition)</title>
+  <style>
+    :root {
+      --bg: #120d0c;
+      --panel: #1e1614;
+      --border: #3d2c26;
+      --text: #f3eae6;
+      --muted: #a9958d;
+      --accent: #e03131;
+      --gold: #fcc419;
+    }
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body {
+      background: radial-gradient(circle at top, #241916 0%, var(--bg) 65%);
+      color: var(--text);
+      font-family: "Inter", -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      padding: 12px;
+      user-select: none;
+    }
+    .app-shell {
+      width: 100%;
+      max-width: 980px;
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+    }
+    .topbar {
+      display: flex;
+      flex-wrap: wrap;
+      align-items: center;
+      justify-content: space-between;
+      gap: 10px;
+      background: var(--panel);
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      padding: 10px 14px;
+    }
+    .brand {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+    .brand-badge {
+      width: 34px;
+      height: 34px;
+      border-radius: 50%;
+      background: linear-gradient(135deg, #f6cbb9, #d99b8a);
+      border: 2px solid #3a2320;
+      display: grid;
+      place-items: center;
+      font-size: 16px;
+      flex-shrink: 0;
+    }
+    .brand h1 {
+      font-size: 16px;
+      font-weight: 700;
+      letter-spacing: 0.3px;
+    }
+    .brand p {
+      font-size: 12px;
+      color: var(--muted);
+    }
+    .controls-bar {
+      display: flex;
+      flex-wrap: wrap;
+      align-items: center;
+      gap: 8px;
+    }
+    .seed-box {
+      display: flex;
+      align-items: center;
+      gap: 4px;
+      background: #140f0e;
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      padding: 3px 6px;
+    }
+    .seed-box input {
+      width: 98px;
+      background: transparent;
+      border: none;
+      color: var(--gold);
+      font-family: monospace;
+      font-size: 13px;
+      outline: none;
+      text-transform: uppercase;
+    }
+    button {
+      background: #2b1f1c;
+      color: var(--text);
+      border: 1px solid #4d3730;
+      border-radius: 8px;
+      padding: 6px 11px;
+      font-size: 13px;
+      font-weight: 600;
+      cursor: pointer;
+      transition: background 0.15s, transform 0.1s;
+    }
+    button:hover { background: #3b2a26; }
+    button:active { transform: scale(0.97); }
+    button.primary {
+      background: var(--accent);
+      border-color: #ff6b6b;
+      color: #fff;
+    }
+    button.primary:hover { background: #c92a2a; }
+    #canvas-wrap {
+      position: relative;
+      width: 100%;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      background: #0d0908;
+      border: 2px solid var(--border);
+      border-radius: 14px;
+      overflow: hidden;
+      box-shadow: 0 18px 42px rgba(0, 0, 0, 0.55);
+    }
+    canvas {
+      display: block;
+      image-rendering: crisp-edges;
+    }
+    .overlay {
+      position: absolute;
+      inset: 0;
+      background: rgba(12, 8, 8, 0.82);
+      backdrop-filter: blur(4px);
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      gap: 14px;
+      text-align: center;
+      padding: 20px;
+    }
+    .overlay.hidden { display: none; }
+    .overlay h2 { font-size: 28px; color: var(--gold); }
+    .overlay p { font-size: 14px; color: var(--text); max-width: 440px; line-height: 1.6; }
+    .items-bar {
+      background: var(--panel);
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      padding: 10px 14px;
+      display: flex;
+      flex-wrap: wrap;
+      align-items: center;
+      gap: 8px;
+      font-size: 12px;
+    }
+    .items-label { color: var(--muted); font-weight: 600; }
+    .item-empty { color: var(--muted); font-style: italic; }
+    .item-chip {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      padding: 3px 9px;
+      border-radius: 999px;
+      background: #261b18;
+      border: 1px solid var(--gold);
+      font-weight: 600;
+    }
+    .item-chip i {
+      width: 8px;
+      height: 8px;
+      border-radius: 50%;
+      display: inline-block;
+    }
+    .touch-controls {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      gap: 12px;
+      background: var(--panel);
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      padding: 10px 14px;
+    }
+    .pad-grid {
+      display: grid;
+      grid-template-columns: repeat(3, 42px);
+      grid-template-rows: repeat(3, 38px);
+      gap: 4px;
+    }
+    .pad-btn {
+      padding: 0;
+      display: grid;
+      place-items: center;
+      font-size: 15px;
+      touch-action: none;
+    }
+    .pad-btn.active { background: var(--accent); color: #fff; }
+    .action-col {
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+      align-items: center;
+    }
+    .key-hint {
+      font-size: 11px;
+      color: var(--muted);
+      text-align: center;
+    }
+    @media (max-width: 640px) {
+      .topbar { padding: 8px 10px; }
+      .brand h1 { font-size: 14px; }
+      .pad-grid { grid-template-columns: repeat(3, 36px); grid-template-rows: repeat(3, 34px); }
+    }
+  </style>
+</head>
+<body>
+  <div class="app-shell">
+    <header class="topbar">
+      <div class="brand">
+        <div class="brand-badge">😭</div>
+        <div>
+          <h1>以撒的结合 · 泪之地下室</h1>
+          <p>Roguelike 随机地牢 · 3层Boss挑战 · 12种协同道具</p>
+        </div>
+      </div>
+      <div class="controls-bar">
+        <div class="seed-box">
+          <input id="seed-input" type="text" maxlength="12" aria-label="地图种子" placeholder="SEED" />
+          <button id="btn-apply-seed" type="button">载入种子</button>
+        </div>
+        <button id="btn-mute" type="button">🔊 音效</button>
+        <button id="btn-pause" type="button">⏸ 暂停</button>
+        <button id="btn-restart" type="button" class="primary">↻ 重开</button>
+      </div>
+    </header>
+
+    <main id="canvas-wrap">
+      <canvas id="game-canvas" width="960" height="640"></canvas>
+      <div id="state-overlay" class="overlay hidden">
+        <h2 id="overlay-title">游戏暂停</h2>
+        <p id="overlay-desc"></p>
+        <button id="overlay-action" type="button" class="primary">继续</button>
+      </div>
+    </main>
+
+    <section class="items-bar">
+      <span class="items-label">已收集道具：</span>
+      <div id="items-list" style="display:flex;flex-wrap:wrap;gap:6px;"></div>
+    </section>
+
+    <section class="touch-controls" aria-label="触屏与快捷控制">
+      <div>
+        <div class="pad-grid">
+          <div></div><button id="pad-up" class="pad-btn" type="button">W</button><div></div>
+          <button id="pad-left" class="pad-btn" type="button">A</button><div></div><button id="pad-right" class="pad-btn" type="button">D</button>
+          <div></div><button id="pad-down" class="pad-btn" type="button">S</button><div></div>
+        </div>
+        <div class="key-hint">移动 (WASD)</div>
+      </div>
+
+      <div class="action-col">
+        <div style="display:flex;gap:8px;">
+          <button id="btn-touch-bomb" type="button">💣 炸弹 (E)</button>
+          <button id="btn-touch-active" type="button">❤️ 主动 (Space)</button>
+        </div>
+        <div class="key-hint">提示：炸开带 X 标记的蓝石头可获得魂心与钥匙</div>
+      </div>
+
+      <div>
+        <div class="pad-grid">
+          <div></div><button id="shoot-up" class="pad-btn" type="button">↑</button><div></div>
+          <button id="shoot-left" class="pad-btn" type="button">←</button><div></div><button id="shoot-right" class="pad-btn" type="button">→</button>
+          <div></div><button id="shoot-down" class="pad-btn" type="button">↓</button><div></div>
+        </div>
+        <div class="key-hint">射击 (方向键)</div>
+      </div>
+    </section>
+  </div>
+
+  <script>
+(function() {
+'use strict';
+// ===== constants.js =====
+const CANVAS_WIDTH = 960;
+const CANVAS_HEIGHT = 640;
+
+const WALL_THICKNESS = 72;
+const TILE_SIZE = 48;
+const GRID_COLS = 15; // 15 * 48 = 720, plus margins
+const GRID_ROWS = 9;  // 9 * 48 = 432
+
+const ROOM_LEFT = WALL_THICKNESS;
+const ROOM_RIGHT = CANVAS_WIDTH - WALL_THICKNESS;
+const ROOM_TOP = WALL_THICKNESS + 24; // Extra space for top HUD bar
+const ROOM_BOTTOM = CANVAS_HEIGHT - WALL_THICKNESS + 16;
+const ROOM_WIDTH = ROOM_RIGHT - ROOM_LEFT;
+const ROOM_HEIGHT = ROOM_BOTTOM - ROOM_TOP;
+
+const DOOR_SIZE = 66;
+
+const DIRECTIONS = {
+  NORTH: { key: 'NORTH', dx: 0, dy: -1, opposite: 'SOUTH' },
+  SOUTH: { key: 'SOUTH', dx: 0, dy: 1, opposite: 'NORTH' },
+  WEST:  { key: 'WEST',  dx: -1, dy: 0, opposite: 'EAST' },
+  EAST:  { key: 'EAST',  dx: 1, dy: 0, opposite: 'WEST' }
+};
+
+const DIR_LIST = [DIRECTIONS.NORTH, DIRECTIONS.SOUTH, DIRECTIONS.WEST, DIRECTIONS.EAST];
+
+const ROOM_TYPES = {
+  START: 'START',
+  NORMAL: 'NORMAL',
+  TREASURE: 'TREASURE',
+  SHOP: 'SHOP',
+  BOSS: 'BOSS'
+};
+
+const TILE_TYPES = {
+  EMPTY: 0,
+  ROCK: 1,
+  TINTED_ROCK: 2,
+  SPIKES: 3,
+  PIT: 4,
+  POOP: 5
+};
+
+const FLOOR_THEMES = [
+  {
+    level: 1,
+    name: '地下室 I',
+    subtitle: 'Basement I',
+    floorColor: '#3a2c24',
+    floorAlt: '#342720',
+    wallColor: '#241a15',
+    wallTrim: '#4c382c',
+    rockColor: '#695b52',
+    bossType: 'MONSTRO'
+  },
+  {
+    level: 2,
+    name: '地下室 II',
+    subtitle: 'Basement II',
+    floorColor: '#352623',
+    floorAlt: '#2e201e',
+    wallColor: '#1f1514',
+    wallTrim: '#4b312d',
+    rockColor: '#60524e',
+    bossType: 'DUKE'
+  },
+  {
+    level: 3,
+    name: '深邃洞穴 I',
+    subtitle: 'Caves I',
+    floorColor: '#262b30',
+    floorAlt: '#21262b',
+    wallColor: '#161a1e',
+    wallTrim: '#39434d',
+    rockColor: '#56606b',
+    bossType: 'HEART'
+  }
+];
+
+const BASE_PLAYER_STATS = {
+  maxRedHearts: 6,       // 6 half-hearts = 3 full red hearts
+  redHearts: 6,
+  soulHearts: 0,
+  speed: 240,            // pixels / sec
+  damage: 3.5,
+  tearRate: 2.8,         // tears / sec
+  tearSpeed: 420,        // pixels / sec
+  range: 340,            // pixels before drop
+  tearSize: 9,
+  shotCount: 1,
+  homing: false,
+  piercing: false,
+  bouncing: false,
+  poison: false,
+  damageMultiplier: 1.0
+};
+
+const ENEMY_CONFIGS = {
+  FLY: {
+    id: 'FLY',
+    name: '攻击苍蝇',
+    hp: 6,
+    speed: 105,
+    radius: 13,
+    flying: true,
+    color: '#1e1b22',
+    accent: '#e03e3e',
+    score: 25
+  },
+  GAPER: {
+    id: 'GAPER',
+    name: '哭泣游走者',
+    hp: 12,
+    speed: 98,
+    radius: 18,
+    flying: false,
+    color: '#d9a49c',
+    accent: '#8a2b2b',
+    score: 40
+  },
+  SPIDER: {
+    id: 'SPIDER',
+    name: '地牢蜘蛛',
+    hp: 8,
+    speed: 215,
+    radius: 12,
+    flying: false,
+    color: '#221d24',
+    accent: '#c43b3b',
+    score: 35
+  },
+  SHOOTER: {
+    id: 'SHOOTER',
+    name: '吐血浮头',
+    hp: 14,
+    speed: 68,
+    radius: 17,
+    flying: true,
+    color: '#c98882',
+    accent: '#a81c1c',
+    fireInterval: 1.8,
+    score: 55
+  },
+  CHARGER: {
+    id: 'CHARGER',
+    name: '冲锋蛆虫',
+    hp: 16,
+    speed: 85,
+    chargeSpeed: 280,
+    radius: 17,
+    flying: false,
+    color: '#d6c29f',
+    accent: '#b83227',
+    score: 60
+  },
+  MONSTRO: {
+    id: 'MONSTRO',
+    name: '巨口畸形 · 蒙斯特罗',
+    hp: 110,
+    speed: 90,
+    radius: 38,
+    flying: false,
+    isBoss: true,
+    color: '#d48d88',
+    accent: '#7a1c1c',
+    score: 300
+  },
+  DUKE: {
+    id: 'DUKE',
+    name: '苍蝇公爵',
+    hp: 135,
+    speed: 95,
+    radius: 40,
+    flying: true,
+    isBoss: true,
+    color: '#8f9c7f',
+    accent: '#4a593d',
+    score: 400
+  },
+  HEART: {
+    id: 'HEART',
+    name: '深渊之心',
+    hp: 180,
+    speed: 55,
+    radius: 44,
+    flying: true,
+    isBoss: true,
+    color: '#a82332',
+    accent: '#ff4d6d',
+    score: 600
+  }
+};
+
+
+// ===== rng.js =====
+/**
+ * 可复现伪随机数生成器 (Mulberry32)
+ * 支持字符串种子（例如 "ISAAC-2026"）与数字种子。
+ */
+function hashSeed(seedInput) {
+  if (typeof seedInput === 'number' && Number.isFinite(seedInput)) {
+    return (seedInput >>> 0) || 1;
+  }
+  const str = String(seedInput ?? 'ISAAC');
+  let h = 2166136261 >>> 0;
+  for (let i = 0; i < str.length; i++) {
+    h ^= str.charCodeAt(i);
+    h = Math.imul(h, 16777619);
+  }
+  return (h >>> 0) || 1;
+}
+
+function generateSeedString() {
+  const chars = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789';
+  let part1 = '';
+  let part2 = '';
+  for (let i = 0; i < 4; i++) {
+    part1 += chars[Math.floor(Math.random() * chars.length)];
+    part2 += chars[Math.floor(Math.random() * chars.length)];
+  }
+  return `${part1}-${part2}`;
+}
+
+class SeededRNG {
+  constructor(seed) {
+    this.seedString = String(seed ?? generateSeedString());
+    this.state = hashSeed(this.seedString);
+  }
+
+  next() {
+    let t = (this.state += 0x6d2b79f5);
+    t = Math.imul(t ^ (t >>> 15), t | 1);
+    t ^= t + Math.imul(t ^ (t >>> 7), t | 61);
+    return ((t ^ (t >>> 14)) >>> 0) / 4294967296;
+  }
+
+  range(min, max) {
+    return min + this.next() * (max - min);
+  }
+
+  int(min, maxInclusive) {
+    return Math.floor(this.range(min, maxInclusive + 1));
+  }
+
+  pick(array) {
+    if (!array || array.length === 0) return undefined;
+    return array[Math.floor(this.next() * array.length)];
+  }
+
+  shuffle(array) {
+    const copy = array.slice();
+    for (let i = copy.length - 1; i > 0; i--) {
+      const j = Math.floor(this.next() * (i + 1));
+      [copy[i], copy[j]] = [copy[j], copy[i]];
+    }
+    return copy;
+  }
+
+  chance(probability) {
+    return this.next() < probability;
+  }
+}
+
+
+// ===== items.js =====
+/**
+ * 被动道具池与主动道具定义
+ */
+const PASSIVE_ITEMS = [
+  {
+    id: 'sad_onion',
+    name: '哭泣洋葱',
+    subtitle: '射速大幅提升',
+    color: '#e7d5a8',
+    accent: '#8cb369',
+    pool: ['treasure', 'shop'],
+    apply(stats) {
+      stats.tearRate = +(stats.tearRate + 1.1).toFixed(2);
+    }
+  },
+  {
+    id: 'pentagram',
+    name: '五芒星',
+    subtitle: '伤害显著提升',
+    color: '#c92a2a',
+    accent: '#ff8787',
+    pool: ['treasure', 'boss'],
+    apply(stats) {
+      stats.damage = +(stats.damage + 1.5).toFixed(2);
+    }
+  },
+  {
+    id: 'inner_eye',
+    name: '内眼',
+    subtitle: '三重眼泪散射',
+    color: '#f8f9fa',
+    accent: '#495057',
+    pool: ['treasure'],
+    apply(stats) {
+      stats.shotCount = Math.min(5, stats.shotCount + 2);
+      stats.tearRate = Math.max(1.2, +(stats.tearRate * 0.78).toFixed(2));
+    }
+  },
+  {
+    id: 'spoon_bender',
+    name: '弯勺之力',
+    subtitle: '念力追踪泪弹',
+    color: '#9c36b5',
+    accent: '#e599f7',
+    pool: ['treasure'],
+    apply(stats) {
+      stats.homing = true;
+      stats.range += 40;
+    }
+  },
+  {
+    id: 'cupids_arrow',
+    name: '丘比特之箭',
+    subtitle: '穿透敌人的眼泪',
+    color: '#f06595',
+    accent: '#ffd43b',
+    pool: ['treasure'],
+    apply(stats) {
+      stats.piercing = true;
+    }
+  },
+  {
+    id: 'rubber_cement',
+    name: '橡皮胶水',
+    subtitle: '弹性反弹泪弹',
+    color: '#ffe066',
+    accent: '#ff922b',
+    pool: ['treasure', 'shop'],
+    apply(stats) {
+      stats.bouncing = true;
+      stats.range += 60;
+    }
+  },
+  {
+    id: 'wire_coat_hanger',
+    name: '铁丝衣架',
+    subtitle: '射速与弹速提升',
+    color: '#adb5bd',
+    accent: '#dee2e6',
+    pool: ['treasure', 'boss'],
+    apply(stats) {
+      stats.tearRate = +(stats.tearRate + 0.85).toFixed(2);
+      stats.tearSpeed += 55;
+    }
+  },
+  {
+    id: 'meat',
+    name: '神秘肉块',
+    subtitle: '生命上限 +1 · 伤害提升',
+    color: '#d9480f',
+    accent: '#ffc9c9',
+    pool: ['boss', 'treasure'],
+    apply(stats) {
+      stats.maxRedHearts += 2;
+      stats.redHearts = Math.min(stats.maxRedHearts, stats.redHearts + 2);
+      stats.damage = +(stats.damage + 0.6).toFixed(2);
+    }
+  },
+  {
+    id: 'soul_relic',
+    name: '圣洁遗物',
+    subtitle: '获得两颗魂心护盾',
+    color: '#4dabf7',
+    accent: '#d0ebff',
+    pool: ['treasure', 'shop', 'boss'],
+    apply(stats) {
+      stats.soulHearts += 4;
+    }
+  },
+  {
+    id: 'wooden_spoon',
+    name: '木勺',
+    subtitle: '移动速度大幅提升',
+    color: '#b07d4f',
+    accent: '#e6ccb2',
+    pool: ['boss', 'shop'],
+    apply(stats) {
+      stats.speed = Math.min(410, stats.speed + 48);
+    }
+  },
+  {
+    id: 'crickets_head',
+    name: '板球之首',
+    subtitle: '伤害倍率 1.5x · 巨型泪弹',
+    color: '#e9c46a',
+    accent: '#e76f51',
+    pool: ['treasure'],
+    apply(stats) {
+      stats.damage = +(stats.damage + 0.8).toFixed(2);
+      stats.damageMultiplier = +(stats.damageMultiplier * 1.5).toFixed(2);
+      stats.tearSize = Math.min(18, stats.tearSize + 3);
+    }
+  },
+  {
+    id: 'scorpio',
+    name: '天蝎剧毒',
+    subtitle: '中毒持续伤害泪弹',
+    color: '#51cf66',
+    accent: '#b2f2bb',
+    pool: ['treasure', 'boss'],
+    apply(stats) {
+      stats.poison = true;
+      stats.damage = +(stats.damage + 0.4).toFixed(2);
+    }
+  }
+];
+
+const ACTIVE_ITEMS = {
+  yum_heart: {
+    id: 'yum_heart',
+    name: '美味的心',
+    subtitle: '恢复 1 颗红心',
+    maxCharge: 4,
+    color: '#ff4d6d',
+    canUse(player) {
+      return player.stats.redHearts < player.stats.maxRedHearts;
+    },
+    use(player) {
+      const before = player.stats.redHearts;
+      player.stats.redHearts = Math.min(player.stats.maxRedHearts, player.stats.redHearts + 2);
+      return player.stats.redHearts > before;
+    }
+  }
+};
+
+function pickItemFromPool(rng, poolName, ownedIds = new Set()) {
+  const candidates = PASSIVE_ITEMS.filter(
+    (item) => item.pool.includes(poolName) && !ownedIds.has(item.id)
+  );
+  if (candidates.length > 0) {
+    return rng.pick(candidates);
+  }
+  const fallback = PASSIVE_ITEMS.filter((item) => !ownedIds.has(item.id));
+  if (fallback.length > 0) {
+    return rng.pick(fallback);
+  }
+  // All items owned: fallback to Meat! stat boost
+  return PASSIVE_ITEMS.find((i) => i.id === 'meat');
+}
+
+
+// ===== dungeon.js =====
+
+
+const MAP_SIZE = 9;
+const CENTER_COORD = 4;
+
+function coordKey(gx, gy) {
+  return `${gx},${gy}`;
+}
+
+/**
+ * 房间障碍物模板库 (15x9 网格)
+ * 保证四门入口区域 (col 6..8, row 0/8) 与 (row 3..5, col 0/14) 永远畅通无阻。
+ */
+const ROOM_TEMPLATES = [
+  // 0: 空旷竞技场 + 四角石块
+  (grid) => {
+    const coords = [
+      [2, 2], [3, 2], [2, 3],
+      [12, 2], [11, 2], [12, 3],
+      [2, 6], [3, 6], [2, 5],
+      [12, 6], [11, 6], [12, 5]
+    ];
+    for (const [c, r] of coords) grid[r][c] = TILE_TYPES.ROCK;
+  },
+  // 1: 中央十字掩体 + 地刺
+  (grid) => {
+    const rocks = [[6, 4], [7, 4], [8, 4], [7, 3], [7, 5]];
+    for (const [c, r] of rocks) grid[r][c] = TILE_TYPES.ROCK;
+    grid[2][4] = TILE_TYPES.SPIKES;
+    grid[2][10] = TILE_TYPES.SPIKES;
+    grid[6][4] = TILE_TYPES.SPIKES;
+    grid[6][10] = TILE_TYPES.SPIKES;
+  },
+  // 2: 双排石柱 + 粪便
+  (grid) => {
+    for (const c of [4, 10]) {
+      grid[2][c] = TILE_TYPES.ROCK;
+      grid[3][c] = TILE_TYPES.ROCK;
+      grid[5][c] = TILE_TYPES.ROCK;
+      grid[6][c] = TILE_TYPES.ROCK;
+    }
+    grid[4][7] = TILE_TYPES.POOP;
+  },
+  // 3: 对角石阵
+  (grid) => {
+    const rocks = [
+      [3, 2], [4, 2], [3, 3],
+      [11, 6], [10, 6], [11, 5],
+      [5, 5], [9, 3]
+    ];
+    for (const [c, r] of rocks) grid[r][c] = TILE_TYPES.ROCK;
+    grid[2][11] = TILE_TYPES.POOP;
+    grid[6][3] = TILE_TYPES.POOP;
+  },
+  // 4: 中央环状地刺 + 四周掩体
+  (grid) => {
+    grid[3][6] = TILE_TYPES.ROCK;
+    grid[3][8] = TILE_TYPES.ROCK;
+    grid[5][6] = TILE_TYPES.ROCK;
+    grid[5][8] = TILE_TYPES.ROCK;
+    grid[4][7] = TILE_TYPES.SPIKES;
+  }
+];
+
+function createEmptyGrid() {
+  return Array.from({ length: GRID_ROWS }, () => Array(GRID_COLS).fill(TILE_TYPES.EMPTY));
+}
+
+function generateEnemyWave(roomType, floorLevel, rng) {
+  if (roomType === ROOM_TYPES.START || roomType === ROOM_TYPES.TREASURE || roomType === ROOM_TYPES.SHOP) {
+    return [];
+  }
+  if (roomType === ROOM_TYPES.BOSS) {
+    const theme = FLOOR_THEMES[Math.min(floorLevel - 1, FLOOR_THEMES.length - 1)];
+    return [{ type: theme.bossType, col: 7, row: 4 }];
+  }
+
+  const wavesByFloor = [
+    // Floor 1
+    [
+      ['FLY', 'FLY', 'FLY'],
+      ['GAPER', 'GAPER', 'FLY'],
+      ['SPIDER', 'SPIDER', 'FLY'],
+      ['SHOOTER', 'FLY', 'FLY'],
+      ['GAPER', 'SHOOTER'],
+      ['CHARGER', 'FLY', 'FLY']
+    ],
+    // Floor 2
+    [
+      ['GAPER', 'GAPER', 'SHOOTER'],
+      ['SPIDER', 'SPIDER', 'SPIDER', 'FLY'],
+      ['CHARGER', 'CHARGER', 'FLY'],
+      ['SHOOTER', 'SHOOTER', 'GAPER'],
+      ['CHARGER', 'SPIDER', 'SHOOTER']
+    ],
+    // Floor 3
+    [
+      ['CHARGER', 'CHARGER', 'SHOOTER', 'FLY'],
+      ['GAPER', 'GAPER', 'SHOOTER', 'SHOOTER'],
+      ['SPIDER', 'SPIDER', 'CHARGER', 'SHOOTER'],
+      ['SHOOTER', 'SHOOTER', 'FLY', 'FLY', 'GAPER']
+    ]
+  ];
+
+  const pool = wavesByFloor[Math.min(floorLevel - 1, wavesByFloor.length - 1)];
+  const chosen = rng.pick(pool);
+  return chosen.map((type, idx) => ({
+    type,
+    // Spawn away from doorways
+    col: 3 + ((idx * 3 + rng.int(0, 2)) % 9),
+    row: 2 + ((idx * 2 + rng.int(0, 2)) % 5)
+  }));
+}
+
+/**
+ * 类以撒 BFS 随机地牢生成器
+ * 规则：
+ * 1. 从中心 (4,4) 出发通过类似原版以撒的约束队列扩展（避免 2x2 团块，鼓励死胡同）。
+ * 2. 识别所有死胡同（度为 1 的房间），最远的设为 BOSS 房，其余死胡同优先分配 TREASURE 和 SHOP 房。
+ * 3. 若死胡同不足 3 个，自动附加合法叶子节点，确保每层必定包含 START、TREASURE、SHOP、BOSS。
+ */
+function generateFloor(floorLevel, rng, ownedItemIds = new Set()) {
+  const targetRoomCount = Math.min(14, 7 + floorLevel * 2); // F1: 9, F2: 11, F3: 13
+  const rooms = new Map();
+
+  const makeRoom = (gx, gy, type = ROOM_TYPES.NORMAL) => ({
+    gx,
+    gy,
+    key: coordKey(gx, gy),
+    type,
+    doors: {}, // { NORTH: { toKey, locked, type } }
+    grid: createEmptyGrid(),
+    enemySpawns: [],
+    enemies: [],
+    pickups: [],
+    pedestals: [],
+    shopItems: [],
+    bloodStains: [],
+    visited: false,
+    cleared: type !== ROOM_TYPES.NORMAL && type !== ROOM_TYPES.BOSS,
+    trapdoor: null,
+    victoryChest: null
+  });
+
+  const countNeighbors = (gx, gy) => {
+    let count = 0;
+    for (const d of DIR_LIST) {
+      if (rooms.has(coordKey(gx + d.dx, gy + d.dy))) count++;
+    }
+    return count;
+  };
+
+  const inBounds = (gx, gy) => gx >= 0 && gx < MAP_SIZE && gy >= 0 && gy < MAP_SIZE;
+
+  const startKey = coordKey(CENTER_COORD, CENTER_COORD);
+  rooms.set(startKey, makeRoom(CENTER_COORD, CENTER_COORD, ROOM_TYPES.START));
+
+  const queue = [{ gx: CENTER_COORD, gy: CENTER_COORD }];
+  let guard = 0;
+
+  while (rooms.size < targetRoomCount && guard < 400) {
+    guard++;
+    if (queue.length === 0) {
+      // Restart expansion from a random existing room
+      const existing = Array.from(rooms.values());
+      const seedRoom = rng.pick(existing);
+      queue.push({ gx: seedRoom.gx, gy: seedRoom.gy });
+    }
+    const curr = queue.shift();
+    const dirs = rng.shuffle(DIR_LIST);
+    for (const d of dirs) {
+      if (rooms.size >= targetRoomCount) break;
+      const nx = curr.gx + d.dx;
+      const ny = curr.gy + d.dy;
+      const nKey = coordKey(nx, ny);
+      if (!inBounds(nx, ny) || rooms.has(nKey)) continue;
+      // Classic Isaac rule: avoid creating 2x2 loops by requiring at most 1 existing neighbor
+      if (countNeighbors(nx, ny) > 1) continue;
+      if (rng.chance(0.55)) {
+        rooms.set(nKey, makeRoom(nx, ny, ROOM_TYPES.NORMAL));
+        queue.push({ gx: nx, gy: ny });
+      }
+    }
+  }
+
+  // BFS distances from START
+  const distances = new Map();
+  const bfsQueue = [startKey];
+  distances.set(startKey, 0);
+  while (bfsQueue.length > 0) {
+    const k = bfsQueue.shift();
+    const r = rooms.get(k);
+    const dist = distances.get(k);
+    for (const d of DIR_LIST) {
+      const nk = coordKey(r.gx + d.dx, r.gy + d.dy);
+      if (rooms.has(nk) && !distances.has(nk)) {
+        distances.set(nk, dist + 1);
+        bfsQueue.push(nk);
+      }
+    }
+  }
+
+  // Find dead ends (degree === 1, excluding START)
+  const getDeadEnds = () =>
+    Array.from(rooms.values()).filter(
+      (r) => r.key !== startKey && countNeighbors(r.gx, r.gy) === 1
+    );
+
+  // Guarantee at least 3 dead ends for BOSS, TREASURE, SHOP
+  let extraGuard = 0;
+  while (getDeadEnds().length < 3 && extraGuard < 100) {
+    extraGuard++;
+    const allRooms = rng.shuffle(Array.from(rooms.values()));
+    let added = false;
+    for (const r of allRooms) {
+      for (const d of rng.shuffle(DIR_LIST)) {
+        const nx = r.gx + d.dx;
+        const ny = r.gy + d.dy;
+        const nk = coordKey(nx, ny);
+        if (inBounds(nx, ny) && !rooms.has(nk) && countNeighbors(nx, ny) === 1) {
+          rooms.set(nk, makeRoom(nx, ny, ROOM_TYPES.NORMAL));
+          distances.set(nk, (distances.get(r.key) ?? 0) + 1);
+          added = true;
+          break;
+        }
+      }
+      if (added) break;
+    }
+  }
+
+  const deadEnds = getDeadEnds().sort(
+    (a, b) => (distances.get(b.key) ?? 0) - (distances.get(a.key) ?? 0)
+  );
+
+  // Assign BOSS to farthest dead-end
+  const bossRoom = deadEnds[0];
+  bossRoom.type = ROOM_TYPES.BOSS;
+  bossRoom.cleared = false;
+
+  // Assign TREASURE and SHOP to remaining dead-ends
+  const treasureRoom = deadEnds[1];
+  treasureRoom.type = ROOM_TYPES.TREASURE;
+  treasureRoom.cleared = true;
+
+  const shopRoom = deadEnds[2];
+  shopRoom.type = ROOM_TYPES.SHOP;
+  shopRoom.cleared = true;
+
+  // Link doors between adjacent rooms
+  for (const room of rooms.values()) {
+    for (const d of DIR_LIST) {
+      const nk = coordKey(room.gx + d.dx, room.gy + d.dy);
+      if (rooms.has(nk)) {
+        const neighbor = rooms.get(nk);
+        let doorType = ROOM_TYPES.NORMAL;
+        if (room.type === ROOM_TYPES.BOSS || neighbor.type === ROOM_TYPES.BOSS) {
+          doorType = ROOM_TYPES.BOSS;
+        } else if (room.type === ROOM_TYPES.TREASURE || neighbor.type === ROOM_TYPES.TREASURE) {
+          doorType = ROOM_TYPES.TREASURE;
+        } else if (room.type === ROOM_TYPES.SHOP || neighbor.type === ROOM_TYPES.SHOP) {
+          doorType = ROOM_TYPES.SHOP;
+        }
+        // Floor 2+ treasure rooms and all shop rooms can be locked (unlocked with 1 key)
+        // Floor 1 treasure room is free just like classic Isaac!
+        const needsKey =
+          (neighbor.type === ROOM_TYPES.TREASURE && floorLevel >= 2) ||
+          (neighbor.type === ROOM_TYPES.SHOP && floorLevel >= 2);
+        room.doors[d.key] = {
+          direction: d.key,
+          toKey: nk,
+          doorType,
+          locked: needsKey
+        };
+      }
+    }
+  }
+
+  // Populate room contents (obstacles, enemies, pedestals, shop items)
+  const usedInFloor = new Set(ownedItemIds);
+
+  for (const room of rooms.values()) {
+    if (room.type === ROOM_TYPES.NORMAL) {
+      const tpl = rng.pick(ROOM_TEMPLATES);
+      tpl(room.grid);
+      // 35% chance to turn one rock into a Tinted Rock (blueish X rock hiding a Soul Heart!)
+      if (rng.chance(0.35)) {
+        const rockCells = [];
+        for (let r = 0; r < GRID_ROWS; r++) {
+          for (let c = 0; c < GRID_COLS; c++) {
+            if (room.grid[r][c] === TILE_TYPES.ROCK) rockCells.push([c, r]);
+          }
+        }
+        if (rockCells.length > 0) {
+          const [tc, tr] = rng.pick(rockCells);
+          room.grid[tr][tc] = TILE_TYPES.TINTED_ROCK;
+        }
+      }
+      room.enemySpawns = generateEnemyWave(room.type, floorLevel, rng);
+    } else if (room.type === ROOM_TYPES.BOSS) {
+      room.enemySpawns = generateEnemyWave(room.type, floorLevel, rng);
+    } else if (room.type === ROOM_TYPES.TREASURE) {
+      const item = pickItemFromPool(rng, 'treasure', usedInFloor);
+      usedInFloor.add(item.id);
+      room.pedestals.push({
+        col: 7,
+        row: 4,
+        item,
+        taken: false
+      });
+    } else if (room.type === ROOM_TYPES.SHOP) {
+      const shopPassive = pickItemFromPool(rng, 'shop', usedInFloor);
+      usedInFloor.add(shopPassive.id);
+      room.shopItems = [
+        { col: 5, row: 4, kind: 'pickup', pickupType: 'soul_heart', label: '魂心', price: 5, bought: false },
+        { col: 7, row: 4, kind: 'item', item: shopPassive, label: shopPassive.name, price: 15, bought: false },
+        { col: 9, row: 4, kind: 'pickup', pickupType: 'bomb', label: '炸弹', price: 5, bought: false }
+      ];
+    }
+  }
+
+  const startRoom = rooms.get(startKey);
+  startRoom.visited = true;
+
+  return {
+    level: floorLevel,
+    theme: FLOOR_THEMES[Math.min(floorLevel - 1, FLOOR_THEMES.length - 1)],
+    rooms,
+    startKey,
+    bossKey: bossRoom.key,
+    treasureKey: treasureRoom.key,
+    shopKey: shopRoom.key
+  };
+}
+
+
+// ===== entities.js =====
+
+
+function getCellSize() {
+  return {
+    cw: ROOM_WIDTH / GRID_COLS,
+    ch: ROOM_HEIGHT / GRID_ROWS
+  };
+}
+
+function tileToWorld(col, row) {
+  const { cw, ch } = getCellSize();
+  return {
+    x: ROOM_LEFT + (col + 0.5) * cw,
+    y: ROOM_TOP + (row + 0.5) * ch
+  };
+}
+
+function worldToTile(x, y) {
+  const { cw, ch } = getCellSize();
+  return {
+    col: Math.floor((x - ROOM_LEFT) / cw),
+    row: Math.floor((y - ROOM_TOP) / ch)
+  };
+}
+
+function createPlayer() {
+  const center = tileToWorld(7, 4);
+  return {
+    x: center.x,
+    y: center.y,
+    vx: 0,
+    vy: 0,
+    radius: 16,
+    facing: { x: 0, y: 1 },
+    fireCooldown: 0,
+    invulnTimer: 0,
+    hurtFlash: 0,
+    blinkTimer: 0,
+    eyeToggle: false,
+    coins: 3,
+    bombs: 2,
+    keys: 1,
+    stats: { ...BASE_PLAYER_STATS },
+    ownedItems: [],
+    ownedItemIds: new Set(),
+    activeItem: {
+      ...ACTIVE_ITEMS.yum_heart,
+      charge: ACTIVE_ITEMS.yum_heart.maxCharge
+    },
+    score: 0
+  };
+}
+
+let nextEntityId = 1;
+
+function createEnemy(type, x, y, floorLevel = 1) {
+  const cfg = ENEMY_CONFIGS[type] || ENEMY_CONFIGS.FLY;
+  const hpScale = cfg.isBoss ? 1 + (floorLevel - 1) * 0.15 : 1 + (floorLevel - 1) * 0.2;
+  const maxHp = Math.round(cfg.hp * hpScale);
+  return {
+    id: nextEntityId++,
+    type: cfg.id,
+    name: cfg.name,
+    x,
+    y,
+    vx: 0,
+    vy: 0,
+    z: 0, // vertical height for jumping bosses
+    vz: 0,
+    radius: cfg.radius,
+    hp: maxHp,
+    maxHp,
+    speed: cfg.speed,
+    flying: Boolean(cfg.flying),
+    isBoss: Boolean(cfg.isBoss),
+    color: cfg.color,
+    accent: cfg.accent,
+    score: cfg.score,
+    hitFlash: 0,
+    poisonTimer: 0,
+    poisonTick: 0,
+    state: 'IDLE',
+    stateTimer: 0.6 + Math.random() * 0.5,
+    fireTimer: cfg.fireInterval ? cfg.fireInterval * 0.7 : 1.5,
+    chargeDir: { x: 0, y: 0 },
+    targetX: x,
+    targetY: y,
+    phase: 0,
+    alive: true
+  };
+}
+
+function createTear(player, dirX, dirY, angleOffset = 0) {
+  const baseAngle = Math.atan2(dirY, dirX) + angleOffset;
+  const cos = Math.cos(baseAngle);
+  const sin = Math.sin(baseAngle);
+  // Classic Binding of Isaac tear physics: inherits ~32% of player velocity
+  const vx = cos * player.stats.tearSpeed + player.vx * 0.32;
+  const vy = sin * player.stats.tearSpeed + player.vy * 0.32;
+  const damage = +(player.stats.damage * player.stats.damageMultiplier).toFixed(2);
+  const maxFlightTime = Math.max(0.25, player.stats.range / Math.max(180, player.stats.tearSpeed));
+
+  return {
+    id: nextEntityId++,
+    x: player.x + cos * 12,
+    y: player.y + sin * 12,
+    vx,
+    vy,
+    z: 18,
+    radius: player.stats.tearSize,
+    damage,
+    age: 0,
+    maxFlightTime,
+    homing: player.stats.homing,
+    piercing: player.stats.piercing,
+    bouncing: player.stats.bouncing,
+    bouncesLeft: player.stats.bouncing ? 2 : 0,
+    poison: player.stats.poison,
+    hitIds: new Set(),
+    alive: true
+  };
+}
+
+function createEnemyBullet(x, y, vx, vy, radius = 8, color = '#e03131') {
+  return {
+    id: nextEntityId++,
+    x,
+    y,
+    vx,
+    vy,
+    radius,
+    color,
+    age: 0,
+    maxAge: 2.8,
+    alive: true
+  };
+}
+
+function createBomb(x, y) {
+  return {
+    id: nextEntityId++,
+    x,
+    y,
+    fuse: 1.5,
+    maxFuse: 1.5,
+    radius: 13,
+    blastRadius: 105,
+    exploded: false
+  };
+}
+
+function createPickup(type, x, y) {
+  return {
+    id: nextEntityId++,
+    type, // 'red_heart' | 'half_heart' | 'soul_heart' | 'coin' | 'bomb' | 'key'
+    x,
+    y,
+    bobPhase: Math.random() * Math.PI * 2,
+    collected: false
+  };
+}
+
+
+// ===== engine.js =====
+
+
+
+
+
+function getDoorRect(direction) {
+  const cx = ROOM_LEFT + ROOM_WIDTH / 2;
+  const cy = ROOM_TOP + ROOM_HEIGHT / 2;
+  const half = DOOR_SIZE / 2;
+  switch (direction) {
+    case 'NORTH':
+      return { x: cx - half, y: ROOM_TOP - 28, w: DOOR_SIZE, h: 36, cx, cy: ROOM_TOP };
+    case 'SOUTH':
+      return { x: cx - half, y: ROOM_BOTTOM - 8, w: DOOR_SIZE, h: 36, cx, cy: ROOM_BOTTOM };
+    case 'WEST':
+      return { x: ROOM_LEFT - 28, y: cy - half, w: 36, h: DOOR_SIZE, cx: ROOM_LEFT, cy };
+    case 'EAST':
+      return { x: ROOM_RIGHT - 8, y: cy - half, w: 36, h: DOOR_SIZE, cx: ROOM_RIGHT, cy };
+    default:
+      return { x: cx, y: cy, w: 0, h: 0, cx, cy };
+  }
+}
+
+class IsaacGameEngine {
+  constructor(options = {}) {
+    this.rng = new SeededRNG(options.seed);
+    this.seed = this.rng.seedString;
+    this.onEvent = options.onEvent || (() => {});
+    this.maxFloors = options.maxFloors || FLOOR_THEMES.length;
+    this.reset(this.seed);
+  }
+
+  reset(newSeed) {
+    if (newSeed !== undefined) {
+      this.rng = new SeededRNG(newSeed);
+      this.seed = this.rng.seedString;
+    } else {
+      this.rng = new SeededRNG();
+      this.seed = this.rng.seedString;
+    }
+    this.status = 'PLAYING'; // 'PLAYING' | 'PAUSED' | 'GAMEOVER' | 'VICTORY'
+    this.elapsedTime = 0;
+    this.floorLevel = 1;
+    this.player = createPlayer();
+    this.tears = [];
+    this.enemyBullets = [];
+    this.bombs = [];
+    this.particles = [];
+    this.banner = null; // { title, subtitle, timer }
+    this.screenShake = 0;
+    this.roomTransitionTimer = 0;
+    this.roomsClearedCount = 0;
+    this.enemiesKilledCount = 0;
+    this.bombKeyWasDown = false;
+    this.activeKeyWasDown = false;
+
+    this.loadFloor(1);
+    this.emit('game_start', { seed: this.seed });
+  }
+
+  emit(type, payload = {}) {
+    try {
+      this.onEvent(type, payload);
+    } catch {
+      // ignore listener errors in headless tests
+    }
+  }
+
+  showBanner(title, subtitle = '', duration = 2.4) {
+    this.banner = { title, subtitle, timer: duration, maxTimer: duration };
+  }
+
+  loadFloor(level) {
+    this.floorLevel = level;
+    this.floor = generateFloor(level, this.rng, this.player.ownedItemIds);
+    this.currentRoomKey = this.floor.startKey;
+    this.tears = [];
+    this.enemyBullets = [];
+    this.bombs = [];
+    this.particles = [];
+    const center = tileToWorld(7, 4);
+    this.player.x = center.x;
+    this.player.y = center.y;
+    this.player.vx = 0;
+    this.player.vy = 0;
+    this.enterRoom(this.currentRoomKey, null);
+    this.showBanner(this.floor.theme.name, this.floor.theme.subtitle, 2.2);
+  }
+
+  getCurrentRoom() {
+    return this.floor.rooms.get(this.currentRoomKey);
+  }
+
+  enterRoom(roomKey, enteredFromDir = null) {
+    this.currentRoomKey = roomKey;
+    const room = this.getCurrentRoom();
+    room.visited = true;
+
+    this.tears = [];
+    this.enemyBullets = [];
+    this.bombs = [];
+    this.particles = [];
+    this.roomTransitionTimer = 0.16;
+
+    // Position player near the opposite doorway if coming from another room
+    if (enteredFromDir) {
+      const opposite = DIRECTIONS[enteredFromDir].opposite;
+      const door = getDoorRect(opposite);
+      const offset = 46;
+      if (opposite === 'NORTH') {
+        this.player.x = door.cx;
+        this.player.y = ROOM_TOP + offset;
+      } else if (opposite === 'SOUTH') {
+        this.player.x = door.cx;
+        this.player.y = ROOM_BOTTOM - offset;
+      } else if (opposite === 'WEST') {
+        this.player.x = ROOM_LEFT + offset;
+        this.player.y = door.cy;
+      } else if (opposite === 'EAST') {
+        this.player.x = ROOM_RIGHT - offset;
+        this.player.y = door.cy;
+      }
+      this.player.vx = 0;
+      this.player.vy = 0;
+    }
+
+    // Spawn enemies if room is not cleared and enemies haven't been instantiated
+    if (!room.cleared && room.enemies.length === 0 && room.enemySpawns.length > 0) {
+      room.enemies = room.enemySpawns.map((sp) => {
+        const pos = tileToWorld(sp.col, sp.row);
+        return createEnemy(sp.type, pos.x, pos.y, this.floorLevel);
+      });
+      if (room.type === ROOM_TYPES.BOSS && room.enemies[0]) {
+        this.showBanner(room.enemies[0].name, 'BOSS 战', 2.0);
+        this.emit('boss_roar', { boss: room.enemies[0].type });
+      }
+    }
+  }
+
+  isSolidTile(tile) {
+    return tile === TILE_TYPES.ROCK || tile === TILE_TYPES.TINTED_ROCK || tile === TILE_TYPES.POOP;
+  }
+
+  addParticles(x, y, color, count = 8, speed = 130) {
+    for (let i = 0; i < count; i++) {
+      const a = this.rng.range(0, Math.PI * 2);
+      const sp = this.rng.range(speed * 0.35, speed);
+      this.particles.push({
+        x,
+        y,
+        vx: Math.cos(a) * sp,
+        vy: Math.sin(a) * sp,
+        radius: this.rng.range(2.2, 5.2),
+        color,
+        life: this.rng.range(0.22, 0.48),
+        maxLife: 0.48
+      });
+    }
+  }
+
+  placeBomb() {
+    if (this.status !== 'PLAYING') return false;
+    if (this.player.bombs <= 0) return false;
+    this.player.bombs -= 1;
+    this.bombs.push(createBomb(this.player.x, this.player.y));
+    this.emit('bomb_place');
+    return true;
+  }
+
+  useActiveItem() {
+    if (this.status !== 'PLAYING') return false;
+    const active = this.player.activeItem;
+    if (!active || active.charge < active.maxCharge) return false;
+    if (active.canUse && !active.canUse(this.player)) return false;
+    const used = active.use(this.player);
+    if (used) {
+      active.charge = 0;
+      this.addParticles(this.player.x, this.player.y, '#ff6b81', 14, 150);
+      this.emit('active_use', { item: active.id });
+    }
+    return used;
+  }
+
+  applyPassiveItem(item) {
+    if (!item) return;
+    item.apply(this.player.stats);
+    this.player.ownedItems.push(item);
+    this.player.ownedItemIds.add(item.id);
+    this.player.score += 150;
+    this.showBanner(item.name, item.subtitle, 2.5);
+    this.addParticles(this.player.x, this.player.y, item.color || '#ffd43b', 18, 170);
+    this.emit('item_pickup', { id: item.id, name: item.name });
+  }
+
+  damagePlayer(halfHearts = 1) {
+    if (this.player.invulnTimer > 0 || this.status !== 'PLAYING') return false;
+    let remaining = halfHearts;
+    if (this.player.stats.soulHearts > 0) {
+      const absorbed = Math.min(this.player.stats.soulHearts, remaining);
+      this.player.stats.soulHearts -= absorbed;
+      remaining -= absorbed;
+    }
+    if (remaining > 0) {
+      this.player.stats.redHearts = Math.max(0, this.player.stats.redHearts - remaining);
+    }
+    this.player.invulnTimer = 1.1;
+    this.player.hurtFlash = 0.35;
+    this.screenShake = Math.max(this.screenShake, 8);
+    this.addParticles(this.player.x, this.player.y, '#e03131', 12, 160);
+    this.emit('player_hurt');
+
+    if (this.player.stats.redHearts <= 0 && this.player.stats.soulHearts <= 0) {
+      this.status = 'GAMEOVER';
+      this.emit('game_over', { score: this.player.score, floor: this.floorLevel });
+    }
+    return true;
+  }
+
+  collectPickup(pickup) {
+    const p = this.player;
+    switch (pickup.type) {
+      case 'red_heart':
+        if (p.stats.redHearts >= p.stats.maxRedHearts) return false;
+        p.stats.redHearts = Math.min(p.stats.maxRedHearts, p.stats.redHearts + 2);
+        this.emit('pickup_heart');
+        return true;
+      case 'half_heart':
+        if (p.stats.redHearts >= p.stats.maxRedHearts) return false;
+        p.stats.redHearts = Math.min(p.stats.maxRedHearts, p.stats.redHearts + 1);
+        this.emit('pickup_heart');
+        return true;
+      case 'soul_heart':
+        p.stats.soulHearts = Math.min(12, p.stats.soulHearts + 2);
+        this.emit('pickup_heart');
+        return true;
+      case 'coin':
+        p.coins += 1;
+        p.score += 15;
+        this.emit('pickup_coin');
+        return true;
+      case 'bomb':
+        p.bombs += 1;
+        this.emit('pickup_item');
+        return true;
+      case 'key':
+        p.keys += 1;
+        this.emit('pickup_item');
+        return true;
+      default:
+        return false;
+    }
+  }
+
+  /**
+   * 推进游戏逻辑一帧
+   * @param {number} dt 秒 (建议 <= 0.05)
+   * @param {object} input { moveX, moveY, shootX, shootY, bomb, active }
+   */
+  step(dt, input = {}) {
+    if (this.status !== 'PLAYING') return;
+    const clampedDt = Math.min(Math.max(dt, 0), 0.05);
+    this.elapsedTime += clampedDt;
+
+    if (this.screenShake > 0) {
+      this.screenShake = Math.max(0, this.screenShake - clampedDt * 28);
+    }
+    if (this.roomTransitionTimer > 0) {
+      this.roomTransitionTimer = Math.max(0, this.roomTransitionTimer - clampedDt);
+    }
+    if (this.banner) {
+      this.banner.timer -= clampedDt;
+      if (this.banner.timer <= 0) this.banner = null;
+    }
+
+    // Edge-triggered bomb & active item inputs
+    const bombDown = Boolean(input.bomb);
+    if (bombDown && !this.bombKeyWasDown) {
+      this.placeBomb();
+    }
+    this.bombKeyWasDown = bombDown;
+
+    const activeDown = Boolean(input.active);
+    if (activeDown && !this.activeKeyWasDown) {
+      this.useActiveItem();
+    }
+    this.activeKeyWasDown = activeDown;
+
+    const room = this.getCurrentRoom();
+    this.updatePlayer(clampedDt, input, room);
+    this.updateTears(clampedDt, room);
+    this.updateEnemies(clampedDt, room);
+    this.updateEnemyBullets(clampedDt, room);
+    this.updateBombs(clampedDt, room);
+    this.updateRoomInteractions(room);
+    this.updateParticles(clampedDt);
+  }
+
+  updatePlayer(dt, input, room) {
+    const p = this.player;
+    if (p.invulnTimer > 0) p.invulnTimer = Math.max(0, p.invulnTimer - dt);
+    if (p.hurtFlash > 0) p.hurtFlash = Math.max(0, p.hurtFlash - dt);
+    if (p.fireCooldown > 0) p.fireCooldown = Math.max(0, p.fireCooldown - dt);
+    if (p.blinkTimer > 0) p.blinkTimer = Math.max(0, p.blinkTimer - dt);
+
+    let mx = Number(input.moveX || 0);
+    let my = Number(input.moveY || 0);
+    const len = Math.hypot(mx, my);
+    if (len > 1) {
+      mx /= len;
+      my /= len;
+    }
+
+    // Smooth Isaac-like acceleration & friction
+    const accel = 15;
+    const targetVx = mx * p.stats.speed;
+    const targetVy = my * p.stats.speed;
+    p.vx += (targetVx - p.vx) * Math.min(1, accel * dt);
+    p.vy += (targetVy - p.vy) * Math.min(1, accel * dt);
+    if (Math.abs(p.vx) < 2) p.vx = 0;
+    if (Math.abs(p.vy) < 2) p.vy = 0;
+
+    if (len > 0.1) {
+      p.facing = { x: mx, y: my };
+    }
+
+    this.moveCircleWithCollisions(p, p.vx * dt, p.vy * dt, room, false);
+
+    // Check spikes damage
+    const tilePos = worldToTile(p.x, p.y);
+    if (
+      tilePos.row >= 0 &&
+      tilePos.row < GRID_ROWS &&
+      tilePos.col >= 0 &&
+      tilePos.col < GRID_COLS &&
+      room.grid[tilePos.row][tilePos.col] === TILE_TYPES.SPIKES
+    ) {
+      this.damagePlayer(1);
+    }
+
+    // Shooting (4-directional prioritized like Isaac)
+    const sx = Number(input.shootX || 0);
+    const sy = Number(input.shootY || 0);
+    if ((sx !== 0 || sy !== 0) && p.fireCooldown <= 0) {
+      let fx = 0;
+      let fy = 0;
+      if (Math.abs(sx) >= Math.abs(sy)) {
+        fx = Math.sign(sx);
+      } else {
+        fy = Math.sign(sy);
+      }
+      p.facing = { x: fx, y: fy };
+      p.fireCooldown = 1 / Math.max(0.6, p.stats.tearRate);
+      p.blinkTimer = 0.12;
+      p.eyeToggle = !p.eyeToggle;
+
+      const count = p.stats.shotCount;
+      const spread = 0.16;
+      for (let i = 0; i < count; i++) {
+        const offset = count === 1 ? 0 : (i - (count - 1) / 2) * spread;
+        this.tears.push(createTear(p, fx, fy, offset));
+      }
+      this.emit('tear_fire');
+    }
+
+    // Door transition check when room is cleared
+    if (room.cleared && this.roomTransitionTimer <= 0) {
+      for (const dir of DIR_LIST) {
+        const door = room.doors[dir.key];
+        if (!door) continue;
+        const rect = getDoorRect(dir.key);
+        const dist = Math.hypot(p.x - rect.cx, p.y - rect.cy);
+        if (dist < 30) {
+          if (door.locked) {
+            if (p.keys > 0) {
+              p.keys -= 1;
+              door.locked = false;
+              const targetRoom = this.floor.rooms.get(door.toKey);
+              if (targetRoom && targetRoom.doors[dir.opposite]) {
+                targetRoom.doors[dir.opposite].locked = false;
+              }
+              this.emit('door_unlock');
+              this.enterRoom(door.toKey, dir.key);
+              break;
+            }
+          } else {
+            this.emit('door_enter');
+            this.enterRoom(door.toKey, dir.key);
+            break;
+          }
+        }
+      }
+    }
+  }
+
+  moveCircleWithCollisions(entity, dx, dy, room, isFlying) {
+    const r = entity.radius;
+    // Move X
+    entity.x += dx;
+    if (entity.x - r < ROOM_LEFT) entity.x = ROOM_LEFT + r;
+    if (entity.x + r > ROOM_RIGHT) entity.x = ROOM_RIGHT - r;
+    if (!isFlying) this.resolveTileCollision(entity, room, true);
+
+    // Move Y
+    entity.y += dy;
+    if (entity.y - r < ROOM_TOP) entity.y = ROOM_TOP + r;
+    if (entity.y + r > ROOM_BOTTOM) entity.y = ROOM_BOTTOM - r;
+    if (!isFlying) this.resolveTileCollision(entity, room, false);
+  }
+
+  resolveTileCollision(entity, room, horizontal) {
+    const { cw, ch } = getCellSize();
+    const r = entity.radius;
+    const minCol = Math.max(0, Math.floor((entity.x - r - ROOM_LEFT) / cw));
+    const maxCol = Math.min(GRID_COLS - 1, Math.floor((entity.x + r - ROOM_LEFT) / cw));
+    const minRow = Math.max(0, Math.floor((entity.y - r - ROOM_TOP) / ch));
+    const maxRow = Math.min(GRID_ROWS - 1, Math.floor((entity.y + r - ROOM_TOP) / ch));
+
+    for (let row = minRow; row <= maxRow; row++) {
+      for (let col = minCol; col <= maxCol; col++) {
+        if (!this.isSolidTile(room.grid[row][col])) continue;
+        const rx = ROOM_LEFT + col * cw;
+        const ry = ROOM_TOP + row * ch;
+        const closestX = Math.max(rx, Math.min(entity.x, rx + cw));
+        const closestY = Math.max(ry, Math.min(entity.y, ry + ch));
+        const distX = entity.x - closestX;
+        const distY = entity.y - closestY;
+        const distSq = distX * distX + distY * distY;
+        if (distSq < r * r) {
+          if (horizontal) {
+            if (entity.x < rx + cw / 2) entity.x = rx - r;
+            else entity.x = rx + cw + r;
+          } else {
+            if (entity.y < ry + ch / 2) entity.y = ry - r;
+            else entity.y = ry + ch + r;
+          }
+        }
+      }
+    }
+  }
+
+  updateTears(dt, room) {
+    for (const tear of this.tears) {
+      if (!tear.alive) continue;
+      tear.age += dt;
+
+      // Homing (Spoon Bender)
+      if (tear.homing && room.enemies.length > 0) {
+        let nearest = null;
+        let bestDist = 230;
+        for (const e of room.enemies) {
+          if (!e.alive || e.z > 40) continue;
+          const d = Math.hypot(e.x - tear.x, e.y - tear.y);
+          if (d < bestDist) {
+            bestDist = d;
+            nearest = e;
+          }
+        }
+        if (nearest) {
+          const speed = Math.hypot(tear.vx, tear.vy);
+          const desiredX = ((nearest.x - tear.x) / bestDist) * speed;
+          const desiredY = ((nearest.y - tear.y) / bestDist) * speed;
+          tear.vx += (desiredX - tear.vx) * Math.min(1, 7 * dt);
+          tear.vy += (desiredY - tear.vy) * Math.min(1, 7 * dt);
+        }
+      }
+
+      tear.x += tear.vx * dt;
+      tear.y += tear.vy * dt;
+
+      // Pseudo-3D drop near end of range
+      const progress = tear.age / tear.maxFlightTime;
+      if (progress > 0.72) {
+        const dropFrac = (progress - 0.72) / 0.28;
+        tear.z = Math.max(0, 18 * (1 - dropFrac * dropFrac));
+        tear.y += 55 * dt;
+      }
+
+      // Wall collision (or bounce with Rubber Cement)
+      let hitWall = false;
+      if (tear.x - tear.radius < ROOM_LEFT || tear.x + tear.radius > ROOM_RIGHT) {
+        if (tear.bouncing && tear.bouncesLeft > 0) {
+          tear.vx = -tear.vx;
+          tear.x = Math.max(ROOM_LEFT + tear.radius, Math.min(ROOM_RIGHT - tear.radius, tear.x));
+          tear.bouncesLeft--;
+        } else {
+          hitWall = true;
+        }
+      }
+      if (tear.y - tear.radius < ROOM_TOP || tear.y + tear.radius > ROOM_BOTTOM) {
+        if (tear.bouncing && tear.bouncesLeft > 0) {
+          tear.vy = -tear.vy;
+          tear.y = Math.max(ROOM_TOP + tear.radius, Math.min(ROOM_BOTTOM - tear.radius, tear.y));
+          tear.bouncesLeft--;
+        } else {
+          hitWall = true;
+        }
+      }
+
+      // Rock/poop tile collision
+      if (!hitWall) {
+        const tPos = worldToTile(tear.x, tear.y);
+        if (
+          tPos.row >= 0 &&
+          tPos.row < GRID_ROWS &&
+          tPos.col >= 0 &&
+          tPos.col < GRID_COLS
+        ) {
+          const tile = room.grid[tPos.row][tPos.col];
+          if (tile === TILE_TYPES.POOP) {
+            room.grid[tPos.row][tPos.col] = TILE_TYPES.EMPTY;
+            this.addParticles(tear.x, tear.y, '#8d6e63', 8, 110);
+            if (this.rng.chance(0.28)) {
+              room.pickups.push(createPickup('coin', tear.x, tear.y));
+            }
+            hitWall = !tear.piercing;
+          } else if (tile === TILE_TYPES.ROCK || tile === TILE_TYPES.TINTED_ROCK) {
+            if (tear.bouncing && tear.bouncesLeft > 0) {
+              tear.vx = -tear.vx;
+              tear.vy = -tear.vy;
+              tear.bouncesLeft--;
+            } else {
+              hitWall = true;
+            }
+          }
+        }
+      }
+
+      if (hitWall || tear.age >= tear.maxFlightTime) {
+        tear.alive = false;
+        const splashColor = tear.homing ? '#cc5de8' : tear.poison ? '#69db7c' : '#74c0fc';
+        this.addParticles(tear.x, tear.y, splashColor, 5, 85);
+        this.emit('tear_splash');
+        continue;
+      }
+
+      // Enemy hit check
+      for (const enemy of room.enemies) {
+        if (!enemy.alive || enemy.z > 40) continue;
+        if (tear.hitIds.has(enemy.id)) continue;
+        const dist = Math.hypot(enemy.x - tear.x, enemy.y - tear.y);
+        if (dist < enemy.radius + tear.radius) {
+          this.damageEnemy(enemy, tear.damage, tear.vx, tear.vy, tear.poison, room);
+          tear.hitIds.add(enemy.id);
+          if (!tear.piercing) {
+            tear.alive = false;
+            const splashColor = tear.homing ? '#cc5de8' : tear.poison ? '#69db7c' : '#74c0fc';
+            this.addParticles(tear.x, tear.y, splashColor, 6, 100);
+            break;
+          }
+        }
+      }
+    }
+    this.tears = this.tears.filter((t) => t.alive);
+  }
+
+  damageEnemy(enemy, amount, knockVx, knockVy, applyPoison, room) {
+    enemy.hp -= amount;
+    enemy.hitFlash = 0.14;
+    if (applyPoison) {
+      enemy.poisonTimer = 3.0;
+    }
+    // Knockback (lighter on bosses)
+    const kbScale = enemy.isBoss ? 0.04 : 0.22;
+    const mag = Math.hypot(knockVx, knockVy) || 1;
+    enemy.vx += (knockVx / mag) * 140 * kbScale;
+    enemy.vy += (knockVy / mag) * 140 * kbScale;
+
+    this.emit('enemy_hit');
+
+    if (enemy.hp <= 0 && enemy.alive) {
+      enemy.alive = false;
+      this.enemiesKilledCount += 1;
+      this.player.score += enemy.score;
+      this.addParticles(enemy.x, enemy.y, '#c92a2a', enemy.isBoss ? 32 : 12, enemy.isBoss ? 220 : 140);
+      room.bloodStains.push({
+        x: enemy.x,
+        y: enemy.y,
+        r: enemy.isBoss ? 34 : this.rng.range(10, 18)
+      });
+      this.emit('enemy_die', { isBoss: enemy.isBoss });
+    }
+  }
+
+  updateEnemies(dt, room) {
+    if (room.enemies.length === 0) return;
+
+    const p = this.player;
+    for (const e of room.enemies) {
+      if (!e.alive) continue;
+      if (e.hitFlash > 0) e.hitFlash = Math.max(0, e.hitFlash - dt);
+
+      // Poison DoT
+      if (e.poisonTimer > 0) {
+        e.poisonTimer -= dt;
+        e.poisonTick += dt;
+        if (e.poisonTick >= 0.6) {
+          e.poisonTick = 0;
+          this.damageEnemy(e, 1.2, 0, 0, false, room);
+          if (!e.alive) continue;
+        }
+      }
+
+      const dx = p.x - e.x;
+      const dy = p.y - e.y;
+      const dist = Math.hypot(dx, dy) || 1;
+      const nx = dx / dist;
+      const ny = dy / dist;
+
+      if (e.type === 'FLY') {
+        const wobbleX = Math.sin(this.elapsedTime * 8 + e.id) * 28;
+        const wobbleY = Math.cos(this.elapsedTime * 7 + e.id) * 28;
+        e.vx += ((nx * e.speed + wobbleX) - e.vx) * Math.min(1, 5 * dt);
+        e.vy += ((ny * e.speed + wobbleY) - e.vy) * Math.min(1, 5 * dt);
+        this.moveCircleWithCollisions(e, e.vx * dt, e.vy * dt, room, true);
+      } else if (e.type === 'GAPER') {
+        e.vx += (nx * e.speed - e.vx) * Math.min(1, 6 * dt);
+        e.vy += (ny * e.speed - e.vy) * Math.min(1, 6 * dt);
+        this.moveCircleWithCollisions(e, e.vx * dt, e.vy * dt, room, false);
+      } else if (e.type === 'SPIDER') {
+        e.stateTimer -= dt;
+        if (e.stateTimer <= 0) {
+          if (e.state === 'IDLE') {
+            e.state = 'DASH';
+            e.stateTimer = 0.32;
+            const angle = Math.atan2(dy, dx) + this.rng.range(-0.65, 0.65);
+            e.vx = Math.cos(angle) * e.speed;
+            e.vy = Math.sin(angle) * e.speed;
+          } else {
+            e.state = 'IDLE';
+            e.stateTimer = this.rng.range(0.35, 0.75);
+            e.vx = 0;
+            e.vy = 0;
+          }
+        }
+        this.moveCircleWithCollisions(e, e.vx * dt, e.vy * dt, room, false);
+      } else if (e.type === 'SHOOTER') {
+        // Keep mid distance and shoot blood tears
+        const desired = dist > 180 ? 1 : dist < 110 ? -0.8 : 0;
+        e.vx += (nx * e.speed * desired - e.vx) * Math.min(1, 4 * dt);
+        e.vy += (ny * e.speed * desired - e.vy) * Math.min(1, 4 * dt);
+        this.moveCircleWithCollisions(e, e.vx * dt, e.vy * dt, room, true);
+
+        e.fireTimer -= dt;
+        if (e.fireTimer <= 0) {
+          e.fireTimer = 1.85;
+          this.enemyBullets.push(createEnemyBullet(e.x, e.y, nx * 240, ny * 240, 8));
+        }
+      } else if (e.type === 'CHARGER') {
+        e.stateTimer -= dt;
+        if (e.state !== 'CHARGE') {
+          // Check orthogonal line of sight
+          if (Math.abs(dx) < 28 && dist < 340) {
+            e.state = 'CHARGE';
+            e.chargeDir = { x: 0, y: Math.sign(dy) };
+            e.stateTimer = 1.0;
+          } else if (Math.abs(dy) < 28 && dist < 340) {
+            e.state = 'CHARGE';
+            e.chargeDir = { x: Math.sign(dx), y: 0 };
+            e.stateTimer = 1.0;
+          } else {
+            e.vx += (nx * e.speed - e.vx) * Math.min(1, 4 * dt);
+            e.vy += (ny * e.speed - e.vy) * Math.min(1, 4 * dt);
+          }
+        } else {
+          e.vx = e.chargeDir.x * 270;
+          e.vy = e.chargeDir.y * 270;
+          if (e.stateTimer <= 0) e.state = 'IDLE';
+        }
+        const prevX = e.x;
+        const prevY = e.y;
+        this.moveCircleWithCollisions(e, e.vx * dt, e.vy * dt, room, false);
+        if (e.state === 'CHARGE' && Math.hypot(e.x - prevX, e.y - prevY) < 1) {
+          e.state = 'IDLE';
+        }
+      } else if (e.type === 'MONSTRO') {
+        this.updateMonstro(e, dt, nx, ny, room);
+      } else if (e.type === 'DUKE') {
+        this.updateDuke(e, dt, room);
+      } else if (e.type === 'HEART') {
+        this.updateHeartBoss(e, dt, nx, ny, room);
+      }
+
+      // Contact damage to player (only if enemy is on ground / low altitude)
+      if (e.alive && e.z < 28) {
+        const contactDist = Math.hypot(p.x - e.x, p.y - e.y);
+        if (contactDist < p.radius + e.radius - 3) {
+          this.damagePlayer(1);
+        }
+      }
+    }
+
+    room.enemies = room.enemies.filter((e) => e.alive);
+
+    // Check room clear!
+    if (!room.cleared && room.enemies.length === 0) {
+      this.onRoomCleared(room);
+    }
+  }
+
+  updateMonstro(e, dt, nx, ny, room) {
+    e.stateTimer -= dt;
+    if (e.state === 'IDLE') {
+      e.vx *= 0.85;
+      e.vy *= 0.85;
+      if (e.stateTimer <= 0) {
+        const roll = this.rng.next();
+        if (roll < 0.45) {
+          // Spit shotgun blood burst
+          e.state = 'SPIT';
+          e.stateTimer = 0.55;
+          const baseA = Math.atan2(ny, nx);
+          for (let i = 0; i < 9; i++) {
+            const a = baseA + this.rng.range(-0.48, 0.48);
+            const sp = this.rng.range(180, 290);
+            this.enemyBullets.push(createEnemyBullet(e.x, e.y, Math.cos(a) * sp, Math.sin(a) * sp, this.rng.range(6, 10)));
+          }
+          this.emit('boss_roar', { boss: 'MONSTRO' });
+        } else {
+          // Big leap toward player
+          e.state = 'LEAP';
+          e.stateTimer = 1.15;
+          e.targetX = this.player.x;
+          e.targetY = this.player.y;
+        }
+      }
+    } else if (e.state === 'SPIT') {
+      if (e.stateTimer <= 0) {
+        e.state = 'IDLE';
+        e.stateTimer = 0.9;
+      }
+    } else if (e.state === 'LEAP') {
+      const t = 1 - Math.max(0, e.stateTimer) / 1.15;
+      e.z = Math.sin(t * Math.PI) * 165;
+      e.x += (e.targetX - e.x) * Math.min(1, 3.2 * dt);
+      e.y += (e.targetY - e.y) * Math.min(1, 3.2 * dt);
+      e.x = Math.max(ROOM_LEFT + e.radius, Math.min(ROOM_RIGHT - e.radius, e.x));
+      e.y = Math.max(ROOM_TOP + e.radius, Math.min(ROOM_BOTTOM - e.radius, e.y));
+      if (e.stateTimer <= 0) {
+        e.z = 0;
+        e.state = 'IDLE';
+        e.stateTimer = 0.85;
+        this.screenShake = Math.max(this.screenShake, 9);
+        // Landing radial ring
+        for (let i = 0; i < 10; i++) {
+          const a = (Math.PI * 2 * i) / 10;
+          this.enemyBullets.push(createEnemyBullet(e.x, e.y, Math.cos(a) * 210, Math.sin(a) * 210, 8));
+        }
+        this.emit('bomb_explode');
+      }
+    }
+  }
+
+  updateDuke(e, dt, room) {
+    if (e.vx === 0 && e.vy === 0) {
+      e.vx = 95;
+      e.vy = 82;
+    }
+    e.x += e.vx * dt;
+    e.y += e.vy * dt;
+    if (e.x - e.radius < ROOM_LEFT || e.x + e.radius > ROOM_RIGHT) {
+      e.vx = -e.vx;
+      e.x = Math.max(ROOM_LEFT + e.radius, Math.min(ROOM_RIGHT - e.radius, e.x));
+    }
+    if (e.y - e.radius < ROOM_TOP || e.y + e.radius > ROOM_BOTTOM) {
+      e.vy = -e.vy;
+      e.y = Math.max(ROOM_TOP + e.radius, Math.min(ROOM_BOTTOM - e.radius, e.y));
+    }
+
+    e.stateTimer -= dt;
+    if (e.stateTimer <= 0) {
+      e.stateTimer = 2.4;
+      const aliveFlies = room.enemies.filter((x) => x.type === 'FLY' && x.alive).length;
+      if (aliveFlies < 4) {
+        room.enemies.push(createEnemy('FLY', e.x + 24, e.y, this.floorLevel));
+        room.enemies.push(createEnemy('FLY', e.x - 24, e.y, this.floorLevel));
+      }
+      for (let i = 0; i < 6; i++) {
+        const a = (Math.PI * 2 * i) / 6 + this.elapsedTime;
+        this.enemyBullets.push(createEnemyBullet(e.x, e.y, Math.cos(a) * 195, Math.sin(a) * 195, 8, '#74b816'));
+      }
+    }
+  }
+
+  updateHeartBoss(e, dt, nx, ny, room) {
+    // Pulses in center area and fires rotating bullet-hell spirals
+    const center = tileToWorld(7, 4);
+    e.x += (center.x + Math.sin(this.elapsedTime * 1.1) * 90 - e.x) * Math.min(1, 2 * dt);
+    e.y += (center.y + Math.cos(this.elapsedTime * 0.9) * 45 - e.y) * Math.min(1, 2 * dt);
+
+    e.fireTimer -= dt;
+    if (e.fireTimer <= 0) {
+      e.phase = (e.phase + 1) % 3;
+      if (e.phase === 0) {
+        e.fireTimer = 1.1;
+        for (let i = 0; i < 12; i++) {
+          const a = (Math.PI * 2 * i) / 12 + this.elapsedTime * 0.7;
+          this.enemyBullets.push(createEnemyBullet(e.x, e.y, Math.cos(a) * 215, Math.sin(a) * 215, 8, '#ff4d6d'));
+        }
+      } else if (e.phase === 1) {
+        e.fireTimer = 1.3;
+        const baseA = Math.atan2(ny, nx);
+        for (let i = -2; i <= 2; i++) {
+          const a = baseA + i * 0.18;
+          this.enemyBullets.push(createEnemyBullet(e.x, e.y, Math.cos(a) * 265, Math.sin(a) * 265, 9, '#ff8787'));
+        }
+      } else {
+        e.fireTimer = 2.0;
+        const aliveAdds = room.enemies.filter((x) => !x.isBoss && x.alive).length;
+        if (aliveAdds < 3) {
+          room.enemies.push(createEnemy('FLY', e.x - 45, e.y + 30, this.floorLevel));
+          room.enemies.push(createEnemy('FLY', e.x + 45, e.y + 30, this.floorLevel));
+        }
+      }
+    }
+  }
+
+  updateEnemyBullets(dt, room) {
+    const p = this.player;
+    for (const b of this.enemyBullets) {
+      if (!b.alive) continue;
+      b.age += dt;
+      b.x += b.vx * dt;
+      b.y += b.vy * dt;
+      if (
+        b.age >= b.maxAge ||
+        b.x < ROOM_LEFT ||
+        b.x > ROOM_RIGHT ||
+        b.y < ROOM_TOP ||
+        b.y > ROOM_BOTTOM
+      ) {
+        b.alive = false;
+        this.addParticles(b.x, b.y, b.color, 4, 70);
+        continue;
+      }
+      const tPos = worldToTile(b.x, b.y);
+      if (
+        tPos.row >= 0 &&
+        tPos.row < GRID_ROWS &&
+        tPos.col >= 0 &&
+        tPos.col < GRID_COLS &&
+        this.isSolidTile(room.grid[tPos.row][tPos.col])
+      ) {
+        b.alive = false;
+        this.addParticles(b.x, b.y, b.color, 4, 70);
+        continue;
+      }
+      if (Math.hypot(p.x - b.x, p.y - b.y) < p.radius + b.radius - 2) {
+        b.alive = false;
+        this.damagePlayer(1);
+      }
+    }
+    this.enemyBullets = this.enemyBullets.filter((b) => b.alive);
+  }
+
+  updateBombs(dt, room) {
+    for (const bomb of this.bombs) {
+      if (bomb.exploded) continue;
+      bomb.fuse -= dt;
+      if (bomb.fuse <= 0) {
+        bomb.exploded = true;
+        this.detonateBomb(bomb, room);
+      }
+    }
+    this.bombs = this.bombs.filter((b) => !b.exploded);
+  }
+
+  detonateBomb(bomb, room) {
+    this.screenShake = Math.max(this.screenShake, 14);
+    this.addParticles(bomb.x, bomb.y, '#ff922b', 22, 240);
+    this.addParticles(bomb.x, bomb.y, '#ffe066', 14, 180);
+    this.emit('bomb_explode');
+
+    // Destroy rocks, tinted rocks, poop within blast radius
+    const { cw, ch } = getCellSize();
+    for (let r = 0; r < GRID_ROWS; r++) {
+      for (let c = 0; c < GRID_COLS; c++) {
+        const tile = room.grid[r][c];
+        if (!this.isSolidTile(tile)) continue;
+        const cx = ROOM_LEFT + (c + 0.5) * cw;
+        const cy = ROOM_TOP + (r + 0.5) * ch;
+        if (Math.hypot(cx - bomb.x, cy - bomb.y) <= bomb.blastRadius) {
+          room.grid[r][c] = TILE_TYPES.EMPTY;
+          this.addParticles(cx, cy, '#868e96', 8, 130);
+          if (tile === TILE_TYPES.TINTED_ROCK) {
+            room.pickups.push(createPickup('soul_heart', cx, cy));
+            room.pickups.push(createPickup('key', cx + 16, cy));
+          }
+        }
+      }
+    }
+
+    // Damage enemies in blast radius
+    for (const e of room.enemies) {
+      if (!e.alive || e.z > 40) continue;
+      if (Math.hypot(e.x - bomb.x, e.y - bomb.y) <= bomb.blastRadius + e.radius) {
+        this.damageEnemy(e, 45, e.x - bomb.x, e.y - bomb.y, false, room);
+      }
+    }
+
+    // Damage player if too close
+    if (Math.hypot(this.player.x - bomb.x, this.player.y - bomb.y) <= bomb.blastRadius * 0.72) {
+      this.damagePlayer(2);
+    }
+  }
+
+  onRoomCleared(room) {
+    room.cleared = true;
+    this.roomsClearedCount += 1;
+    this.emit('door_open');
+
+    // Charge active item +1 bar
+    if (this.player.activeItem) {
+      this.player.activeItem.charge = Math.min(
+        this.player.activeItem.maxCharge,
+        this.player.activeItem.charge + 1
+      );
+    }
+
+    const center = tileToWorld(7, 4);
+    if (room.type === ROOM_TYPES.BOSS) {
+      // Drop Boss pool passive item
+      const bossItem = pickItemFromPool(this.rng, 'boss', this.player.ownedItemIds);
+      room.pedestals.push({ col: 7, row: 5, item: bossItem, taken: false });
+      // Spawn Trapdoor (next floor) or Golden Victory Chest (final floor)
+      if (this.floorLevel < this.maxFloors) {
+        const td = tileToWorld(7, 2);
+        room.trapdoor = { x: td.x, y: td.y, radius: 24, cooldown: 0.7 };
+      } else {
+        const vc = tileToWorld(7, 2);
+        room.victoryChest = { x: vc.x, y: vc.y, radius: 26, cooldown: 0.7 };
+      }
+    } else if (room.type === ROOM_TYPES.NORMAL) {
+      // Room clear reward drop
+      const roll = this.rng.next();
+      if (roll < 0.30) {
+        room.pickups.push(createPickup('coin', center.x, center.y));
+      } else if (roll < 0.52) {
+        room.pickups.push(createPickup('red_heart', center.x, center.y));
+      } else if (roll < 0.68) {
+        room.pickups.push(createPickup('bomb', center.x, center.y));
+      } else if (roll < 0.84) {
+        room.pickups.push(createPickup('key', center.x, center.y));
+      } else if (roll < 0.94) {
+        room.pickups.push(createPickup('soul_heart', center.x, center.y));
+      }
+    }
+  }
+
+  updateRoomInteractions(room) {
+    const p = this.player;
+
+    // Pickups
+    for (const pickup of room.pickups) {
+      if (pickup.collected) continue;
+      if (Math.hypot(p.x - pickup.x, p.y - pickup.y) < p.radius + 16) {
+        if (this.collectPickup(pickup)) {
+          pickup.collected = true;
+        }
+      }
+    }
+    room.pickups = room.pickups.filter((pk) => !pk.collected);
+
+    // Item pedestals
+    for (const ped of room.pedestals) {
+      if (ped.taken) continue;
+      const pos = tileToWorld(ped.col, ped.row);
+      if (Math.hypot(p.x - pos.x, p.y - pos.y) < p.radius + 22) {
+        ped.taken = true;
+        this.applyPassiveItem(ped.item);
+      }
+    }
+
+    // Shop items
+    for (const sItem of room.shopItems) {
+      if (sItem.bought) continue;
+      const pos = tileToWorld(sItem.col, sItem.row);
+      if (Math.hypot(p.x - pos.x, p.y - pos.y) < p.radius + 22) {
+        if (p.coins >= sItem.price) {
+          if (sItem.kind === 'item') {
+            p.coins -= sItem.price;
+            sItem.bought = true;
+            this.applyPassiveItem(sItem.item);
+          } else if (sItem.kind === 'pickup') {
+            const tempPickup = createPickup(sItem.pickupType, pos.x, pos.y);
+            if (this.collectPickup(tempPickup)) {
+              p.coins -= sItem.price;
+              sItem.bought = true;
+            }
+          }
+        }
+      }
+    }
+
+    // Trapdoor to next floor
+    if (room.trapdoor) {
+      if (room.trapdoor.cooldown > 0) {
+        room.trapdoor.cooldown = Math.max(0, room.trapdoor.cooldown - 0.016);
+      } else if (Math.hypot(p.x - room.trapdoor.x, p.y - room.trapdoor.y) < p.radius + 16) {
+        this.emit('floor_descend');
+        this.loadFloor(this.floorLevel + 1);
+      }
+    }
+
+    // Victory Golden Chest on final floor
+    if (room.victoryChest) {
+      if (room.victoryChest.cooldown > 0) {
+        room.victoryChest.cooldown = Math.max(0, room.victoryChest.cooldown - 0.016);
+      } else if (Math.hypot(p.x - room.victoryChest.x, p.y - room.victoryChest.y) < p.radius + 20) {
+        this.status = 'VICTORY';
+        this.player.score += 1000;
+        this.emit('victory', { score: this.player.score });
+      }
+    }
+  }
+
+  updateParticles(dt) {
+    for (const pt of this.particles) {
+      pt.x += pt.vx * dt;
+      pt.y += pt.vy * dt;
+      pt.vx *= 0.92;
+      pt.vy *= 0.92;
+      pt.life -= dt;
+    }
+    this.particles = this.particles.filter((pt) => pt.life > 0);
+  }
+}
+
+
+// ===== audio.js =====
+/**
+ * Web Audio API 程序化复古音效合成器（零外部音频文件）
+ */
+class SoundEngine {
+  constructor() {
+    this.ctx = null;
+    this.muted = false;
+  }
+
+  unlock() {
+    if (typeof window === 'undefined') return;
+    const AudioCtx = window.AudioContext || window.webkitAudioContext;
+    if (!AudioCtx) return;
+    if (!this.ctx) {
+      this.ctx = new AudioCtx();
+    }
+    if (this.ctx.state === 'suspended') {
+      this.ctx.resume().catch(() => {});
+    }
+  }
+
+  toggleMute() {
+    this.muted = !this.muted;
+    return this.muted;
+  }
+
+  playTone(freq, endFreq, duration, type = 'triangle', volume = 0.14) {
+    if (this.muted || !this.ctx || this.ctx.state !== 'running') return;
+    const now = this.ctx.currentTime;
+    const osc = this.ctx.createOscillator();
+    const gain = this.ctx.createGain();
+    osc.type = type;
+    osc.frequency.setValueAtTime(freq, now);
+    if (endFreq !== freq) {
+      osc.frequency.exponentialRampToValueAtTime(Math.max(20, endFreq), now + duration);
+    }
+    gain.gain.setValueAtTime(volume, now);
+    gain.gain.exponentialRampToValueAtTime(0.001, now + duration);
+    osc.connect(gain);
+    gain.connect(this.ctx.destination);
+    osc.start(now);
+    osc.stop(now + duration);
+  }
+
+  playNoise(duration, volume = 0.18) {
+    if (this.muted || !this.ctx || this.ctx.state !== 'running') return;
+    const bufferSize = Math.floor(this.ctx.sampleRate * duration);
+    const buffer = this.ctx.createBuffer(1, bufferSize, this.ctx.sampleRate);
+    const data = buffer.getChannelData(0);
+    for (let i = 0; i < bufferSize; i++) {
+      data[i] = (Math.random() * 2 - 1) * Math.exp(-i / (bufferSize * 0.35));
+    }
+    const noise = this.ctx.createBufferSource();
+    noise.buffer = buffer;
+    const gain = this.ctx.createGain();
+    gain.gain.setValueAtTime(volume, this.ctx.currentTime);
+    noise.connect(gain);
+    gain.connect(this.ctx.destination);
+    noise.start();
+  }
+
+  handleEvent(eventType) {
+    if (this.muted) return;
+    switch (eventType) {
+      case 'tear_fire':
+        this.playTone(460, 220, 0.08, 'sine', 0.11);
+        break;
+      case 'tear_splash':
+        this.playTone(210, 90, 0.05, 'triangle', 0.06);
+        break;
+      case 'enemy_hit':
+        this.playTone(170, 95, 0.07, 'square', 0.09);
+        break;
+      case 'enemy_die':
+        this.playTone(240, 65, 0.16, 'sawtooth', 0.12);
+        this.playNoise(0.11, 0.1);
+        break;
+      case 'player_hurt':
+        this.playTone(300, 110, 0.22, 'sawtooth', 0.18);
+        break;
+      case 'door_open':
+        this.playTone(330, 520, 0.18, 'triangle', 0.12);
+        break;
+      case 'door_unlock':
+        this.playTone(520, 780, 0.16, 'square', 0.1);
+        break;
+      case 'item_pickup':
+        this.playTone(440, 440, 0.1, 'triangle', 0.14);
+        setTimeout(() => this.playTone(554, 554, 0.1, 'triangle', 0.14), 90);
+        setTimeout(() => this.playTone(659, 880, 0.22, 'triangle', 0.16), 180);
+        break;
+      case 'pickup_coin':
+        this.playTone(880, 1320, 0.1, 'sine', 0.12);
+        break;
+      case 'pickup_heart':
+        this.playTone(520, 680, 0.14, 'sine', 0.13);
+        break;
+      case 'bomb_place':
+        this.playTone(190, 140, 0.09, 'triangle', 0.1);
+        break;
+      case 'bomb_explode':
+        this.playNoise(0.35, 0.26);
+        this.playTone(110, 32, 0.34, 'sawtooth', 0.22);
+        break;
+      case 'boss_roar':
+        this.playTone(140, 55, 0.42, 'sawtooth', 0.2);
+        break;
+      case 'victory':
+        [523, 659, 784, 1046].forEach((f, idx) => {
+          setTimeout(() => this.playTone(f, f, 0.2, 'triangle', 0.16), idx * 120);
+        });
+        break;
+      default:
+        break;
+    }
+  }
+}
+
+
+// ===== renderer.js =====
+
+
+
+class IsaacRenderer {
+  constructor(canvas) {
+    this.canvas = canvas;
+    this.ctx = canvas.getContext('2d');
+  }
+
+  render(engine) {
+    const ctx = this.ctx;
+    const room = engine.getCurrentRoom();
+    const theme = engine.floor.theme;
+
+    ctx.save();
+    ctx.clearRect(0, 0, CANVAS_WIDTH, CANVAS_HEIGHT);
+
+    // Screen shake transform
+    if (engine.screenShake > 0.2) {
+      const sx = (Math.random() - 0.5) * engine.screenShake;
+      const sy = (Math.random() - 0.5) * engine.screenShake;
+      ctx.translate(sx, sy);
+    }
+
+    this.drawRoomShell(ctx, theme, room);
+    this.drawStartTutorials(ctx, room);
+    this.drawBloodStains(ctx, room);
+    this.drawTiles(ctx, room, theme);
+    this.drawDoors(ctx, room);
+    this.drawTrapdoorOrChest(ctx, room, engine.elapsedTime);
+    this.drawPedestalsAndShop(ctx, room, engine.elapsedTime);
+    this.drawPickups(ctx, room, engine.elapsedTime);
+    this.drawBombs(ctx, engine.bombs, engine.elapsedTime);
+    this.drawEnemies(ctx, room.enemies, engine.elapsedTime);
+    this.drawPlayer(ctx, engine.player, engine.elapsedTime);
+    this.drawTears(ctx, engine.tears);
+    this.drawEnemyBullets(ctx, engine.enemyBullets);
+    this.drawParticles(ctx, engine.particles);
+    this.drawVignette(ctx);
+    ctx.restore();
+
+    // Screen-space HUD (no screen shake)
+    this.drawTopHUD(ctx, engine);
+    this.drawFoundHUDStats(ctx, engine);
+    this.drawBossHealthBar(ctx, room);
+    this.drawBanner(ctx, engine.banner);
+  }
+
+  drawRoomShell(ctx, theme, room) {
+    // Outer wall fill
+    ctx.fillStyle = theme.wallColor;
+    ctx.fillRect(0, 0, CANVAS_WIDTH, CANVAS_HEIGHT);
+
+    // Wall brick bevel frame
+    ctx.fillStyle = theme.wallTrim;
+    ctx.fillRect(ROOM_LEFT - 14, ROOM_TOP - 14, ROOM_WIDTH + 28, ROOM_HEIGHT + 28);
+
+    // Subtle stone brick lines on walls
+    ctx.strokeStyle = 'rgba(0,0,0,0.32)';
+    ctx.lineWidth = 2;
+    for (let x = ROOM_LEFT - 14; x < ROOM_RIGHT + 14; x += 64) {
+      ctx.beginPath();
+      ctx.moveTo(x, ROOM_TOP - 14);
+      ctx.lineTo(x, ROOM_TOP);
+      ctx.moveTo(x + 32, ROOM_BOTTOM);
+      ctx.lineTo(x + 32, ROOM_BOTTOM + 14);
+      ctx.stroke();
+    }
+
+    // Floor base
+    ctx.fillStyle = theme.floorColor;
+    ctx.fillRect(ROOM_LEFT, ROOM_TOP, ROOM_WIDTH, ROOM_HEIGHT);
+
+    // Subtle tiled floor pattern
+    const { cw, ch } = getCellSize();
+    ctx.fillStyle = theme.floorAlt;
+    for (let r = 0; r < GRID_ROWS; r++) {
+      for (let c = 0; c < GRID_COLS; c++) {
+        if ((r + c) % 2 === 0) {
+          ctx.fillRect(ROOM_LEFT + c * cw, ROOM_TOP + r * ch, cw, ch);
+        }
+      }
+    }
+
+    // Special room floor emblem
+    if (room.type === ROOM_TYPES.TREASURE) {
+      ctx.strokeStyle = 'rgba(255, 212, 59, 0.16)';
+      ctx.lineWidth = 4;
+      ctx.strokeRect(ROOM_LEFT + 18, ROOM_TOP + 18, ROOM_WIDTH - 36, ROOM_HEIGHT - 36);
+    } else if (room.type === ROOM_TYPES.BOSS) {
+      ctx.strokeStyle = 'rgba(224, 49, 49, 0.22)';
+      ctx.lineWidth = 4;
+      ctx.strokeRect(ROOM_LEFT + 18, ROOM_TOP + 18, ROOM_WIDTH - 36, ROOM_HEIGHT - 36);
+    }
+
+    // Inner wall shadow
+    ctx.strokeStyle = 'rgba(0,0,0,0.55)';
+    ctx.lineWidth = 6;
+    ctx.strokeRect(ROOM_LEFT + 2, ROOM_TOP + 2, ROOM_WIDTH - 4, ROOM_HEIGHT - 4);
+  }
+
+  drawStartTutorials(ctx, room) {
+    if (room.type !== ROOM_TYPES.START) return;
+    ctx.save();
+    ctx.fillStyle = 'rgba(255, 240, 220, 0.16)';
+    ctx.strokeStyle = 'rgba(255, 240, 220, 0.18)';
+    ctx.font = 'bold 14px "Inter", sans-serif';
+    ctx.textAlign = 'center';
+
+    const cx = ROOM_LEFT + ROOM_WIDTH / 2;
+    const cy = ROOM_TOP + ROOM_HEIGHT / 2;
+
+    ctx.fillText('WASD 移动', cx - 220, cy - 12);
+    ctx.fillText('↑ ↓ ← → 发射眼泪', cx + 220, cy - 12);
+    ctx.fillText('E 放置炸弹', cx - 220, cy + 125);
+    ctx.fillText('SPACE 主动道具  ·  R 重开', cx + 210, cy + 125);
+    ctx.restore();
+  }
+
+  drawBloodStains(ctx, room) {
+    for (const s of room.bloodStains) {
+      ctx.fillStyle = 'rgba(138, 22, 22, 0.45)';
+      ctx.beginPath();
+      ctx.ellipse(s.x, s.y, s.r, s.r * 0.65, 0, 0, Math.PI * 2);
+      ctx.fill();
+    }
+  }
+
+  drawTiles(ctx, room, theme) {
+    const { cw, ch } = getCellSize();
+    for (let r = 0; r < GRID_ROWS; r++) {
+      for (let c = 0; c < GRID_COLS; c++) {
+        const tile = room.grid[r][c];
+        if (tile === TILE_TYPES.EMPTY) continue;
+        const x = ROOM_LEFT + c * cw;
+        const y = ROOM_TOP + r * ch;
+
+        if (tile === TILE_TYPES.ROCK || tile === TILE_TYPES.TINTED_ROCK) {
+          const isTinted = tile === TILE_TYPES.TINTED_ROCK;
+          // Shadow
+          ctx.fillStyle = 'rgba(0,0,0,0.35)';
+          ctx.beginPath();
+          ctx.roundRect(x + 4, y + 8, cw - 6, ch - 6, 8);
+          ctx.fill();
+          // Rock body
+          ctx.fillStyle = isTinted ? '#4d647a' : theme.rockColor;
+          ctx.beginPath();
+          ctx.roundRect(x + 3, y + 3, cw - 6, ch - 8, 8);
+          ctx.fill();
+          // Highlight
+          ctx.fillStyle = isTinted ? 'rgba(180,225,255,0.22)' : 'rgba(255,255,255,0.12)';
+          ctx.beginPath();
+          ctx.roundRect(x + 7, y + 6, cw - 16, 10, 4);
+          ctx.fill();
+          // Tinted Rock secret X mark
+          if (isTinted) {
+            ctx.strokeStyle = 'rgba(20, 35, 50, 0.65)';
+            ctx.lineWidth = 2;
+            ctx.beginPath();
+            ctx.moveTo(x + cw * 0.6, y + ch * 0.5);
+            ctx.lineTo(x + cw * 0.78, y + ch * 0.68);
+            ctx.moveTo(x + cw * 0.78, y + ch * 0.5);
+            ctx.lineTo(x + cw * 0.6, y + ch * 0.68);
+            ctx.stroke();
+          }
+        } else if (tile === TILE_TYPES.SPIKES) {
+          ctx.fillStyle = '#25282c';
+          ctx.fillRect(x + 4, y + 4, cw - 8, ch - 8);
+          ctx.fillStyle = '#ced4da';
+          const pts = [
+            [x + 12, y + 12], [x + cw - 12, y + 12],
+            [x + 12, y + ch - 12], [x + cw - 12, y + ch - 12],
+            [x + cw / 2, y + ch / 2]
+          ];
+          for (const [px, py] of pts) {
+            ctx.beginPath();
+            ctx.moveTo(px, py - 7);
+            ctx.lineTo(px + 6, py + 5);
+            ctx.lineTo(px - 6, py + 5);
+            ctx.closePath();
+            ctx.fill();
+          }
+        } else if (tile === TILE_TYPES.POOP) {
+          ctx.fillStyle = '#6d4c41';
+          ctx.beginPath();
+          ctx.ellipse(x + cw / 2, y + ch * 0.62, cw * 0.34, ch * 0.24, 0, 0, Math.PI * 2);
+          ctx.fill();
+          ctx.fillStyle = '#795548';
+          ctx.beginPath();
+          ctx.ellipse(x + cw / 2, y + ch * 0.45, cw * 0.24, ch * 0.18, 0, 0, Math.PI * 2);
+          ctx.fill();
+          ctx.fillStyle = '#8d6e63';
+          ctx.beginPath();
+          ctx.arc(x + cw / 2, y + ch * 0.32, 6, 0, Math.PI * 2);
+          ctx.fill();
+        }
+      }
+    }
+  }
+
+  drawDoors(ctx, room) {
+    for (const dir of DIR_LIST) {
+      const door = room.doors[dir.key];
+      if (!door) continue;
+      const rect = getDoorRect(dir.key);
+
+      let frameColor = '#795548';
+      if (door.doorType === ROOM_TYPES.TREASURE) frameColor = '#f59f00';
+      else if (door.doorType === ROOM_TYPES.BOSS) frameColor = '#c92a2a';
+      else if (door.doorType === ROOM_TYPES.SHOP) frameColor = '#5c940d';
+
+      ctx.save();
+      ctx.fillStyle = frameColor;
+      ctx.beginPath();
+      ctx.roundRect(rect.x, rect.y, rect.w, rect.h, 6);
+      ctx.fill();
+
+      // Inner opening
+      const pad = 6;
+      const isOpen = room.cleared && !door.locked;
+      ctx.fillStyle = isOpen ? '#0d0908' : '#3d2b24';
+      ctx.fillRect(rect.x + pad, rect.y + pad, rect.w - pad * 2, rect.h - pad * 2);
+
+      // Bars when enemies alive
+      if (!room.cleared) {
+        ctx.strokeStyle = '#adb5bd';
+        ctx.lineWidth = 3;
+        if (dir.key === 'NORTH' || dir.key === 'SOUTH') {
+          for (let bx = rect.x + 14; bx < rect.x + rect.w - 10; bx += 12) {
+            ctx.beginPath();
+            ctx.moveTo(bx, rect.y + pad);
+            ctx.lineTo(bx, rect.y + rect.h - pad);
+            ctx.stroke();
+          }
+        } else {
+          for (let by = rect.y + 14; by < rect.y + rect.h - 10; by += 12) {
+            ctx.beginPath();
+            ctx.moveTo(rect.x + pad, by);
+            ctx.lineTo(rect.x + rect.w - pad, by);
+            ctx.stroke();
+          }
+        }
+      } else if (door.locked) {
+        // Golden keyhole icon
+        ctx.fillStyle = '#ffd43b';
+        ctx.beginPath();
+        ctx.arc(rect.x + rect.w / 2, rect.y + rect.h / 2 - 2, 5, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.fillRect(rect.x + rect.w / 2 - 2, rect.y + rect.h / 2 + 1, 4, 7);
+      }
+
+      // Boss skull badge or Treasure crown dot
+      if (door.doorType === ROOM_TYPES.BOSS) {
+        ctx.fillStyle = '#f8f9fa';
+        ctx.beginPath();
+        ctx.arc(rect.x + rect.w / 2, rect.y + rect.h / 2, 5, 0, Math.PI * 2);
+        ctx.fill();
+      }
+      ctx.restore();
+    }
+  }
+
+  drawTrapdoorOrChest(ctx, room, time) {
+    if (room.trapdoor) {
+      const { x, y } = room.trapdoor;
+      ctx.save();
+      ctx.fillStyle = '#4a3525';
+      ctx.fillRect(x - 24, y - 24, 48, 48);
+      ctx.fillStyle = '#090707';
+      ctx.fillRect(x - 18, y - 18, 36, 36);
+      // Ladder rungs
+      ctx.strokeStyle = '#8d6e63';
+      ctx.lineWidth = 3;
+      for (let ry = y - 10; ry <= y + 12; ry += 8) {
+        ctx.beginPath();
+        ctx.moveTo(x - 10, ry);
+        ctx.lineTo(x + 10, ry);
+        ctx.stroke();
+      }
+      ctx.fillStyle = '#ffd43b';
+      ctx.font = 'bold 11px "Inter", sans-serif';
+      ctx.textAlign = 'center';
+      ctx.fillText('进入下一层', x, y - 30);
+      ctx.restore();
+    }
+
+    if (room.victoryChest) {
+      const { x, y } = room.victoryChest;
+      const glow = 0.4 + Math.sin(time * 5) * 0.2;
+      ctx.save();
+      ctx.fillStyle = `rgba(255, 212, 59, ${glow})`;
+      ctx.beginPath();
+      ctx.arc(x, y, 36, 0, Math.PI * 2);
+      ctx.fill();
+
+      ctx.fillStyle = '#f59f00';
+      ctx.strokeStyle = '#fff3bf';
+      ctx.lineWidth = 2.5;
+      ctx.beginPath();
+      ctx.roundRect(x - 22, y - 16, 44, 32, 6);
+      ctx.fill();
+      ctx.stroke();
+
+      ctx.fillStyle = '#fff9db';
+      ctx.fillRect(x - 5, y - 4, 10, 10);
+      ctx.font = 'bold 12px "Inter", sans-serif';
+      ctx.textAlign = 'center';
+      ctx.fillText('胜利宝箱', x, y - 24);
+      ctx.restore();
+    }
+  }
+
+  drawPedestalsAndShop(ctx, room, time) {
+    for (const ped of room.pedestals) {
+      const pos = tileToWorld(ped.col, ped.row);
+      // Stone altar
+      ctx.fillStyle = '#5c544e';
+      ctx.fillRect(pos.x - 18, pos.y + 4, 36, 16);
+      ctx.fillStyle = '#867b73';
+      ctx.fillRect(pos.x - 20, pos.y, 40, 7);
+
+      if (!ped.taken && ped.item) {
+        const bob = Math.sin(time * 4) * 5;
+        this.drawItemOrb(ctx, pos.x, pos.y - 16 + bob, ped.item);
+        ctx.fillStyle = 'rgba(255,255,255,0.85)';
+        ctx.font = 'bold 11px "Inter", sans-serif';
+        ctx.textAlign = 'center';
+        ctx.fillText(ped.item.name, pos.x, pos.y + 34);
+      }
+    }
+
+    for (const sItem of room.shopItems) {
+      if (sItem.bought) continue;
+      const pos = tileToWorld(sItem.col, sItem.row);
+      const bob = Math.sin(time * 3.5 + sItem.col) * 4;
+      if (sItem.kind === 'item') {
+        this.drawItemOrb(ctx, pos.x, pos.y - 10 + bob, sItem.item);
+      } else {
+        this.drawSinglePickup(ctx, sItem.pickupType, pos.x, pos.y - 6 + bob);
+      }
+      ctx.fillStyle = '#ffd43b';
+      ctx.font = 'bold 13px "Inter", sans-serif';
+      ctx.textAlign = 'center';
+      ctx.fillText(`${sItem.price}¢`, pos.x, pos.y + 24);
+      ctx.fillStyle = 'rgba(255,255,255,0.75)';
+      ctx.font = '11px "Inter", sans-serif';
+      ctx.fillText(sItem.label, pos.x, pos.y + 38);
+    }
+  }
+
+  drawItemOrb(ctx, x, y, item) {
+    ctx.save();
+    ctx.fillStyle = 'rgba(255, 224, 102, 0.25)';
+    ctx.beginPath();
+    ctx.arc(x, y, 20, 0, Math.PI * 2);
+    ctx.fill();
+
+    ctx.fillStyle = item.color || '#ffd43b';
+    ctx.strokeStyle = '#ffffff';
+    ctx.lineWidth = 2;
+    ctx.beginPath();
+    ctx.arc(x, y, 13, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.stroke();
+
+    ctx.fillStyle = item.accent || '#ffffff';
+    ctx.beginPath();
+    ctx.arc(x - 3, y - 3, 4.5, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.restore();
+  }
+
+  drawPickups(ctx, room, time) {
+    for (const pk of room.pickups) {
+      const bob = Math.sin(time * 5 + pk.bobPhase) * 3;
+      this.drawSinglePickup(ctx, pk.type, pk.x, pk.y + bob);
+    }
+  }
+
+  drawSinglePickup(ctx, type, x, y) {
+    ctx.save();
+    ctx.fillStyle = 'rgba(0,0,0,0.32)';
+    ctx.beginPath();
+    ctx.ellipse(x, y + 10, 10, 4, 0, 0, Math.PI * 2);
+    ctx.fill();
+
+    if (type === 'red_heart' || type === 'half_heart' || type === 'soul_heart') {
+      const col = type === 'soul_heart' ? '#4dabf7' : '#e03131';
+      this.drawHeartShape(ctx, x, y - 4, 9, col, '#ffffff');
+    } else if (type === 'coin') {
+      ctx.fillStyle = '#fcc419';
+      ctx.strokeStyle = '#e67700';
+      ctx.lineWidth = 2;
+      ctx.beginPath();
+      ctx.arc(x, y, 9, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.stroke();
+      ctx.fillStyle = '#fff3bf';
+      ctx.font = 'bold 10px sans-serif';
+      ctx.textAlign = 'center';
+      ctx.fillText('¢', x, y + 3.5);
+    } else if (type === 'bomb') {
+      ctx.fillStyle = '#343a40';
+      ctx.strokeStyle = '#ced4da';
+      ctx.lineWidth = 1.5;
+      ctx.beginPath();
+      ctx.arc(x, y + 1, 9, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.stroke();
+      ctx.strokeStyle = '#ffa94d';
+      ctx.beginPath();
+      ctx.moveTo(x + 3, y - 7);
+      ctx.lineTo(x + 8, y - 12);
+      ctx.stroke();
+    } else if (type === 'key') {
+      ctx.fillStyle = '#ffd43b';
+      ctx.strokeStyle = '#e67700';
+      ctx.lineWidth = 1.5;
+      ctx.beginPath();
+      ctx.arc(x - 4, y, 5, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.stroke();
+      ctx.fillRect(x, y - 2, 11, 4);
+      ctx.fillRect(x + 7, y + 2, 3, 4);
+    }
+    ctx.restore();
+  }
+
+  drawHeartShape(ctx, cx, cy, size, fill, stroke) {
+    ctx.save();
+    ctx.fillStyle = fill;
+    ctx.beginPath();
+    ctx.moveTo(cx, cy + size * 0.9);
+    ctx.bezierCurveTo(cx - size * 1.4, cy, cx - size * 1.1, cy - size * 0.9, cx, cy - size * 0.25);
+    ctx.bezierCurveTo(cx + size * 1.1, cy - size * 0.9, cx + size * 1.4, cy, cx, cy + size * 0.9);
+    ctx.fill();
+    if (stroke) {
+      ctx.strokeStyle = stroke;
+      ctx.lineWidth = 1.3;
+      ctx.stroke();
+    }
+    ctx.restore();
+  }
+
+  drawBombs(ctx, bombs, time) {
+    for (const b of bombs) {
+      const flash = Math.sin(time * (b.fuse < 0.5 ? 45 : 18)) > 0;
+      ctx.save();
+      ctx.fillStyle = 'rgba(0,0,0,0.4)';
+      ctx.beginPath();
+      ctx.ellipse(b.x, b.y + 11, 13, 5, 0, 0, Math.PI * 2);
+      ctx.fill();
+
+      ctx.fillStyle = flash ? '#ff6b6b' : '#2b2d42';
+      ctx.strokeStyle = '#f8f9fa';
+      ctx.lineWidth = 2;
+      ctx.beginPath();
+      ctx.arc(b.x, b.y, b.radius, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.stroke();
+
+      // Sparking fuse
+      ctx.strokeStyle = '#ffd43b';
+      ctx.lineWidth = 2.5;
+      ctx.beginPath();
+      ctx.moveTo(b.x + 5, b.y - 10);
+      ctx.lineTo(b.x + 11, b.y - 17);
+      ctx.stroke();
+      ctx.fillStyle = '#ff922b';
+      ctx.beginPath();
+      ctx.arc(b.x + 12, b.y - 18, 3.5, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.restore();
+    }
+  }
+
+  drawPlayer(ctx, p, time) {
+    if (p.invulnTimer > 0 && Math.floor(time * 16) % 2 === 0) {
+      ctx.globalAlpha = 0.45;
+    }
+    const moving = Math.hypot(p.vx, p.vy) > 15;
+    const bob = moving ? Math.sin(time * 16) * 2.5 : 0;
+
+    // Ground shadow
+    ctx.fillStyle = 'rgba(0,0,0,0.38)';
+    ctx.beginPath();
+    ctx.ellipse(p.x, p.y + 16, 15, 6, 0, 0, Math.PI * 2);
+    ctx.fill();
+
+    // Small body
+    ctx.fillStyle = p.hurtFlash > 0 ? '#ff6b6b' : '#f1c2b0';
+    ctx.strokeStyle = '#2b1d19';
+    ctx.lineWidth = 2;
+    ctx.beginPath();
+    ctx.roundRect(p.x - 9, p.y + 1 + bob, 18, 14, 6);
+    ctx.fill();
+    ctx.stroke();
+
+    // Big iconic Isaac head
+    ctx.fillStyle = p.hurtFlash > 0 ? '#ff8787' : '#f6cbb9';
+    ctx.beginPath();
+    ctx.ellipse(p.x, p.y - 10 + bob, 18, 16, 0, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.stroke();
+
+    // Face direction offset
+    const fx = Math.max(-4, Math.min(4, p.facing.x * 4));
+    const fy = Math.max(-3, Math.min(3, p.facing.y * 3));
+
+    // Tear streams
+    const tearCol = p.stats.homing ? '#cc5de8' : p.stats.poison ? '#51cf66' : '#74c0fc';
+    ctx.fillStyle = tearCol;
+    ctx.fillRect(p.x - 9 + fx, p.y - 9 + fy + bob, 4, 9);
+    ctx.fillRect(p.x + 5 + fx, p.y - 9 + fy + bob, 4, 9);
+
+    // Eyes
+    ctx.fillStyle = '#141214';
+    const eyeH = p.blinkTimer > 0 ? 1.8 : 4.2;
+    ctx.beginPath();
+    ctx.ellipse(p.x - 7 + fx, p.y - 11 + fy + bob, 3.6, eyeH, 0, 0, Math.PI * 2);
+    ctx.ellipse(p.x + 7 + fx, p.y - 11 + fy + bob, 3.6, eyeH, 0, 0, Math.PI * 2);
+    ctx.fill();
+
+    // Eye highlights
+    if (p.blinkTimer <= 0) {
+      ctx.fillStyle = '#ffffff';
+      ctx.beginPath();
+      ctx.arc(p.x - 8 + fx, p.y - 12.5 + fy + bob, 1.3, 0, Math.PI * 2);
+      ctx.arc(p.x + 6 + fx, p.y - 12.5 + fy + bob, 1.3, 0, Math.PI * 2);
+      ctx.fill();
+    }
+
+    // Sad quivering mouth
+    ctx.strokeStyle = '#3a2320';
+    ctx.lineWidth = 1.8;
+    ctx.beginPath();
+    ctx.arc(p.x + fx, p.y - 2 + fy + bob, 4, Math.PI * 1.15, Math.PI * 1.85);
+    ctx.stroke();
+
+    ctx.globalAlpha = 1;
+  }
+
+  drawEnemies(ctx, enemies, time) {
+    for (const e of enemies) {
+      if (!e.alive) continue;
+      ctx.save();
+
+      // Ground shadow (scales down when jumping high)
+      const shadowScale = Math.max(0.45, 1 - e.z / 260);
+      ctx.fillStyle = 'rgba(0,0,0,0.42)';
+      ctx.beginPath();
+      ctx.ellipse(e.x, e.y + e.radius * 0.72, e.radius * 0.9 * shadowScale, e.radius * 0.36 * shadowScale, 0, 0, Math.PI * 2);
+      ctx.fill();
+
+      const drawY = e.y - e.z;
+      const bodyColor = e.hitFlash > 0 ? '#ffffff' : e.poisonTimer > 0 ? '#69db7c' : e.color;
+
+      if (e.type === 'FLY') {
+        const wing = Math.sin(time * 36 + e.id) * 4;
+        ctx.fillStyle = 'rgba(230,240,255,0.65)';
+        ctx.beginPath();
+        ctx.ellipse(e.x - 10, drawY - 6 + wing, 7, 4, -0.3, 0, Math.PI * 2);
+        ctx.ellipse(e.x + 10, drawY - 6 - wing, 7, 4, 0.3, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.fillStyle = bodyColor;
+        ctx.beginPath();
+        ctx.arc(e.x, drawY, e.radius, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.fillStyle = e.accent;
+        ctx.beginPath();
+        ctx.arc(e.x - 4, drawY - 2, 3, 0, Math.PI * 2);
+        ctx.arc(e.x + 4, drawY - 2, 3, 0, Math.PI * 2);
+        ctx.fill();
+      } else if (e.type === 'SPIDER') {
+        ctx.strokeStyle = '#18141a';
+        ctx.lineWidth = 2;
+        for (let side of [-1, 1]) {
+          for (let leg = -1; leg <= 1; leg++) {
+            ctx.beginPath();
+            ctx.moveTo(e.x, drawY);
+            ctx.lineTo(e.x + side * (e.radius + 7), drawY + leg * 7 + Math.sin(time * 22 + leg) * 2);
+            ctx.stroke();
+          }
+        }
+        ctx.fillStyle = bodyColor;
+        ctx.beginPath();
+        ctx.arc(e.x, drawY, e.radius, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.fillStyle = e.accent;
+        ctx.fillRect(e.x - 4, drawY - 3, 3, 3);
+        ctx.fillRect(e.x + 1, drawY - 3, 3, 3);
+      } else if (e.type === 'MONSTRO') {
+        const squash = e.z > 5 ? 0.92 : 1 + Math.sin(time * 6) * 0.04;
+        ctx.fillStyle = bodyColor;
+        ctx.strokeStyle = '#3b1515';
+        ctx.lineWidth = 3;
+        ctx.beginPath();
+        ctx.ellipse(e.x, drawY, e.radius * squash, e.radius * (2 - squash) * 0.9, 0, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.stroke();
+        // Gaping cleft mouth
+        ctx.fillStyle = '#4a0d0d';
+        ctx.beginPath();
+        ctx.ellipse(e.x, drawY + 10, 22, 13, 0, 0, Math.PI * 2);
+        ctx.fill();
+        // Eyes
+        ctx.fillStyle = '#111';
+        ctx.beginPath();
+        ctx.arc(e.x - 14, drawY - 10, 5, 0, Math.PI * 2);
+        ctx.arc(e.x + 14, drawY - 10, 5, 0, Math.PI * 2);
+        ctx.fill();
+      } else if (e.type === 'HEART') {
+        const pulse = 1 + Math.sin(time * 7) * 0.07;
+        this.drawHeartShape(ctx, e.x, drawY - 8, e.radius * 0.85 * pulse, bodyColor, '#4a0d16');
+      } else {
+        // GAPER / SHOOTER / CHARGER / DUKE
+        ctx.fillStyle = bodyColor;
+        ctx.strokeStyle = '#241818';
+        ctx.lineWidth = 2.5;
+        ctx.beginPath();
+        ctx.arc(e.x, drawY, e.radius, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.stroke();
+
+        // Angry/hollow eyes
+        ctx.fillStyle = e.type === 'CHARGER' && e.state === 'CHARGE' ? '#ff2a2a' : '#181010';
+        ctx.beginPath();
+        ctx.arc(e.x - e.radius * 0.34, drawY - e.radius * 0.16, Math.max(3, e.radius * 0.18), 0, Math.PI * 2);
+        ctx.arc(e.x + e.radius * 0.34, drawY - e.radius * 0.16, Math.max(3, e.radius * 0.18), 0, Math.PI * 2);
+        ctx.fill();
+
+        // Mouth
+        ctx.fillStyle = e.accent;
+        ctx.beginPath();
+        ctx.ellipse(e.x, drawY + e.radius * 0.28, e.radius * 0.36, e.radius * 0.22, 0, 0, Math.PI * 2);
+        ctx.fill();
+      }
+
+      // Small HP bar for non-boss damaged enemies
+      if (!e.isBoss && e.hp < e.maxHp) {
+        const bw = 28;
+        ctx.fillStyle = 'rgba(0,0,0,0.6)';
+        ctx.fillRect(e.x - bw / 2, drawY - e.radius - 10, bw, 4);
+        ctx.fillStyle = '#ff6b6b';
+        ctx.fillRect(e.x - bw / 2, drawY - e.radius - 10, bw * Math.max(0, e.hp / e.maxHp), 4);
+      }
+
+      ctx.restore();
+    }
+  }
+
+  drawTears(ctx, tears) {
+    for (const t of tears) {
+      // Shadow
+      ctx.fillStyle = 'rgba(0,0,0,0.28)';
+      ctx.beginPath();
+      ctx.ellipse(t.x, t.y + 10, t.radius * 0.8, t.radius * 0.35, 0, 0, Math.PI * 2);
+      ctx.fill();
+
+      const drawY = t.y - t.z * 0.45;
+      const fill = t.homing ? '#be4bdb' : t.poison ? '#51cf66' : t.bouncing ? '#ffd43b' : '#4dabf7';
+      ctx.fillStyle = fill;
+      ctx.strokeStyle = 'rgba(255,255,255,0.65)';
+      ctx.lineWidth = 1.5;
+      ctx.beginPath();
+      ctx.arc(t.x, drawY, t.radius, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.stroke();
+
+      ctx.fillStyle = 'rgba(255,255,255,0.75)';
+      ctx.beginPath();
+      ctx.arc(t.x - t.radius * 0.3, drawY - t.radius * 0.3, t.radius * 0.28, 0, Math.PI * 2);
+      ctx.fill();
+    }
+  }
+
+  drawEnemyBullets(ctx, bullets) {
+    for (const b of bullets) {
+      ctx.fillStyle = b.color;
+      ctx.strokeStyle = '#ffccd5';
+      ctx.lineWidth = 1.5;
+      ctx.beginPath();
+      ctx.arc(b.x, b.y, b.radius, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.stroke();
+    }
+  }
+
+  drawParticles(ctx, particles) {
+    for (const pt of particles) {
+      ctx.globalAlpha = Math.max(0, pt.life / pt.maxLife);
+      ctx.fillStyle = pt.color;
+      ctx.beginPath();
+      ctx.arc(pt.x, pt.y, pt.radius, 0, Math.PI * 2);
+      ctx.fill();
+    }
+    ctx.globalAlpha = 1;
+  }
+
+  drawVignette(ctx) {
+    const grad = ctx.createRadialGradient(
+      CANVAS_WIDTH / 2,
+      CANVAS_HEIGHT / 2,
+      260,
+      CANVAS_WIDTH / 2,
+      CANVAS_HEIGHT / 2,
+      580
+    );
+    grad.addColorStop(0, 'rgba(0,0,0,0)');
+    grad.addColorStop(1, 'rgba(0,0,0,0.45)');
+    ctx.fillStyle = grad;
+    ctx.fillRect(0, 0, CANVAS_WIDTH, CANVAS_HEIGHT);
+  }
+
+  drawTopHUD(ctx, engine) {
+    const p = engine.player;
+    ctx.save();
+    // Subtle dark HUD strip at very top
+    ctx.fillStyle = 'rgba(14, 10, 9, 0.88)';
+    ctx.fillRect(0, 0, CANVAS_WIDTH, 76);
+    ctx.strokeStyle = 'rgba(255, 224, 178, 0.14)';
+    ctx.lineWidth = 1;
+    ctx.beginPath();
+    ctx.moveTo(0, 76);
+    ctx.lineTo(CANVAS_WIDTH, 76);
+    ctx.stroke();
+
+    // 1. Active Item Box (Left)
+    const active = p.activeItem;
+    ctx.fillStyle = '#241b18';
+    ctx.strokeStyle = active && active.charge >= active.maxCharge ? '#ffd43b' : '#5c4d47';
+    ctx.lineWidth = 2;
+    ctx.beginPath();
+    ctx.roundRect(14, 12, 46, 50, 8);
+    ctx.fill();
+    ctx.stroke();
+    if (active) {
+      this.drawHeartShape(ctx, 37, 34, 11, active.color, '#fff');
+      // Charge bar
+      const barH = 44;
+      const frac = active.charge / active.maxCharge;
+      ctx.fillStyle = '#1b1615';
+      ctx.fillRect(64, 15, 8, barH);
+      ctx.fillStyle = frac >= 1 ? '#69db7c' : '#94d82d';
+      ctx.fillRect(64, 15 + barH * (1 - frac), 8, barH * frac);
+    }
+
+    // 2. Hearts Row
+    const totalRedContainers = Math.ceil(p.stats.maxRedHearts / 2);
+    let hx = 94;
+    const hy = 26;
+    for (let i = 0; i < totalRedContainers; i++) {
+      const containerVal = Math.max(0, Math.min(2, p.stats.redHearts - i * 2));
+      if (containerVal === 2) {
+        this.drawHeartShape(ctx, hx, hy, 9, '#e03131', '#ffc9c9');
+      } else if (containerVal === 1) {
+        this.drawHeartShape(ctx, hx, hy, 9, '#3a2222', '#ff8787');
+        ctx.save();
+        ctx.beginPath();
+        ctx.rect(hx - 14, hy - 14, 14, 28);
+        ctx.clip();
+        this.drawHeartShape(ctx, hx, hy, 9, '#e03131', null);
+        ctx.restore();
+      } else {
+        this.drawHeartShape(ctx, hx, hy, 9, '#2b1d1c', '#868e96');
+      }
+      hx += 24;
+    }
+    // Soul Hearts
+    const totalSoulContainers = Math.ceil(p.stats.soulHearts / 2);
+    for (let i = 0; i < totalSoulContainers; i++) {
+      this.drawHeartShape(ctx, hx, hy, 9, '#4dabf7', '#d0ebff');
+      hx += 24;
+    }
+
+    // 3. Resources (Coins, Bombs, Keys, Score)
+    ctx.font = 'bold 13px "Inter", sans-serif';
+    ctx.textAlign = 'left';
+    ctx.fillStyle = '#ffd43b';
+    ctx.fillText(`¢ ${String(p.coins).padStart(2, '0')}`, 88, 60);
+    ctx.fillStyle = '#ffa94d';
+    ctx.fillText(`💣 ${String(p.bombs).padStart(2, '0')}`, 144, 60);
+    ctx.fillStyle = '#ffe066';
+    ctx.fillText(`🔑 ${String(p.keys).padStart(2, '0')}`, 206, 60);
+
+    // 4. Center Floor & Seed Info
+    ctx.textAlign = 'center';
+    ctx.fillStyle = '#f8f9fa';
+    ctx.font = 'bold 15px "Inter", sans-serif';
+    ctx.fillText(`${engine.floor.theme.name}  ·  得分 ${p.score}`, CANVAS_WIDTH / 2, 30);
+    ctx.fillStyle = '#adb5bd';
+    ctx.font = '12px monospace';
+    ctx.fillText(`SEED: ${engine.seed}  |  已收集道具: ${p.ownedItems.length}`, CANVAS_WIDTH / 2, 54);
+
+    // 5. Minimap (Top-Right)
+    this.drawMinimap(ctx, engine);
+    ctx.restore();
+  }
+
+  drawMinimap(ctx, engine) {
+    const mapX = CANVAS_WIDTH - 148;
+    const mapY = 8;
+    const cellW = 14;
+    const cellH = 10;
+
+    ctx.fillStyle = 'rgba(0,0,0,0.55)';
+    ctx.strokeStyle = 'rgba(255,255,255,0.16)';
+    ctx.lineWidth = 1;
+    ctx.beginPath();
+    ctx.roundRect(mapX, mapY, 136, 62, 6);
+    ctx.fill();
+    ctx.stroke();
+
+    const cur = engine.getCurrentRoom();
+    const centerDrawX = mapX + 68;
+    const centerDrawY = mapY + 31;
+
+    for (const room of engine.floor.rooms.values()) {
+      // Show visited rooms + neighbors of visited rooms
+      const isAdjacentToVisited = Object.values(room.doors).some((d) => {
+        const nr = engine.floor.rooms.get(d.toKey);
+        return nr && nr.visited;
+      });
+      if (!room.visited && !isAdjacentToVisited) continue;
+
+      const rx = centerDrawX + (room.gx - cur.gx) * (cellW + 2) - cellW / 2;
+      const ry = centerDrawY + (room.gy - cur.gy) * (cellH + 2) - cellH / 2;
+      if (rx < mapX + 4 || rx + cellW > mapX + 132 || ry < mapY + 3 || ry + cellH > mapY + 59) continue;
+
+      if (room.key === cur.key) {
+        ctx.fillStyle = '#ffffff';
+      } else if (room.type === ROOM_TYPES.BOSS) {
+        ctx.fillStyle = '#e03131';
+      } else if (room.type === ROOM_TYPES.TREASURE) {
+        ctx.fillStyle = '#fcc419';
+      } else if (room.type === ROOM_TYPES.SHOP) {
+        ctx.fillStyle = '#74b816';
+      } else if (room.visited) {
+        ctx.fillStyle = '#868e96';
+      } else {
+        ctx.fillStyle = 'rgba(134, 142, 150, 0.35)';
+      }
+
+      ctx.fillRect(rx, ry, cellW, cellH);
+    }
+  }
+
+  drawFoundHUDStats(ctx, engine) {
+    const s = engine.player.stats;
+    ctx.save();
+    ctx.fillStyle = 'rgba(255, 255, 255, 0.52)';
+    ctx.font = 'bold 11px monospace';
+    ctx.textAlign = 'left';
+    const x = 12;
+    let y = 135;
+    const effDmg = (s.damage * s.damageMultiplier).toFixed(1);
+    const lines = [
+      `DMG  ${effDmg}`,
+      `TRS  ${s.tearRate.toFixed(1)}`,
+      `SPD  ${(s.speed / 200).toFixed(2)}`,
+      `RNG  ${Math.round(s.range)}`
+    ];
+    for (const line of lines) {
+      ctx.fillText(line, x, y);
+      y += 20;
+    }
+
+    // Active modifiers badges
+    const mods = [];
+    if (s.shotCount > 1) mods.push(`x${s.shotCount}`);
+    if (s.homing) mods.push('追踪');
+    if (s.piercing) mods.push('穿透');
+    if (s.bouncing) mods.push('反弹');
+    if (s.poison) mods.push('剧毒');
+    if (mods.length > 0) {
+      ctx.fillStyle = '#ffd43b';
+      for (const m of mods) {
+        ctx.fillText(m, x, y);
+        y += 17;
+      }
+    }
+    ctx.restore();
+  }
+
+  drawBossHealthBar(ctx, room) {
+    const boss = room.enemies.find((e) => e.isBoss && e.alive);
+    if (!boss) return;
+    ctx.save();
+    const bw = 420;
+    const bh = 16;
+    const bx = (CANVAS_WIDTH - bw) / 2;
+    const by = CANVAS_HEIGHT - 36;
+
+    ctx.fillStyle = 'rgba(0,0,0,0.75)';
+    ctx.beginPath();
+    ctx.roundRect(bx - 4, by - 4, bw + 8, bh + 8, 8);
+    ctx.fill();
+
+    ctx.fillStyle = '#3a1414';
+    ctx.fillRect(bx, by, bw, bh);
+    ctx.fillStyle = '#e03131';
+    ctx.fillRect(bx, by, bw * Math.max(0, boss.hp / boss.maxHp), bh);
+
+    ctx.fillStyle = '#ffffff';
+    ctx.font = 'bold 12px "Inter", sans-serif';
+    ctx.textAlign = 'center';
+    ctx.fillText(boss.name, CANVAS_WIDTH / 2, by - 9);
+    ctx.restore();
+  }
+
+  drawBanner(ctx, banner) {
+    if (!banner) return;
+    const alpha = Math.min(1, banner.timer * 2, (banner.maxTimer - banner.timer) * 4 + 0.2);
+    ctx.save();
+    ctx.globalAlpha = Math.max(0, Math.min(1, alpha));
+    ctx.fillStyle = 'rgba(12, 8, 8, 0.78)';
+    ctx.fillRect(0, 140, CANVAS_WIDTH, 76);
+
+    ctx.fillStyle = '#ffd43b';
+    ctx.font = 'bold 26px "Inter", sans-serif';
+    ctx.textAlign = 'center';
+    ctx.fillText(banner.title, CANVAS_WIDTH / 2, 174);
+
+    if (banner.subtitle) {
+      ctx.fillStyle = '#f1f3f5';
+      ctx.font = '14px "Inter", sans-serif';
+      ctx.fillText(banner.subtitle, CANVAS_WIDTH / 2, 200);
+    }
+    ctx.restore();
+  }
+}
+
+
+// ===== main.js =====
+
+
+
+
+function bootGame() {
+  const canvas = document.getElementById('game-canvas');
+  if (!canvas) return;
+  canvas.width = CANVAS_WIDTH;
+  canvas.height = CANVAS_HEIGHT;
+
+  const sound = new SoundEngine();
+  const renderer = new IsaacRenderer(canvas);
+  const overlayEl = document.getElementById('state-overlay');
+  const overlayTitle = document.getElementById('overlay-title');
+  const overlayDesc = document.getElementById('overlay-desc');
+  const overlayBtn = document.getElementById('overlay-action');
+  const muteBtn = document.getElementById('btn-mute');
+  const pauseBtn = document.getElementById('btn-pause');
+  const restartBtn = document.getElementById('btn-restart');
+  const seedInput = document.getElementById('seed-input');
+  const seedApplyBtn = document.getElementById('btn-apply-seed');
+  const itemsDrawer = document.getElementById('items-list');
+
+  let engine = null;
+  let rafId = null;
+  let lastTs = 0;
+
+  const keys = new Set();
+  const touchState = { moveX: 0, moveY: 0, shootX: 0, shootY: 0, bomb: false, active: false };
+
+  function syncItemsUI() {
+    if (!itemsDrawer || !engine) return;
+    if (engine.player.ownedItems.length === 0) {
+      itemsDrawer.innerHTML = '<span class="item-empty">尚未拾取被动道具（探索金色宝箱房获取）</span>';
+      return;
+    }
+    itemsDrawer.innerHTML = engine.player.ownedItems
+      .map(
+        (it) =>
+          `<span class="item-chip" style="border-color:${it.color}"><i style="background:${it.color}"></i>${it.name}</span>`
+      )
+      .join('');
+  }
+
+  function syncOverlay() {
+    if (!overlayEl || !engine) return;
+    if (engine.status === 'PLAYING') {
+      overlayEl.classList.add('hidden');
+      return;
+    }
+    overlayEl.classList.remove('hidden');
+    if (engine.status === 'PAUSED') {
+      overlayTitle.textContent = '游戏已暂停';
+      overlayDesc.textContent = `当前层级：${engine.floor.theme.name} · 种子：${engine.seed}`;
+      overlayBtn.textContent = '继续冒险 (P)';
+    } else if (engine.status === 'GAMEOVER') {
+      overlayTitle.textContent = '你倒在了地下室中';
+      overlayDesc.textContent = `抵达 ${engine.floor.theme.name} · 击杀 ${engine.enemiesKilledCount} · 最终得分 ${engine.player.score}`;
+      overlayBtn.textContent = '重新开始 (R)';
+    } else if (engine.status === 'VICTORY') {
+      overlayTitle.textContent = '通关成功！';
+      overlayDesc.textContent = `恭喜击败深渊之心！清理房间 ${engine.roomsClearedCount} · 最终得分 ${engine.player.score}`;
+      overlayBtn.textContent = '开启新一局';
+    }
+  }
+
+  function startNewRun(customSeed) {
+    engine = new IsaacGameEngine({
+      seed: customSeed || undefined,
+      onEvent(type) {
+        sound.handleEvent(type);
+        if (type === 'item_pickup' || type === 'game_start') {
+          syncItemsUI();
+        }
+        if (type === 'game_over' || type === 'victory') {
+          syncOverlay();
+        }
+      }
+    });
+    if (seedInput) seedInput.value = engine.seed;
+    syncItemsUI();
+    syncOverlay();
+  }
+
+  function togglePause() {
+    if (!engine) return;
+    if (engine.status === 'PLAYING') {
+      engine.status = 'PAUSED';
+      syncOverlay();
+    } else if (engine.status === 'PAUSED') {
+      engine.status = 'PLAYING';
+      syncOverlay();
+    }
+  }
+
+  function getInput() {
+    let moveX = touchState.moveX;
+    let moveY = touchState.moveY;
+    if (keys.has('KeyA')) moveX -= 1;
+    if (keys.has('KeyD')) moveX += 1;
+    if (keys.has('KeyW')) moveY -= 1;
+    if (keys.has('KeyS')) moveY += 1;
+
+    let shootX = touchState.shootX;
+    let shootY = touchState.shootY;
+    if (keys.has('ArrowLeft')) shootX -= 1;
+    if (keys.has('ArrowRight')) shootX += 1;
+    if (keys.has('ArrowUp')) shootY -= 1;
+    if (keys.has('ArrowDown')) shootY += 1;
+
+    const bomb = keys.has('KeyE') || keys.has('ShiftLeft') || keys.has('ShiftRight') || touchState.bomb;
+    const active = keys.has('Space') || touchState.active;
+
+    return { moveX, moveY, shootX, shootY, bomb, active };
+  }
+
+  // Keyboard listeners
+  window.addEventListener('keydown', (e) => {
+    sound.unlock();
+    if (document.activeElement === seedInput) return;
+    const prevent = ['ArrowUp', 'ArrowDown', 'ArrowLeft', 'ArrowRight', 'Space'];
+    if (prevent.includes(e.code)) e.preventDefault();
+
+    if (e.code === 'KeyP' || e.code === 'Escape') {
+      togglePause();
+      return;
+    }
+    if (e.code === 'KeyR') {
+      startNewRun();
+      return;
+    }
+    if (e.code === 'KeyM') {
+      const m = sound.toggleMute();
+      if (muteBtn) muteBtn.textContent = m ? '🔇 静音' : '🔊 音效';
+      return;
+    }
+    keys.add(e.code);
+  });
+
+  window.addEventListener('keyup', (e) => {
+    keys.delete(e.code);
+  });
+
+  window.addEventListener('blur', () => {
+    keys.clear();
+  });
+
+  // UI Button listeners
+  if (muteBtn) {
+    muteBtn.addEventListener('click', () => {
+      sound.unlock();
+      const m = sound.toggleMute();
+      muteBtn.textContent = m ? '🔇 静音' : '🔊 音效';
+    });
+  }
+  if (pauseBtn) {
+    pauseBtn.addEventListener('click', () => {
+      sound.unlock();
+      togglePause();
+    });
+  }
+  if (restartBtn) {
+    restartBtn.addEventListener('click', () => {
+      sound.unlock();
+      startNewRun();
+    });
+  }
+  if (overlayBtn) {
+    overlayBtn.addEventListener('click', () => {
+      sound.unlock();
+      if (engine && engine.status === 'PAUSED') {
+        togglePause();
+      } else {
+        startNewRun();
+      }
+    });
+  }
+  if (seedApplyBtn && seedInput) {
+    seedApplyBtn.addEventListener('click', () => {
+      sound.unlock();
+      const val = seedInput.value.trim().toUpperCase();
+      startNewRun(val || undefined);
+    });
+  }
+
+  // Touch / On-screen pad bindings
+  const bindHoldButton = (id, onDown, onUp) => {
+    const el = document.getElementById(id);
+    if (!el) return;
+    const start = (ev) => {
+      ev.preventDefault();
+      sound.unlock();
+      el.classList.add('active');
+      onDown();
+    };
+    const end = (ev) => {
+      ev.preventDefault();
+      el.classList.remove('active');
+      onUp();
+    };
+    el.addEventListener('pointerdown', start);
+    el.addEventListener('pointerup', end);
+    el.addEventListener('pointerleave', end);
+    el.addEventListener('pointercancel', end);
+  };
+
+  bindHoldButton('pad-up', () => (touchState.moveY = -1), () => (touchState.moveY = 0));
+  bindHoldButton('pad-down', () => (touchState.moveY = 1), () => (touchState.moveY = 0));
+  bindHoldButton('pad-left', () => (touchState.moveX = -1), () => (touchState.moveX = 0));
+  bindHoldButton('pad-right', () => (touchState.moveX = 1), () => (touchState.moveX = 0));
+
+  bindHoldButton('shoot-up', () => (touchState.shootY = -1), () => (touchState.shootY = 0));
+  bindHoldButton('shoot-down', () => (touchState.shootY = 1), () => (touchState.shootY = 0));
+  bindHoldButton('shoot-left', () => (touchState.shootX = -1), () => (touchState.shootX = 0));
+  bindHoldButton('shoot-right', () => (touchState.shootX = 1), () => (touchState.shootX = 0));
+
+  bindHoldButton('btn-touch-bomb', () => (touchState.bomb = true), () => (touchState.bomb = false));
+  bindHoldButton('btn-touch-active', () => (touchState.active = true), () => (touchState.active = false));
+
+  // Responsive canvas sizing
+  function resizeCanvasDisplay() {
+    const wrap = document.getElementById('canvas-wrap');
+    if (!wrap) return;
+    const maxW = wrap.clientWidth;
+    const scale = Math.min(1, maxW / CANVAS_WIDTH);
+    canvas.style.width = `${Math.floor(CANVAS_WIDTH * scale)}px`;
+    canvas.style.height = `${Math.floor(CANVAS_HEIGHT * scale)}px`;
+    if (engine) renderer.render(engine);
+  }
+  window.addEventListener('resize', resizeCanvasDisplay);
+
+  function frame(ts) {
+    if (!lastTs) lastTs = ts;
+    const dt = Math.min(0.05, (ts - lastTs) / 1000);
+    lastTs = ts;
+    if (engine) {
+      engine.step(dt, getInput());
+      renderer.render(engine);
+    }
+    rafId = window.requestAnimationFrame(frame);
+  }
+
+  startNewRun();
+  resizeCanvasDisplay();
+  if (rafId) window.cancelAnimationFrame(rafId);
+  rafId = window.requestAnimationFrame(frame);
+}
+
+if (typeof window !== 'undefined') {
+  window.addEventListener('load', bootGame);
+}
+
+})();
+</script>
+</body>
+</html>

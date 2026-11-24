@@ -1,0 +1,4000 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Web HOI — 1936 欧洲战区大战略</title>
+  <style>
+:root {
+  --bg-dark: #0e141b;
+  --panel-bg: #151e28;
+  --panel-border: #2a394a;
+  --accent-gold: #d4af37;
+  --accent-blue: #38bdf8;
+  --accent-red: #ef4444;
+  --accent-green: #22c55e;
+  --text-main: #e6edf3;
+  --text-muted: #94a3b8;
+}
+
+* {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+}
+
+body {
+  font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+  background: var(--bg-dark);
+  color: var(--text-main);
+  height: 100vh;
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+  user-select: none;
+}
+
+/* 顶部指挥栏 */
+.topbar {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  padding: 8px 12px;
+  background: linear-gradient(180deg, #1b2633 0%, #111922 100%);
+  border-bottom: 1px solid var(--panel-border);
+  z-index: 20;
+}
+
+.brand-group {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.nation-select {
+  background: #0f1722;
+  color: var(--accent-gold);
+  border: 1px solid var(--accent-gold);
+  border-radius: 6px;
+  padding: 4px 8px;
+  font-weight: 700;
+  font-size: 13px;
+  cursor: pointer;
+}
+
+.stats-strip {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  align-items: center;
+}
+
+.stat-pill {
+  background: rgba(15, 23, 34, 0.85);
+  border: 1px solid var(--panel-border);
+  border-radius: 6px;
+  padding: 4px 8px;
+  font-size: 12px;
+  display: flex;
+  align-items: center;
+  gap: 5px;
+}
+
+.stat-pill strong {
+  color: #f8fafc;
+}
+
+.time-controls {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.date-display {
+  background: #0b1118;
+  border: 1px solid var(--accent-gold);
+  color: #fef08a;
+  font-weight: 700;
+  font-size: 13px;
+  padding: 4px 10px;
+  border-radius: 6px;
+  min-width: 112px;
+  text-align: center;
+}
+
+.btn {
+  background: #1e2c3b;
+  color: var(--text-main);
+  border: 1px solid #35495e;
+  border-radius: 6px;
+  padding: 5px 10px;
+  font-size: 12px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background 0.15s, border-color 0.15s;
+}
+
+.btn:hover {
+  background: #283b4f;
+  border-color: var(--accent-gold);
+}
+
+.btn.active {
+  background: var(--accent-gold);
+  color: #0e141b;
+  border-color: var(--accent-gold);
+}
+
+.btn.danger {
+  background: #7f1d1d;
+  border-color: #ef4444;
+  color: #fee2e2;
+}
+
+.btn.danger:hover {
+  background: #991b1b;
+}
+
+.btn.sm {
+  padding: 3px 7px;
+  font-size: 11px;
+}
+
+/* 主布局 */
+.main-layout {
+  flex: 1;
+  display: flex;
+  min-height: 0;
+  position: relative;
+}
+
+/* 左侧司令部面板 */
+.sidebar {
+  width: 340px;
+  max-width: 42vw;
+  background: var(--panel-bg);
+  border-right: 1px solid var(--panel-border);
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+}
+
+.tab-bar {
+  display: grid;
+  grid-template-columns: repeat(5, 1fr);
+  background: #101720;
+  border-bottom: 1px solid var(--panel-border);
+}
+
+.tab-btn {
+  background: transparent;
+  color: var(--text-muted);
+  border: none;
+  border-bottom: 2px solid transparent;
+  padding: 9px 4px;
+  font-size: 12px;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.tab-btn.active {
+  color: var(--accent-gold);
+  border-bottom-color: var(--accent-gold);
+  background: rgba(212, 175, 55, 0.08);
+}
+
+.panel-body {
+  flex: 1;
+  overflow-y: auto;
+  padding: 12px;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.card {
+  background: #101720;
+  border: 1px solid var(--panel-border);
+  border-radius: 8px;
+  padding: 10px;
+}
+
+.card-title {
+  font-size: 12px;
+  font-weight: 700;
+  color: var(--accent-gold);
+  margin-bottom: 8px;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 8px;
+  font-size: 12px;
+  padding: 4px 0;
+  border-bottom: 1px solid rgba(42, 57, 74, 0.45);
+}
+
+.row:last-child {
+  border-bottom: none;
+}
+
+.muted {
+  color: var(--text-muted);
+  font-size: 11px;
+}
+
+.progress-bar {
+  width: 100%;
+  height: 6px;
+  background: #1e293b;
+  border-radius: 999px;
+  overflow: hidden;
+  margin-top: 4px;
+}
+
+.progress-fill {
+  height: 100%;
+  background: var(--accent-gold);
+  transition: width 0.2s;
+}
+
+/* 地图视口 */
+.map-stage {
+  flex: 1;
+  position: relative;
+  min-width: 0;
+  overflow: hidden;
+}
+
+#mapCanvas {
+  display: block;
+  width: 100%;
+  height: 100%;
+  cursor: grab;
+}
+
+#mapCanvas:active {
+  cursor: grabbing;
+}
+
+.map-overlay-top {
+  position: absolute;
+  top: 10px;
+  right: 12px;
+  display: flex;
+  gap: 6px;
+  z-index: 10;
+}
+
+.map-overlay-bottom {
+  position: absolute;
+  bottom: 10px;
+  left: 12px;
+  right: 12px;
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-end;
+  gap: 10px;
+  pointer-events: none;
+  z-index: 10;
+}
+
+.province-inspector,
+.event-log {
+  pointer-events: auto;
+  background: rgba(16, 23, 32, 0.92);
+  border: 1px solid var(--panel-border);
+  border-radius: 8px;
+  padding: 10px;
+  backdrop-filter: blur(6px);
+}
+
+.province-inspector {
+  width: 280px;
+  max-width: 48%;
+}
+
+.event-log {
+  width: 340px;
+  max-width: 48%;
+  max-height: 130px;
+  overflow-y: auto;
+  font-size: 11px;
+}
+
+.log-item {
+  padding: 2px 0;
+  border-bottom: 1px solid rgba(42, 57, 74, 0.35);
+  line-height: 1.4;
+}
+
+.log-item.war { color: #fca5a5; }
+.log-item.tech { color: #7dd3fc; }
+.log-item.focus { color: #fde047; }
+.log-item.military { color: #86efac; }
+
+.toast {
+  position: fixed;
+  top: 64px;
+  left: 50%;
+  transform: translateX(-50%);
+  background: rgba(15, 23, 42, 0.95);
+  border: 1px solid var(--accent-gold);
+  color: #fef08a;
+  padding: 8px 16px;
+  border-radius: 8px;
+  font-size: 12px;
+  font-weight: 600;
+  z-index: 50;
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 0.2s;
+}
+
+.toast.show {
+  opacity: 1;
+}
+
+.badge {
+  display: inline-block;
+  padding: 1px 6px;
+  border-radius: 4px;
+  font-size: 10px;
+  font-weight: 700;
+  background: #1e293b;
+  color: #cbd5e1;
+}
+
+.badge.war { background: #7f1d1d; color: #fecaca; }
+.badge.ally { background: #14532d; color: #bbf7d0; }
+
+@media (max-width: 820px) {
+  .main-layout {
+    flex-direction: column-reverse;
+  }
+  .sidebar {
+    width: 100%;
+    max-width: 100%;
+    height: 44%;
+    border-right: none;
+    border-top: 1px solid var(--panel-border);
+  }
+  .event-log {
+    display: none;
+  }
+  .province-inspector {
+    width: 100%;
+    max-width: 100%;
+  }
+}
+
+</style>
+</head>
+<body>
+  <header class="topbar">
+    <div class="brand-group">
+      <strong style="color:#d4af37;letter-spacing:0.5px;">⚔️ WEB HOI</strong>
+      <select id="nationSelect" class="nation-select" aria-label="选择国家"></select>
+    </div>
+
+    <div class="stats-strip">
+      <div class="stat-pill">🏛 政治 <strong id="statPP">0</strong></div>
+      <div class="stat-pill">👥 人力 <strong id="statMP">0</strong></div>
+      <div class="stat-pill">🏭 工业 <strong id="statFac">0/0</strong></div>
+      <div class="stat-pill">🪖 师数 <strong id="statDivs">0</strong></div>
+      <div class="stat-pill">🌍 紧张 <strong id="statTension">0%</strong></div>
+    </div>
+
+    <div class="time-controls">
+      <div id="dateDisplay" class="date-display">1936-01-01 00:00</div>
+      <button id="btnPause" class="btn">▶ 开始</button>
+      <button class="btn sm" data-speed="1">1x</button>
+      <button class="btn sm" data-speed="3">3x</button>
+      <button class="btn sm" data-speed="5">5x</button>
+      <button id="btnSave" class="btn sm" title="保存战局">💾</button>
+      <button id="btnLoad" class="btn sm" title="读取战局">📂</button>
+      <button id="btnMute" class="btn sm" title="音效开关">🔊</button>
+    </div>
+  </header>
+
+  <main class="main-layout">
+    <aside class="sidebar">
+      <nav class="tab-bar">
+        <button class="tab-btn active" data-tab="military">军事</button>
+        <button class="tab-btn" data-tab="production">工业</button>
+        <button class="tab-btn" data-tab="research">科研</button>
+        <button class="tab-btn" data-tab="focus">国策</button>
+        <button class="tab-btn" data-tab="diplomacy">外交</button>
+      </nav>
+      <section id="panelBody" class="panel-body"></section>
+    </aside>
+
+    <section class="map-stage">
+      <canvas id="mapCanvas"></canvas>
+
+      <div class="map-overlay-top">
+        <button class="btn sm active" data-mapmode="political">政治</button>
+        <button class="btn sm" data-mapmode="terrain">地形</button>
+        <button class="btn sm" data-mapmode="supply">补给</button>
+        <button id="btnZoomIn" class="btn sm">+</button>
+        <button id="btnZoomOut" class="btn sm">-</button>
+        <button id="btnResetView" class="btn sm">重置</button>
+      </div>
+
+      <div class="map-overlay-bottom">
+        <div id="provinceInspector" class="province-inspector"></div>
+        <div id="eventLog" class="event-log"></div>
+      </div>
+    </section>
+  </main>
+
+  <div id="toast" class="toast"></div>
+  <script>
+// ===== src/data/mapData.js =====
+/**
+ * 1936 欧洲战区战略地图数据
+ * 包含 24 个核心战略省份、邻接拓扑、海路连接、地形、胜利点 (VP)、初始工厂、基础设施与战略资源。
+ * 坐标系为标准化逻辑坐标 [0..1000] x [0..640]，由渲染器按容器尺寸自适应缩放。
+ */
+const TERRAIN_TYPES = {
+  plains: {
+    id: 'plains',
+    name: '平原',
+    color: '#6b7d54',
+    attackMod: 1.0,
+    defenseMod: 1.0,
+    moveCost: 1.0,
+    supplyLimit: 14,
+  },
+  forest: {
+    id: 'forest',
+    name: '森林',
+    color: '#4b6344',
+    attackMod: 0.85,
+    defenseMod: 1.15,
+    moveCost: 1.25,
+    supplyLimit: 11,
+  },
+  hills: {
+    id: 'hills',
+    name: '丘陵',
+    color: '#7c7356',
+    attackMod: 0.8,
+    defenseMod: 1.25,
+    moveCost: 1.35,
+    supplyLimit: 10,
+  },
+  mountains: {
+    id: 'mountains',
+    name: '山地',
+    color: '#6c6864',
+    attackMod: 0.6,
+    defenseMod: 1.45,
+    moveCost: 1.75,
+    supplyLimit: 7,
+  },
+  urban: {
+    id: 'urban',
+    name: '都市',
+    color: '#7b746e',
+    attackMod: 0.75,
+    defenseMod: 1.35,
+    moveCost: 1.1,
+    supplyLimit: 16,
+  },
+  marsh: {
+    id: 'marsh',
+    name: '沼泽',
+    color: '#54685e',
+    attackMod: 0.7,
+    defenseMod: 1.2,
+    moveCost: 1.6,
+    supplyLimit: 8,
+  },
+};
+
+/**
+ * 陆地轮廓裁剪多边形（英国本岛 + 欧洲大陆），用于生成无接缝 Voronoi 省界
+ */
+const LAND_MASKS = {
+  britain: [
+    [135, 95], [195, 85], [225, 130], [235, 195], [225, 250],
+    [150, 260], [120, 225], [130, 165],
+  ],
+  mainland: [
+    [120, 295], [235, 275], [325, 225], [385, 175], [475, 165],
+    [560, 145], [640, 110], [725, 80], [875, 75], [955, 125],
+    [965, 365], [925, 505], [815, 525], [700, 480], [600, 470],
+    [520, 495], [495, 585], [430, 590], [385, 505], [340, 475],
+    [250, 500], [150, 475], [105, 390],
+  ],
+};
+const PROVINCES = [
+  // 英国 (ENG)
+  {
+    id: 'edinburgh',
+    name: '爱丁堡',
+    region: 'britain',
+    x: 175,
+    y: 138,
+    owner: 'ENG',
+    terrain: 'hills',
+    vp: 8,
+    civFactories: 2,
+    milFactories: 1,
+    infra: 4,
+    supplyHub: false,
+    resources: { steel: 8, oil: 0, tungsten: 2 },
+    neighbors: ['london'],
+    seaNeighbors: [],
+  },
+  {
+    id: 'london',
+    name: '伦敦',
+    region: 'britain',
+    x: 185,
+    y: 215,
+    owner: 'ENG',
+    terrain: 'urban',
+    vp: 25,
+    isCapital: true,
+    civFactories: 5,
+    milFactories: 4,
+    infra: 5,
+    supplyHub: true,
+    resources: { steel: 14, oil: 4, tungsten: 4 },
+    neighbors: ['edinburgh'],
+    seaNeighbors: ['normandy'],
+  },
+
+  // 法国 (FRA)
+  {
+    id: 'normandy',
+    name: '诺曼底',
+    region: 'mainland',
+    x: 185,
+    y: 325,
+    owner: 'FRA',
+    terrain: 'plains',
+    vp: 6,
+    civFactories: 2,
+    milFactories: 1,
+    infra: 4,
+    supplyHub: true,
+    resources: { steel: 6, oil: 0, tungsten: 1 },
+    neighbors: ['paris', 'bordeaux'],
+    seaNeighbors: ['london'],
+  },
+  {
+    id: 'paris',
+    name: '巴黎',
+    region: 'mainland',
+    x: 255,
+    y: 335,
+    owner: 'FRA',
+    terrain: 'urban',
+    vp: 25,
+    isCapital: true,
+    civFactories: 5,
+    milFactories: 3,
+    infra: 5,
+    supplyHub: true,
+    resources: { steel: 10, oil: 2, tungsten: 2 },
+    neighbors: ['normandy', 'bordeaux', 'alsace', 'marseille'],
+    seaNeighbors: [],
+  },
+  {
+    id: 'bordeaux',
+    name: '波尔多',
+    region: 'mainland',
+    x: 175,
+    y: 425,
+    owner: 'FRA',
+    terrain: 'forest',
+    vp: 6,
+    civFactories: 2,
+    milFactories: 1,
+    infra: 3,
+    supplyHub: false,
+    resources: { steel: 5, oil: 1, tungsten: 2 },
+    neighbors: ['normandy', 'paris', 'marseille'],
+    seaNeighbors: [],
+  },
+  {
+    id: 'alsace',
+    name: '阿尔萨斯',
+    region: 'mainland',
+    x: 328,
+    y: 342,
+    owner: 'FRA',
+    terrain: 'hills',
+    vp: 8,
+    civFactories: 2,
+    milFactories: 2,
+    infra: 4,
+    fortLevel: 3,
+    supplyHub: false,
+    resources: { steel: 12, oil: 0, tungsten: 1 },
+    neighbors: ['paris', 'marseille', 'rhineland', 'munich'],
+    seaNeighbors: [],
+  },
+  {
+    id: 'marseille',
+    name: '马赛',
+    region: 'mainland',
+    x: 280,
+    y: 445,
+    owner: 'FRA',
+    terrain: 'hills',
+    vp: 10,
+    civFactories: 2,
+    milFactories: 1,
+    infra: 4,
+    supplyHub: true,
+    resources: { steel: 6, oil: 2, tungsten: 1 },
+    neighbors: ['paris', 'bordeaux', 'alsace', 'milan'],
+    seaNeighbors: [],
+  },
+
+  // 德国 (GER)
+  {
+    id: 'rhineland',
+    name: '莱茵兰',
+    region: 'mainland',
+    x: 372,
+    y: 268,
+    owner: 'GER',
+    terrain: 'urban',
+    vp: 14,
+    civFactories: 4,
+    milFactories: 3,
+    infra: 5,
+    supplyHub: true,
+    resources: { steel: 18, oil: 2, tungsten: 2 },
+    neighbors: ['alsace', 'berlin', 'munich'],
+    seaNeighbors: [],
+  },
+  {
+    id: 'berlin',
+    name: '柏林',
+    region: 'mainland',
+    x: 455,
+    y: 230,
+    owner: 'GER',
+    terrain: 'urban',
+    vp: 30,
+    isCapital: true,
+    civFactories: 5,
+    milFactories: 5,
+    infra: 5,
+    supplyHub: true,
+    resources: { steel: 16, oil: 3, tungsten: 4 },
+    neighbors: ['rhineland', 'munich', 'prague', 'danzig', 'warsaw'],
+    seaNeighbors: [],
+  },
+  {
+    id: 'munich',
+    name: '慕尼黑',
+    region: 'mainland',
+    x: 432,
+    y: 342,
+    owner: 'GER',
+    terrain: 'hills',
+    vp: 12,
+    civFactories: 3,
+    milFactories: 3,
+    infra: 4,
+    supplyHub: false,
+    resources: { steel: 10, oil: 1, tungsten: 3 },
+    neighbors: ['alsace', 'rhineland', 'berlin', 'prague', 'vienna', 'milan'],
+    seaNeighbors: [],
+  },
+  {
+    id: 'prague',
+    name: '布拉格',
+    region: 'mainland',
+    x: 508,
+    y: 315,
+    owner: 'GER',
+    terrain: 'forest',
+    vp: 12,
+    civFactories: 3,
+    milFactories: 3,
+    infra: 4,
+    supplyHub: true,
+    resources: { steel: 12, oil: 0, tungsten: 3 },
+    neighbors: ['berlin', 'munich', 'vienna', 'krakow', 'warsaw'],
+    seaNeighbors: [],
+  },
+  {
+    id: 'vienna',
+    name: '维也纳',
+    region: 'mainland',
+    x: 530,
+    y: 395,
+    owner: 'GER',
+    terrain: 'hills',
+    vp: 10,
+    civFactories: 2,
+    milFactories: 2,
+    infra: 4,
+    supplyHub: false,
+    resources: { steel: 8, oil: 2, tungsten: 1 },
+    neighbors: ['munich', 'prague', 'milan', 'krakow'],
+    seaNeighbors: [],
+  },
+
+  // 意大利 (ITA)
+  {
+    id: 'milan',
+    name: '米兰',
+    region: 'mainland',
+    x: 412,
+    y: 435,
+    owner: 'ITA',
+    terrain: 'mountains',
+    vp: 12,
+    civFactories: 3,
+    milFactories: 3,
+    infra: 4,
+    supplyHub: true,
+    resources: { steel: 10, oil: 1, tungsten: 2 },
+    neighbors: ['marseille', 'munich', 'vienna', 'rome'],
+    seaNeighbors: [],
+  },
+  {
+    id: 'rome',
+    name: '罗马',
+    region: 'mainland',
+    x: 445,
+    y: 505,
+    owner: 'ITA',
+    terrain: 'urban',
+    vp: 22,
+    isCapital: true,
+    civFactories: 4,
+    milFactories: 3,
+    infra: 4,
+    supplyHub: true,
+    resources: { steel: 8, oil: 2, tungsten: 1 },
+    neighbors: ['milan', 'naples'],
+    seaNeighbors: [],
+  },
+  {
+    id: 'naples',
+    name: '那不勒斯',
+    region: 'mainland',
+    x: 472,
+    y: 562,
+    owner: 'ITA',
+    terrain: 'hills',
+    vp: 8,
+    civFactories: 2,
+    milFactories: 1,
+    infra: 3,
+    supplyHub: false,
+    resources: { steel: 4, oil: 2, tungsten: 1 },
+    neighbors: ['rome'],
+    seaNeighbors: [],
+  },
+
+  // 波兰 (POL)
+  {
+    id: 'danzig',
+    name: '但泽',
+    region: 'mainland',
+    x: 548,
+    y: 190,
+    owner: 'POL',
+    terrain: 'plains',
+    vp: 10,
+    civFactories: 2,
+    milFactories: 1,
+    infra: 4,
+    supplyHub: true,
+    resources: { steel: 6, oil: 0, tungsten: 1 },
+    neighbors: ['berlin', 'warsaw', 'leningrad', 'minsk'],
+    seaNeighbors: [],
+  },
+  {
+    id: 'warsaw',
+    name: '华沙',
+    region: 'mainland',
+    x: 595,
+    y: 262,
+    owner: 'POL',
+    terrain: 'urban',
+    vp: 20,
+    isCapital: true,
+    civFactories: 3,
+    milFactories: 3,
+    infra: 4,
+    supplyHub: true,
+    resources: { steel: 10, oil: 1, tungsten: 2 },
+    neighbors: ['berlin', 'prague', 'danzig', 'krakow', 'minsk'],
+    seaNeighbors: [],
+  },
+  {
+    id: 'krakow',
+    name: '克拉科夫',
+    region: 'mainland',
+    x: 615,
+    y: 358,
+    owner: 'POL',
+    terrain: 'hills',
+    vp: 10,
+    civFactories: 2,
+    milFactories: 2,
+    infra: 3,
+    supplyHub: false,
+    resources: { steel: 8, oil: 2, tungsten: 1 },
+    neighbors: ['prague', 'vienna', 'warsaw', 'minsk', 'kiev'],
+    seaNeighbors: [],
+  },
+
+  // 苏联 (SOV)
+  {
+    id: 'leningrad',
+    name: '列宁格勒',
+    region: 'mainland',
+    x: 725,
+    y: 138,
+    owner: 'SOV',
+    terrain: 'urban',
+    vp: 18,
+    civFactories: 4,
+    milFactories: 3,
+    infra: 4,
+    supplyHub: true,
+    resources: { steel: 14, oil: 2, tungsten: 3 },
+    neighbors: ['danzig', 'minsk', 'smolensk', 'moscow'],
+    seaNeighbors: [],
+  },
+  {
+    id: 'minsk',
+    name: '明斯克',
+    region: 'mainland',
+    x: 695,
+    y: 252,
+    owner: 'SOV',
+    terrain: 'marsh',
+    vp: 10,
+    civFactories: 2,
+    milFactories: 2,
+    infra: 3,
+    supplyHub: true,
+    resources: { steel: 8, oil: 2, tungsten: 2 },
+    neighbors: ['danzig', 'warsaw', 'krakow', 'leningrad', 'smolensk', 'kiev'],
+    seaNeighbors: [],
+  },
+  {
+    id: 'kiev',
+    name: '基辅',
+    region: 'mainland',
+    x: 725,
+    y: 385,
+    owner: 'SOV',
+    terrain: 'plains',
+    vp: 16,
+    civFactories: 4,
+    milFactories: 3,
+    infra: 4,
+    supplyHub: true,
+    resources: { steel: 16, oil: 4, tungsten: 3 },
+    neighbors: ['krakow', 'minsk', 'smolensk', 'kharkov'],
+    seaNeighbors: [],
+  },
+  {
+    id: 'smolensk',
+    name: '斯摩棱斯克',
+    region: 'mainland',
+    x: 785,
+    y: 235,
+    owner: 'SOV',
+    terrain: 'forest',
+    vp: 10,
+    civFactories: 2,
+    milFactories: 2,
+    infra: 3,
+    supplyHub: false,
+    resources: { steel: 10, oil: 2, tungsten: 2 },
+    neighbors: ['leningrad', 'minsk', 'kiev', 'moscow', 'kharkov'],
+    seaNeighbors: [],
+  },
+  {
+    id: 'moscow',
+    name: '莫斯科',
+    region: 'mainland',
+    x: 878,
+    y: 195,
+    owner: 'SOV',
+    terrain: 'urban',
+    vp: 35,
+    isCapital: true,
+    civFactories: 6,
+    milFactories: 6,
+    infra: 5,
+    supplyHub: true,
+    resources: { steel: 22, oil: 10, tungsten: 6 },
+    neighbors: ['leningrad', 'smolensk', 'stalingrad'],
+    seaNeighbors: [],
+  },
+  {
+    id: 'kharkov',
+    name: '哈尔科夫',
+    region: 'mainland',
+    x: 835,
+    y: 375,
+    owner: 'SOV',
+    terrain: 'plains',
+    vp: 12,
+    civFactories: 3,
+    milFactories: 3,
+    infra: 4,
+    supplyHub: true,
+    resources: { steel: 16, oil: 6, tungsten: 4 },
+    neighbors: ['kiev', 'smolensk', 'stalingrad'],
+    seaNeighbors: [],
+  },
+  {
+    id: 'stalingrad',
+    name: '斯大林格勒',
+    region: 'mainland',
+    x: 912,
+    y: 445,
+    owner: 'SOV',
+    terrain: 'urban',
+    vp: 22,
+    civFactories: 4,
+    milFactories: 4,
+    infra: 4,
+    supplyHub: true,
+    resources: { steel: 18, oil: 16, tungsten: 4 },
+    neighbors: ['moscow', 'kharkov'],
+    seaNeighbors: [],
+  },
+];
+function getAllNeighbors(province) {
+  return [...province.neighbors, ...(province.seaNeighbors || [])];
+}
+
+
+// ===== src/data/nations.js =====
+/**
+ * 1936 年 6 大主要国家初始设定与陆军师级编制模板
+ */
+const DIVISION_TEMPLATES = {
+  infantry: {
+    id: 'infantry',
+    name: '步兵师',
+    shortName: '步',
+    symbol: 'INF',
+    manpower: 10000,
+    equipmentCost: { infantry_eq: 100, artillery: 12 },
+    maxOrg: 60,
+    maxHp: 100,
+    softAttack: 18,
+    hardAttack: 4,
+    defense: 26,
+    breakthrough: 10,
+    armor: 0,
+    piercing: 5,
+    speed: 1.0, // 每 24 小时基础推进进度
+    supplyUse: 1.0,
+    trainDays: 30,
+  },
+  motorized: {
+    id: 'motorized',
+    name: '摩托化步兵师',
+    shortName: '摩',
+    symbol: 'MOT',
+    manpower: 11000,
+    equipmentCost: { infantry_eq: 110, artillery: 16, trucks: 40 },
+    maxOrg: 56,
+    maxHp: 105,
+    softAttack: 22,
+    hardAttack: 6,
+    defense: 24,
+    breakthrough: 18,
+    armor: 4,
+    piercing: 8,
+    speed: 1.65,
+    supplyUse: 1.4,
+    trainDays: 38,
+  },
+  armor: {
+    id: 'armor',
+    name: '装甲师',
+    shortName: '装',
+    symbol: 'ARM',
+    manpower: 9000,
+    equipmentCost: { infantry_eq: 60, tanks: 60, trucks: 25 },
+    maxOrg: 48,
+    maxHp: 120,
+    softAttack: 30,
+    hardAttack: 20,
+    defense: 20,
+    breakthrough: 36,
+    armor: 28,
+    piercing: 26,
+    speed: 1.85,
+    supplyUse: 2.0,
+    trainDays: 45,
+  },
+  mountaineer: {
+    id: 'mountaineer',
+    name: '山地步兵师',
+    shortName: '山',
+    symbol: 'MTN',
+    manpower: 9500,
+    equipmentCost: { infantry_eq: 120, artillery: 10 },
+    maxOrg: 66,
+    maxHp: 98,
+    softAttack: 20,
+    hardAttack: 5,
+    defense: 30,
+    breakthrough: 14,
+    armor: 0,
+    piercing: 6,
+    speed: 1.1,
+    supplyUse: 0.9,
+    trainDays: 35,
+    mountainBonus: 1.3,
+  },
+};
+const EQUIPMENT_CATALOG = {
+  infantry_eq: {
+    id: 'infantry_eq',
+    name: '步兵装备',
+    icCost: 0.5,
+    resources: { steel: 1 },
+  },
+  artillery: {
+    id: 'artillery',
+    name: '牵引火炮',
+    icCost: 3.5,
+    resources: { steel: 2, tungsten: 1 },
+  },
+  trucks: {
+    id: 'trucks',
+    name: '军用卡车',
+    icCost: 2.5,
+    resources: { steel: 1, oil: 1 },
+  },
+  tanks: {
+    id: 'tanks',
+    name: '中型坦克',
+    icCost: 8.0,
+    resources: { steel: 3, oil: 2, tungsten: 1 },
+  },
+};
+const NATIONS = {
+  GER: {
+    id: 'GER',
+    name: '德意志国',
+    shortName: '德国',
+    flag: '🇩🇪',
+    ideology: '轴心阵营',
+    faction: 'Axis',
+    color: '#5a6672',
+    borderColor: '#d9c48b',
+    capital: 'berlin',
+    manpower: 850000,
+    politicalPower: 75,
+    stability: 0.78,
+    warSupport: 0.72,
+    startingEquipment: { infantry_eq: 800, artillery: 90, trucks: 140, tanks: 110 },
+    startingDivisions: [
+      { province: 'berlin', template: 'armor', name: '第1装甲师' },
+      { province: 'berlin', template: 'infantry', name: '第1步兵师' },
+      { province: 'rhineland', template: 'armor', name: '第2装甲师' },
+      { province: 'rhineland', template: 'infantry', name: '第2步兵师' },
+      { province: 'rhineland', template: 'motorized', name: '第1摩步师' },
+      { province: 'munich', template: 'mountaineer', name: '第1山地师' },
+      { province: 'prague', template: 'infantry', name: '第3步兵师' },
+      { province: 'vienna', template: 'infantry', name: '第4步兵师' },
+    ],
+    aiProfile: { aggression: 0.85, focusPriority: ['rhineland_remil', 'four_year_plan', 'danzig_or_war'] },
+  },
+  SOV: {
+    id: 'SOV',
+    name: '苏维埃联盟',
+    shortName: '苏联',
+    flag: '🇷🇺',
+    ideology: '共产国际',
+    faction: 'Comintern',
+    color: '#9b3a3a',
+    borderColor: '#f1c27d',
+    capital: 'moscow',
+    manpower: 2200000,
+    politicalPower: 65,
+    stability: 0.65,
+    warSupport: 0.68,
+    startingEquipment: { infantry_eq: 1100, artillery: 120, trucks: 100, tanks: 130 },
+    startingDivisions: [
+      { province: 'moscow', template: 'armor', name: '近卫第1坦克师' },
+      { province: 'moscow', template: 'infantry', name: '红军第1步兵师' },
+      { province: 'leningrad', template: 'infantry', name: '列宁格勒步兵师' },
+      { province: 'minsk', template: 'infantry', name: '白俄罗斯步兵师' },
+      { province: 'minsk', template: 'motorized', name: '西部摩步师' },
+      { province: 'kiev', template: 'armor', name: '基辅坦克师' },
+      { province: 'kiev', template: 'infantry', name: '乌克兰步兵师' },
+      { province: 'stalingrad', template: 'infantry', name: '伏尔加步兵师' },
+    ],
+    aiProfile: { aggression: 0.55, focusPriority: ['five_year_plan', 'heavy_industry', 'red_army_reform'] },
+  },
+  FRA: {
+    id: 'FRA',
+    name: '法兰西共和国',
+    shortName: '法国',
+    flag: '🇫🇷',
+    ideology: '同盟国',
+    faction: 'Allies',
+    color: '#3f6999',
+    borderColor: '#a8d1ff',
+    capital: 'paris',
+    manpower: 680000,
+    politicalPower: 50,
+    stability: 0.58,
+    warSupport: 0.52,
+    startingEquipment: { infantry_eq: 650, artillery: 80, trucks: 90, tanks: 70 },
+    startingDivisions: [
+      { province: 'paris', template: 'armor', name: '第1轻机械化师' },
+      { province: 'paris', template: 'infantry', name: '巴黎卫戍师' },
+      { province: 'alsace', template: 'infantry', name: '马奇诺第1师' },
+      { province: 'alsace', template: 'infantry', name: '马奇诺第2师' },
+      { province: 'normandy', template: 'infantry', name: '诺曼底海防师' },
+      { province: 'marseille', template: 'mountaineer', name: '阿尔卑斯山地师' },
+    ],
+    aiProfile: { aggression: 0.35, focusPriority: ['defensive_focus', 'industrial_modernization'] },
+  },
+  ENG: {
+    id: 'ENG',
+    name: '联合王国',
+    shortName: '英国',
+    flag: '🇬🇧',
+    ideology: '同盟国',
+    faction: 'Allies',
+    color: '#b06459',
+    borderColor: '#ffd4c2',
+    capital: 'london',
+    manpower: 740000,
+    politicalPower: 80,
+    stability: 0.82,
+    warSupport: 0.58,
+    startingEquipment: { infantry_eq: 700, artillery: 75, trucks: 130, tanks: 80 },
+    startingDivisions: [
+      { province: 'london', template: 'motorized', name: '第1远征摩步师' },
+      { province: 'london', template: 'armor', name: '皇家第1装甲师' },
+      { province: 'london', template: 'infantry', name: '本土近卫步兵师' },
+      { province: 'edinburgh', template: 'infantry', name: '高地步兵师' },
+    ],
+    aiProfile: { aggression: 0.45, focusPriority: ['industrial_modernization', 'rearmament_act'] },
+  },
+  ITA: {
+    id: 'ITA',
+    name: '意大利王国',
+    shortName: '意大利',
+    flag: '🇮🇹',
+    ideology: '轴心阵营',
+    faction: 'Axis',
+    color: '#4e7a56',
+    borderColor: '#b9e3be',
+    capital: 'rome',
+    manpower: 620000,
+    politicalPower: 60,
+    stability: 0.68,
+    warSupport: 0.65,
+    startingEquipment: { infantry_eq: 550, artillery: 60, trucks: 70, tanks: 50 },
+    startingDivisions: [
+      { province: 'milan', template: 'mountaineer', name: '阿尔卑斯第1师' },
+      { province: 'milan', template: 'infantry', name: '伦巴第步兵师' },
+      { province: 'rome', template: 'motorized', name: '第1摩托化师' },
+      { province: 'naples', template: 'infantry', name: '南部步兵师' },
+    ],
+    aiProfile: { aggression: 0.62, focusPriority: ['four_year_plan', 'rearmament_act'] },
+  },
+  POL: {
+    id: 'POL',
+    name: '波兰第二共和国',
+    shortName: '波兰',
+    flag: '🇵🇱',
+    ideology: '同盟国',
+    faction: 'Allies',
+    color: '#9c627a',
+    borderColor: '#f3bed3',
+    capital: 'warsaw',
+    manpower: 520000,
+    politicalPower: 55,
+    stability: 0.72,
+    warSupport: 0.74,
+    startingEquipment: { infantry_eq: 520, artillery: 55, trucks: 50, tanks: 40 },
+    startingDivisions: [
+      { province: 'warsaw', template: 'infantry', name: '华沙第1步兵师' },
+      { province: 'warsaw', template: 'motorized', name: '波兰机械化旅' },
+      { province: 'danzig', template: 'infantry', name: '波美拉尼亚步兵师' },
+      { province: 'krakow', template: 'infantry', name: '克拉科夫步兵师' },
+    ],
+    aiProfile: { aggression: 0.3, focusPriority: ['defensive_focus', 'rearmament_act'] },
+  },
+};
+
+
+// ===== src/data/technologies.js =====
+/**
+ * 科技树定义：步兵、装甲、工业、陆军学说四大领域共 12 项科技
+ */
+const TECHNOLOGIES = [
+  // 步兵与火炮
+  {
+    id: 'inf_weapons_1',
+    name: '改进型步兵武器',
+    branch: 'infantry',
+    branchName: '步兵科技',
+    costDays: 40,
+    prereq: [],
+    desc: '提升全体部队软攻 +12%、防御 +8%。',
+    effects: { softAttackMult: 0.12, defenseMult: 0.08 },
+  },
+  {
+    id: 'artillery_modern',
+    name: '现代化师属火炮',
+    branch: 'infantry',
+    branchName: '步兵科技',
+    costDays: 55,
+    prereq: ['inf_weapons_1'],
+    desc: '强化火力覆盖，全体部队软攻 +18%、突破 +10%。',
+    effects: { softAttackMult: 0.18, breakthroughMult: 0.1 },
+  },
+  {
+    id: 'anti_tank_1',
+    name: '反坦克火炮',
+    branch: 'infantry',
+    branchName: '步兵科技',
+    costDays: 50,
+    prereq: ['inf_weapons_1'],
+    desc: '提升硬攻 +25%、穿甲值 +10，有效克制敌方装甲师。',
+    effects: { hardAttackMult: 0.25, piercingFlat: 10 },
+  },
+
+  // 装甲与机械化
+  {
+    id: 'medium_tank_1',
+    name: '中型坦克量产',
+    branch: 'armor',
+    branchName: '装甲科技',
+    costDays: 50,
+    prereq: [],
+    desc: '装甲师装甲值 +8、突破 +15%。',
+    effects: { armorFlat: 8, breakthroughMult: 0.15 },
+  },
+  {
+    id: 'heavy_armor_doctrine',
+    name: '倾斜装甲与长管火炮',
+    branch: 'armor',
+    branchName: '装甲科技',
+    costDays: 65,
+    prereq: ['medium_tank_1'],
+    desc: '装甲值 +12、硬攻 +20%、穿甲 +8。',
+    effects: { armorFlat: 12, hardAttackMult: 0.2, piercingFlat: 8 },
+  },
+  {
+    id: 'motorized_logistics',
+    name: '机械化后勤补给',
+    branch: 'armor',
+    branchName: '装甲科技',
+    costDays: 45,
+    prereq: ['medium_tank_1'],
+    desc: '行军速度 +15%、补给消耗降低 15%。',
+    effects: { speedMult: 0.15, supplyUseMult: -0.15 },
+  },
+
+  // 工业与建造
+  {
+    id: 'basic_machine_tools',
+    name: '基础机床工具',
+    branch: 'industry',
+    branchName: '工业科技',
+    costDays: 35,
+    prereq: [],
+    desc: '军工生产效率 +15%。',
+    effects: { factoryOutputMult: 0.15 },
+  },
+  {
+    id: 'concentrated_industry',
+    name: '集中工业体系',
+    branch: 'industry',
+    branchName: '工业科技',
+    costDays: 55,
+    prereq: ['basic_machine_tools'],
+    desc: '军工产能 +20%、民用建造速度 +15%。',
+    effects: { factoryOutputMult: 0.2, constructionMult: 0.15 },
+  },
+  {
+    id: 'excavation_1',
+    name: '战略资源勘探',
+    branch: 'industry',
+    branchName: '工业科技',
+    costDays: 45,
+    prereq: ['basic_machine_tools'],
+    desc: '全国钢铁、石油、钨矿产出提升 +25%。',
+    effects: { resourceMult: 0.25 },
+  },
+
+  // 陆军学说
+  {
+    id: 'mobile_warfare',
+    name: '机动战学说',
+    branch: 'doctrine',
+    branchName: '陆军学说',
+    costDays: 50,
+    prereq: [],
+    desc: '部队最大组织度 +8、突破 +15%、行军速度 +10%。',
+    effects: { maxOrgFlat: 8, breakthroughMult: 0.15, speedMult: 0.1 },
+  },
+  {
+    id: 'deep_battle',
+    name: '大纵深作战理论',
+    branch: 'doctrine',
+    branchName: '陆军学说',
+    costDays: 60,
+    prereq: ['mobile_warfare'],
+    desc: '组织度恢复速率 +25%、补给消耗 -10%、最大组织度 +6。',
+    effects: { orgRecoveryMult: 0.25, supplyUseMult: -0.1, maxOrgFlat: 6 },
+  },
+  {
+    id: 'superior_firepower',
+    name: '优势火力协同',
+    branch: 'doctrine',
+    branchName: '陆军学说',
+    costDays: 60,
+    prereq: ['mobile_warfare'],
+    desc: '软攻 +15%、防御 +15%、组织度 +5。',
+    effects: { softAttackMult: 0.15, defenseMult: 0.15, maxOrgFlat: 5 },
+  },
+];
+
+
+// ===== src/data/focuses.js =====
+/**
+ * 国家焦点树 (National Focus Tree)
+ * 每个焦点需要消耗固定天数，完成后触发工业、政治、军事或外交效果。
+ */
+const NATIONAL_FOCUSES = [
+  {
+    id: 'four_year_plan',
+    name: '四年工业计划',
+    category: '经济',
+    days: 35,
+    prereq: [],
+    desc: '首都新增 2 座民用工厂，政治点数 +30。',
+    effect: { addCivToCapital: 2, politicalPower: 30 },
+  },
+  {
+    id: 'five_year_plan',
+    name: '重工业五年计划',
+    category: '经济',
+    days: 35,
+    prereq: [],
+    desc: '首都新增 2 座军用工厂，稳定度 +5%。',
+    effect: { addMilToCapital: 2, stability: 0.05 },
+  },
+  {
+    id: 'industrial_modernization',
+    name: '工业现代化改造',
+    category: '经济',
+    days: 30,
+    prereq: [],
+    desc: '首都新增 1 座民工与 1 座军工，政治点数 +25。',
+    effect: { addCivToCapital: 1, addMilToCapital: 1, politicalPower: 25 },
+  },
+  {
+    id: 'rearmament_act',
+    name: '全面重整军备法案',
+    category: '军事',
+    days: 35,
+    prereq: ['industrial_modernization'],
+    desc: '战争支持度 +10%，补充 300 步兵装备与 30 辆中型坦克。',
+    effect: { warSupport: 0.1, equipment: { infantry_eq: 300, tanks: 30 }, tension: 5 },
+  },
+  {
+    id: 'rhineland_remil',
+    name: '进军莱茵兰',
+    category: '政治',
+    days: 30,
+    prereq: [],
+    desc: '政治点数 +80，战争支持度 +8%，全球紧张度 +6%。',
+    effect: { politicalPower: 80, warSupport: 0.08, tension: 6 },
+  },
+  {
+    id: 'heavy_industry',
+    name: '乌拉尔军工扩张',
+    category: '经济',
+    days: 40,
+    prereq: ['five_year_plan'],
+    desc: '首都新增 2 座军工，补充 40 辆中型坦克与 40 门火炮。',
+    effect: { addMilToCapital: 2, equipment: { tanks: 40, artillery: 40 } },
+  },
+  {
+    id: 'defensive_focus',
+    name: '边境要塞化工程',
+    category: '军事',
+    days: 35,
+    prereq: [],
+    desc: '全国前线稳定度 +6%，补充 350 步兵装备与 40 门火炮。',
+    effect: { stability: 0.06, equipment: { infantry_eq: 350, artillery: 40 } },
+  },
+  {
+    id: 'red_army_reform',
+    name: '总参谋部军事改革',
+    category: '军事',
+    days: 40,
+    prereq: ['heavy_industry'],
+    desc: '人力动员 +300,000，战争支持度 +10%。',
+    effect: { manpower: 300000, warSupport: 0.1 },
+  },
+  {
+    id: 'danzig_or_war',
+    name: '但泽或战争',
+    category: '外交',
+    days: 35,
+    prereq: ['rhineland_remil'],
+    desc: '政治点数 +50，战争支持度 +12%，全球紧张度 +15%，获得强硬宣战借口。',
+    effect: { politicalPower: 50, warSupport: 0.12, tension: 15, manpower: 200000 },
+  },
+];
+
+
+// ===== src/engine/combat.js =====
+/**
+ * HOI 核心战斗结算引擎
+ * 完整实现软攻/硬攻、防御/突破、装甲率/穿甲判定、地形修正、要塞、堑壕、补给惩罚与组织度/兵力损耗。
+ */
+
+
+
+/**
+ * 汇总国家已解锁科技对部队属性的加成
+ */
+function computeNationTechModifiers(nation) {
+  const mods = {
+    softAttackMult: 1.0,
+    hardAttackMult: 1.0,
+    defenseMult: 1.0,
+    breakthroughMult: 1.0,
+    armorFlat: 0,
+    piercingFlat: 0,
+    speedMult: 1.0,
+    supplyUseMult: 1.0,
+    maxOrgFlat: 0,
+    orgRecoveryMult: 1.0,
+    factoryOutputMult: 1.0,
+    constructionMult: 1.0,
+    resourceMult: 1.0,
+  };
+
+  const completed = nation?.completedTechs || [];
+  for (const techId of completed) {
+    const tech = TECHNOLOGIES.find((t) => t.id === techId);
+    if (!tech) continue;
+    for (const [k, v] of Object.entries(tech.effects)) {
+      if (k in mods) {
+        mods[k] += v;
+      }
+    }
+  }
+  mods.supplyUseMult = Math.max(0.4, mods.supplyUseMult);
+  return mods;
+}
+
+/**
+ * 计算单个师在当前科技、补给、兵力比与地形下的有效战斗属性
+ */
+function computeDivisionStats(division, nation, province, isAttacker) {
+  const tpl = DIVISION_TEMPLATES[division.template] || DIVISION_TEMPLATES.infantry;
+  const mods = computeNationTechModifiers(nation);
+  const terrain = TERRAIN_TYPES[province?.terrain] || TERRAIN_TYPES.plains;
+
+  const strengthRatio = Math.max(0.15, division.hp / tpl.maxHp);
+  const supplyFactor = 0.45 + 0.55 * Math.min(1, Math.max(0, division.supply ?? 1));
+  const terrainMod = isAttacker ? terrain.attackMod : terrain.defenseMod;
+  const mountainBonus =
+    tpl.mountainBonus && (terrain.id === 'mountains' || terrain.id === 'hills')
+      ? tpl.mountainBonus
+      : 1.0;
+
+  // 防守方享受堑壕与要塞加成；进攻方受要塞削弱
+  const entrenchBonus = isAttacker ? 1.0 : 1.0 + Math.min(0.25, (division.entrenchment || 0) * 0.05);
+  const fortLevel = province?.fortLevel || 0;
+  const fortMod = isAttacker
+    ? Math.max(0.4, 1.0 - fortLevel * 0.12)
+    : 1.0 + fortLevel * 0.08;
+
+  const composite = strengthRatio * supplyFactor * terrainMod * mountainBonus * entrenchBonus * fortMod;
+
+  const maxOrg = tpl.maxOrg + mods.maxOrgFlat;
+  const armor = tpl.armor > 0 ? tpl.armor + mods.armorFlat : 0;
+  const piercing = tpl.piercing + mods.piercingFlat;
+  // 装甲率（hardness）决定吃硬攻还是软攻比例
+  const hardness = tpl.armor >= 20 ? 0.65 : tpl.armor > 0 ? 0.25 : 0.05;
+
+  return {
+    softAttack: tpl.softAttack * mods.softAttackMult * composite,
+    hardAttack: tpl.hardAttack * mods.hardAttackMult * composite,
+    defense: tpl.defense * mods.defenseMult * composite,
+    breakthrough: tpl.breakthrough * mods.breakthroughMult * composite,
+    armor,
+    piercing,
+    hardness,
+    maxOrg,
+    speed: tpl.speed * mods.speedMult * (0.6 + 0.4 * Math.min(1, division.supply ?? 1)),
+  };
+}
+
+/**
+ * 计算单次战斗小时轮次伤害
+ * 当一方的装甲值 > 对方穿甲值时，获得装甲优势（输出 +35%，承伤 -40%）
+ */
+function calculateExchange(attackerStats, defenderStats) {
+  const atkRaw =
+    attackerStats.softAttack * (1 - defenderStats.hardness) +
+    attackerStats.hardAttack * defenderStats.hardness;
+  const defRaw =
+    defenderStats.softAttack * (1 - attackerStats.hardness) +
+    defenderStats.hardAttack * attackerStats.hardness;
+
+  const attackerHasArmorAdv = attackerStats.armor > defenderStats.piercing;
+  const defenderHasArmorAdv = defenderStats.armor > attackerStats.piercing;
+
+  // 超过对方防御/突破的部分造成 2.5 倍暴击伤害（简化版 HOI4 命中机制）
+  const atkBlocked = Math.min(atkRaw, defenderStats.defense);
+  const atkExcess = Math.max(0, atkRaw - defenderStats.defense);
+  let dmgToDefender = atkBlocked * 0.08 + atkExcess * 0.22;
+
+  const defBlocked = Math.min(defRaw, attackerStats.breakthrough);
+  const defExcess = Math.max(0, defRaw - attackerStats.breakthrough);
+  let dmgToAttacker = defBlocked * 0.08 + defExcess * 0.22;
+
+  if (attackerHasArmorAdv) {
+    dmgToDefender *= 1.35;
+    dmgToAttacker *= 0.6;
+  }
+  if (defenderHasArmorAdv) {
+    dmgToAttacker *= 1.35;
+    dmgToDefender *= 0.6;
+  }
+
+  return {
+    defenderOrgDmg: Math.max(0.4, dmgToDefender * 1.6),
+    defenderHpDmg: Math.max(0.15, dmgToDefender * 0.48),
+    attackerOrgDmg: Math.max(0.35, dmgToAttacker * 1.45),
+    attackerHpDmg: Math.max(0.15, dmgToAttacker * 0.45),
+    attackerHasArmorAdv,
+    defenderHasArmorAdv,
+  };
+}
+
+/**
+ * 推进单个战区战斗 1 个回合（每 6 游戏小时结算一次）
+ * 返回战斗状态：{ status: 'ongoing' | 'attacker_won' | 'defender_won', progress }
+ */
+function stepBattle(battle, state) {
+  const province = state.provinces[battle.provinceId];
+  const attackers = battle.attackerIds
+    .map((id) => state.divisions[id])
+    .filter((d) => d && d.org > 0 && d.hp > 0);
+  const defenders = battle.defenderIds
+    .map((id) => state.divisions[id])
+    .filter((d) => d && d.org > 0 && d.hp > 0);
+
+  if (attackers.length === 0) {
+    return { status: 'defender_won', progress: 0 };
+  }
+  if (defenders.length === 0) {
+    return { status: 'attacker_won', progress: 100 };
+  }
+
+  // 聚合攻防双方战力（含堆叠惩罚防止无限堆兵）
+  const atkStackPenalty = attackers.length > 4 ? Math.max(0.55, 1 - (attackers.length - 4) * 0.08) : 1;
+  const defStackPenalty = defenders.length > 4 ? Math.max(0.55, 1 - (defenders.length - 4) * 0.08) : 1;
+
+  const aggAtk = aggregateStats(attackers, state, province, true, atkStackPenalty);
+  const aggDef = aggregateStats(defenders, state, province, false, defStackPenalty);
+
+  const exchange = calculateExchange(aggAtk, aggDef);
+
+  // 分摊伤害到参战各师
+  for (const d of defenders) {
+    d.org = Math.max(0, d.org - exchange.defenderOrgDmg / Math.sqrt(defenders.length));
+    d.hp = Math.max(5, d.hp - exchange.defenderHpDmg / Math.sqrt(defenders.length));
+  }
+  for (const a of attackers) {
+    a.org = Math.max(0, a.org - exchange.attackerOrgDmg / Math.sqrt(attackers.length));
+    a.hp = Math.max(5, a.hp - exchange.attackerHpDmg / Math.sqrt(attackers.length));
+  }
+
+  const atkAlive = attackers.filter((d) => d.org > 1);
+  const defAlive = defenders.filter((d) => d.org > 1);
+
+  const atkOrgSum = attackers.reduce((s, d) => s + d.org, 0);
+  const defOrgSum = defenders.reduce((s, d) => s + d.org, 0);
+  const total = atkOrgSum + defOrgSum;
+  const progress = total > 0 ? Math.round((atkOrgSum / total) * 100) : 50;
+  battle.progress = progress;
+  battle.hoursElapsed = (battle.hoursElapsed || 0) + 6;
+
+  if (defAlive.length === 0) {
+    return { status: 'attacker_won', progress: 100 };
+  }
+  if (atkAlive.length === 0) {
+    return { status: 'defender_won', progress: 0 };
+  }
+  return { status: 'ongoing', progress };
+}
+
+function aggregateStats(divisions, state, province, isAttacker, stackPenalty) {
+  let softAttack = 0;
+  let hardAttack = 0;
+  let defense = 0;
+  let breakthrough = 0;
+  let maxArmor = 0;
+  let maxPiercing = 0;
+  let hardnessSum = 0;
+
+  for (const div of divisions) {
+    const nation = state.nations[div.owner];
+    const st = computeDivisionStats(div, nation, province, isAttacker);
+    softAttack += st.softAttack;
+    hardAttack += st.hardAttack;
+    defense += st.defense;
+    breakthrough += st.breakthrough;
+    maxArmor = Math.max(maxArmor, st.armor);
+    maxPiercing = Math.max(maxPiercing, st.piercing);
+    hardnessSum += st.hardness;
+  }
+
+  return {
+    softAttack: softAttack * stackPenalty,
+    hardAttack: hardAttack * stackPenalty,
+    defense: defense * stackPenalty,
+    breakthrough: breakthrough * stackPenalty,
+    armor: maxArmor,
+    piercing: maxPiercing,
+    hardness: divisions.length > 0 ? hardnessSum / divisions.length : 0,
+  };
+}
+
+
+// ===== src/engine/economy.js =====
+/**
+ * 工业经济、资源统计、民用建造队列与军工装备生产引擎
+ */
+const CONSTRUCTION_COSTS = {
+  civFactory: { name: '民用工厂', icCost: 120 },
+  milFactory: { name: '军用工厂', icCost: 90 },
+  infra: { name: '基础设施', icCost: 60 },
+  fort: { name: '陆地要塞', icCost: 50 },
+};
+
+/**
+ * 统计某国家当前控制的民工、军工与战略资源产出
+ */
+function computeNationEconomy(nationId, state) {
+  const nation = state.nations[nationId];
+  const mods = computeNationTechModifiers(nation);
+  let civFactories = 0;
+  let milFactories = 0;
+  const resources = { steel: 0, oil: 0, tungsten: 0 };
+
+  for (const prov of Object.values(state.provinces)) {
+    if (prov.owner !== nationId) continue;
+    civFactories += prov.civFactories;
+    milFactories += prov.milFactories;
+    resources.steel += Math.round((prov.resources.steel || 0) * mods.resourceMult);
+    resources.oil += Math.round((prov.resources.oil || 0) * mods.resourceMult);
+    resources.tungsten += Math.round((prov.resources.tungsten || 0) * mods.resourceMult);
+  }
+
+  // 消费品占用约 20% 民工，剩余用于建造
+  const consumerGoods = Math.floor(civFactories * 0.2);
+  const availableCiv = Math.max(1, civFactories - consumerGoods);
+
+  // 计算军工产线总资源需求
+  const resourceNeed = { steel: 0, oil: 0, tungsten: 0 };
+  let assignedMil = 0;
+  for (const line of nation.productionLines) {
+    assignedMil += line.factories;
+    const eq = EQUIPMENT_CATALOG[line.equipmentId];
+    if (!eq) continue;
+    for (const [res, amt] of Object.entries(eq.resources)) {
+      resourceNeed[res] += amt * line.factories;
+    }
+  }
+
+  // 资源缺口效率修正：短缺越多军工产出越低，最低保留 35%
+  let efficiency = 1.0;
+  for (const res of ['steel', 'oil', 'tungsten']) {
+    if (resourceNeed[res] > resources[res] && resourceNeed[res] > 0) {
+      const deficitRatio = (resourceNeed[res] - resources[res]) / resourceNeed[res];
+      efficiency -= deficitRatio * 0.35;
+    }
+  }
+  efficiency = Math.max(0.35, Math.min(1.0, efficiency));
+
+  return {
+    civFactories,
+    milFactories,
+    availableCiv,
+    assignedMil,
+    freeMil: Math.max(0, milFactories - assignedMil),
+    resources,
+    resourceNeed,
+    resourceEfficiency: efficiency,
+  };
+}
+
+/**
+ * 每日推进：民用建造队列 + 军工装备生产 + 新师训练队列 + 部队兵力补充
+ */
+function processDailyEconomy(nationId, state) {
+  const nation = state.nations[nationId];
+  if (!nation || nation.capitulated) return;
+
+  const mods = computeNationTechModifiers(nation);
+  const econ = computeNationEconomy(nationId, state);
+
+  // 若军工数量因占领/损失变化，自动裁剪超额分配的工厂
+  let totalAssigned = nation.productionLines.reduce((s, l) => s + l.factories, 0);
+  if (totalAssigned > econ.milFactories) {
+    let excess = totalAssigned - econ.milFactories;
+    for (let i = nation.productionLines.length - 1; i >= 0 && excess > 0; i--) {
+      const cut = Math.min(excess, nation.productionLines[i].factories);
+      nation.productionLines[i].factories -= cut;
+      excess -= cut;
+    }
+  }
+
+  // 1. 民用建造队列（每日每个可用民工贡献 5 IC）
+  if (nation.constructionQueue.length > 0) {
+    const task = nation.constructionQueue[0];
+    const prov = state.provinces[task.provinceId];
+    if (!prov || prov.owner !== nationId) {
+      nation.constructionQueue.shift();
+    } else {
+      const dailyIC = econ.availableCiv * 5.0 * mods.constructionMult;
+      task.progress += dailyIC;
+      if (task.progress >= task.cost) {
+        applyConstructionComplete(prov, task.type);
+        nation.constructionQueue.shift();
+        state.addLog(`${nation.shortName}在${prov.name}完成了${CONSTRUCTION_COSTS[task.type].name}建设。`, 'economy');
+      }
+    }
+  }
+
+  // 2. 军工生产（每日每个军工产出 4.5 基础 IC）
+  for (const line of nation.productionLines) {
+    if (line.factories <= 0) continue;
+    const eq = EQUIPMENT_CATALOG[line.equipmentId];
+    if (!eq) continue;
+    const dailyIC = line.factories * 4.5 * mods.factoryOutputMult * econ.resourceEfficiency;
+    const produced = dailyIC / eq.icCost;
+    nation.equipment[line.equipmentId] = (nation.equipment[line.equipmentId] || 0) + produced;
+  }
+
+  // 3. 新建师训练队列
+  for (let i = nation.trainingQueue.length - 1; i >= 0; i--) {
+    const item = nation.trainingQueue[i];
+    item.daysLeft -= 1;
+    if (item.daysLeft <= 0) {
+      const deployProv =
+        state.provinces[item.deployProvinceId]?.owner === nationId
+          ? item.deployProvinceId
+          : findFallbackCapital(nationId, state);
+      if (deployProv) {
+        state.spawnDivision(nationId, item.templateId, deployProv);
+        state.addLog(
+          `${nation.shortName}新编成的${DIVISION_TEMPLATES[item.templateId].name}已在${state.provinces[deployProv].name}部署。`,
+          'military'
+        );
+      }
+      nation.trainingQueue.splice(i, 1);
+    }
+  }
+
+  // 4. 现役部队每日人力与装备补员（非战斗且有补给时缓慢恢复 HP）
+  for (const div of Object.values(state.divisions)) {
+    if (div.owner !== nationId) continue;
+    const tpl = DIVISION_TEMPLATES[div.template] || DIVISION_TEMPLATES.infantry;
+    if (div.hp < tpl.maxHp && !div.inCombat && (div.supply ?? 1) >= 0.4) {
+      const needHp = Math.min(2.5, tpl.maxHp - div.hp);
+      const manpowerNeeded = Math.round((needHp / tpl.maxHp) * tpl.manpower);
+      if (nation.manpower >= manpowerNeeded && (nation.equipment.infantry_eq || 0) >= 3) {
+        nation.manpower -= manpowerNeeded;
+        nation.equipment.infantry_eq -= 3;
+        div.hp = Math.min(tpl.maxHp, div.hp + needHp);
+      }
+    }
+  }
+}
+
+function applyConstructionComplete(prov, type) {
+  if (type === 'civFactory') prov.civFactories += 1;
+  else if (type === 'milFactory') prov.milFactories += 1;
+  else if (type === 'infra') prov.infra = Math.min(10, prov.infra + 1);
+  else if (type === 'fort') prov.fortLevel = Math.min(6, (prov.fortLevel || 0) + 1);
+}
+
+function findFallbackCapital(nationId, state) {
+  const nation = state.nations[nationId];
+  if (state.provinces[nation.capital]?.owner === nationId) return nation.capital;
+  const anyOwned = Object.values(state.provinces).find((p) => p.owner === nationId);
+  return anyOwned ? anyOwned.id : null;
+}
+
+/**
+ * 发起新建师训练（扣除人力与装备库存）
+ */
+function queueDivisionTraining(nationId, templateId, deployProvinceId, state) {
+  const nation = state.nations[nationId];
+  const tpl = DIVISION_TEMPLATES[templateId];
+  if (!nation || !tpl) return { ok: false, reason: '无效编制模板' };
+  if (nation.manpower < tpl.manpower) return { ok: false, reason: '可用人力不足' };
+
+  for (const [eqId, cost] of Object.entries(tpl.equipmentCost)) {
+    if ((nation.equipment[eqId] || 0) < cost) {
+      return { ok: false, reason: `${EQUIPMENT_CATALOG[eqId].name}库存不足` };
+    }
+  }
+
+  nation.manpower -= tpl.manpower;
+  for (const [eqId, cost] of Object.entries(tpl.equipmentCost)) {
+    nation.equipment[eqId] -= cost;
+  }
+
+  nation.trainingQueue.push({
+    id: `train_${Date.now()}_${Math.random().toString(36).slice(2, 6)}`,
+    templateId,
+    deployProvinceId: deployProvinceId || nation.capital,
+    daysLeft: tpl.trainDays,
+    totalDays: tpl.trainDays,
+  });
+  return { ok: true };
+}
+
+/**
+ * 添加建造任务到民用队列
+ */
+function queueConstruction(nationId, provinceId, type, state) {
+  const nation = state.nations[nationId];
+  const prov = state.provinces[provinceId];
+  const spec = CONSTRUCTION_COSTS[type];
+  if (!nation || !prov || !spec) return { ok: false, reason: '无效建造参数' };
+  if (prov.owner !== nationId) return { ok: false, reason: '只能在本国控制省份建造' };
+  if (type === 'infra' && prov.infra >= 10) return { ok: false, reason: '基础设施已满级' };
+  if (type === 'fort' && (prov.fortLevel || 0) >= 6) return { ok: false, reason: '要塞已满级' };
+
+  nation.constructionQueue.push({
+    id: `build_${Date.now()}_${Math.random().toString(36).slice(2, 6)}`,
+    provinceId,
+    type,
+    progress: 0,
+    cost: spec.icCost,
+  });
+  return { ok: true };
+}
+
+
+// ===== src/engine/supply.js =====
+/**
+ * 补给枢纽与前线补给追踪系统
+ * 使用广度优先搜索 (BFS) 从首都及补给枢纽出发，经由己方/盟友控制省份计算每省补给水平与师级损耗。
+ */
+
+
+
+/**
+ * 判断某省份是否对指定国家开放补给通行（己方或同阵营盟友）
+ */
+function isFriendlyProvince(nationId, province, state) {
+  if (!province) return false;
+  if (province.owner === nationId) return true;
+  const n1 = state.nations[nationId];
+  const n2 = state.nations[province.owner];
+  return Boolean(n1 && n2 && n1.faction && n1.faction === n2.faction);
+}
+
+/**
+ * 计算指定国家在所有省份的补给连通性与供给能力
+ */
+function computeSupplyNetwork(nationId, state) {
+  const nation = state.nations[nationId];
+  if (!nation) return {};
+
+  const visitedDist = {};
+  const queue = [];
+
+  // 起点：首都（若仍被己方控制）
+  const cap = state.provinces[nation.capital];
+  if (cap && isFriendlyProvince(nationId, cap, state)) {
+    visitedDist[cap.id] = 0;
+    queue.push(cap.id);
+  } else {
+    // 首都沦陷后，回退至所有己方控制的补给枢纽
+    for (const p of Object.values(state.provinces)) {
+      if (p.owner === nationId && p.supplyHub) {
+        visitedDist[p.id] = 1;
+        queue.push(p.id);
+      }
+    }
+  }
+
+  // BFS 计算到首都/补给源的最短跳数
+  while (queue.length > 0) {
+    const currId = queue.shift();
+    const curr = state.provinces[currId];
+    const nextDist = visitedDist[currId] + 1;
+
+    for (const nbId of getAllNeighbors(curr)) {
+      const nb = state.provinces[nbId];
+      if (!isFriendlyProvince(nationId, nb, state)) continue;
+      // 经过补给枢纽可重置距离衰减（相当于铁路枢纽中转）
+      const effDist = nb.supplyHub ? Math.min(nextDist, 1) : nextDist;
+      if (visitedDist[nbId] === undefined || effDist < visitedDist[nbId]) {
+        visitedDist[nbId] = effDist;
+        queue.push(nbId);
+      }
+    }
+  }
+
+  return visitedDist;
+}
+
+/**
+ * 更新全部师的补给状态，并对断补或超载师施加每日损耗
+ */
+function updateAllSupply(state, applyDailyAttrition = false) {
+  const networks = {};
+  for (const nationId of Object.keys(state.nations)) {
+    networks[nationId] = computeSupplyNetwork(nationId, state);
+  }
+
+  // 按省份统计各师补给消耗
+  const provinceDemand = {};
+  for (const div of Object.values(state.divisions)) {
+    const nation = state.nations[div.owner];
+    const mods = computeNationTechModifiers(nation);
+    const tpl = DIVISION_TEMPLATES[div.template] || DIVISION_TEMPLATES.infantry;
+    const use = tpl.supplyUse * mods.supplyUseMult;
+    provinceDemand[div.provinceId] = (provinceDemand[div.provinceId] || 0) + use;
+  }
+
+  for (const prov of Object.values(state.provinces)) {
+    const terrain = TERRAIN_TYPES[prov.terrain] || TERRAIN_TYPES.plains;
+    const capacity = terrain.supplyLimit + prov.infra * 2 + (prov.supplyHub ? 8 : 0);
+    prov.supplyCapacity = capacity;
+    prov.supplyUsed = Number((provinceDemand[prov.id] || 0).toFixed(1));
+  }
+
+  for (const div of Object.values(state.divisions)) {
+    const prov = state.provinces[div.provinceId];
+    const dist = networks[div.owner]?.[div.provinceId];
+
+    if (dist === undefined) {
+      // 完全断补（被敌军包围）
+      div.supply = 0.0;
+      div.encircled = true;
+    } else {
+      div.encircled = false;
+      const distFactor = Math.max(0.4, 1.0 - dist * 0.12);
+      const cap = prov.supplyCapacity || 10;
+      const used = prov.supplyUsed || 1;
+      const loadFactor = used <= cap ? 1.0 : Math.max(0.25, cap / used);
+      div.supply = Number(Math.min(1.0, distFactor * loadFactor).toFixed(2));
+    }
+
+    if (applyDailyAttrition && div.supply < 0.5) {
+      const severity = div.encircled ? 1.0 : 0.5 - div.supply;
+      div.org = Math.max(2, div.org - severity * 6.5);
+      div.hp = Math.max(10, div.hp - severity * 3.0);
+    }
+  }
+}
+
+
+// ===== src/engine/diplomacy.js =====
+/**
+ * 外交关系、阵营、宣战、全球紧张度与国家投降结算引擎
+ */
+function areAtWar(nationA, nationB, state) {
+  if (!nationA || !nationB || nationA === nationB) return false;
+  return state.wars.some(
+    (w) =>
+      (w.a === nationA && w.b === nationB) ||
+      (w.a === nationB && w.b === nationA)
+  );
+}
+function areAllies(nationA, nationB, state) {
+  if (!nationA || !nationB || nationA === nationB) return false;
+  const n1 = state.nations[nationA];
+  const n2 = state.nations[nationB];
+  return Boolean(n1 && n2 && n1.faction && n1.faction === n2.faction);
+}
+function declareWar(attackerId, defenderId, state) {
+  const atk = state.nations[attackerId];
+  const def = state.nations[defenderId];
+  if (!atk || !def || attackerId === defenderId) {
+    return { ok: false, reason: '无效宣战目标' };
+  }
+  if (atk.capitulated || def.capitulated) {
+    return { ok: false, reason: '已投降国家无法宣战' };
+  }
+  if (areAllies(attackerId, defenderId, state)) {
+    return { ok: false, reason: '无法向同阵营盟友宣战' };
+  }
+  if (areAtWar(attackerId, defenderId, state)) {
+    return { ok: false, reason: '双方已处于交战状态' };
+  }
+
+  state.wars.push({
+    a: attackerId,
+    b: defenderId,
+    startDate: state.formatDate(),
+  });
+
+  state.worldTension = Math.min(100, state.worldTension + 12);
+  state.addLog(`⚔️ ${atk.name}向${def.name}正式宣战！全球紧张度升至 ${Math.round(state.worldTension)}%。`, 'war');
+
+  // 触发阵营自动参战（高紧张度或同盟防御条约）
+  for (const ally of Object.values(state.nations)) {
+    if (ally.capitulated) continue;
+    if (ally.id !== defenderId && ally.faction === def.faction && !areAtWar(attackerId, ally.id, state)) {
+      state.wars.push({ a: attackerId, b: ally.id, startDate: state.formatDate() });
+      state.addLog(`🛡️ ${ally.shortName}履行${def.faction}同盟义务，对${atk.shortName}宣战！`, 'war');
+    }
+    if (ally.id !== attackerId && ally.faction === atk.faction && !areAtWar(ally.id, defenderId, state)) {
+      state.wars.push({ a: ally.id, b: defenderId, startDate: state.formatDate() });
+      state.addLog(`🔥 ${ally.shortName}响应${atk.faction}盟友号召，加入对${def.shortName}的战争！`, 'war');
+    }
+  }
+
+  return { ok: true };
+}
+
+/**
+ * 计算国家投降进度（基于原始核心领土胜利点 VP 失守比例）
+ */
+function computeSurrenderProgress(nationId, state) {
+  let totalCoreVp = 0;
+  let lostCoreVp = 0;
+
+  for (const prov of Object.values(state.provinces)) {
+    if (prov.coreOwner === nationId) {
+      totalCoreVp += prov.vp;
+      if (prov.owner !== nationId) {
+        lostCoreVp += prov.vp;
+      }
+    }
+  }
+
+  if (totalCoreVp === 0) return 1.0;
+  return Number((lostCoreVp / totalCoreVp).toFixed(3));
+}
+
+/**
+ * 检查交战国是否达到投降阈值（核心胜利点失守 >= 75% 或丧失全部省份）
+ */
+function checkCapitulations(state, conqueringNationId) {
+  for (const nation of Object.values(state.nations)) {
+    if (nation.capitulated) continue;
+    const ownedCount = Object.values(state.provinces).filter((p) => p.owner === nation.id).length;
+    const surrender = computeSurrenderProgress(nation.id, state);
+    nation.surrenderProgress = surrender;
+
+    if (ownedCount === 0 || surrender >= 0.75) {
+      nation.capitulated = true;
+      // 剩余领土移交给占领国
+      const winnerId = conqueringNationId || findPrimaryEnemy(nation.id, state);
+      if (winnerId) {
+        for (const prov of Object.values(state.provinces)) {
+          if (prov.owner === nation.id) {
+            prov.owner = winnerId;
+          }
+        }
+      }
+      // 解散其残余部队
+      for (const [divId, div] of Object.entries(state.divisions)) {
+        if (div.owner === nation.id) {
+          delete state.divisions[divId];
+        }
+      }
+      // 清理与该国相关的战斗
+      state.battles = state.battles.filter(
+        (b) => b.attackerNation !== nation.id && b.defenderNation !== nation.id
+      );
+
+      state.addLog(`🏳️ ${nation.name}已宣布投降！剩余领土由${state.nations[winnerId]?.shortName || '敌军'}接管。`, 'war');
+    }
+  }
+}
+
+function findPrimaryEnemy(nationId, state) {
+  const war = state.wars.find((w) => w.a === nationId || w.b === nationId);
+  if (!war) return null;
+  return war.a === nationId ? war.b : war.a;
+}
+
+
+// ===== src/engine/ai.js =====
+/**
+ * 国家战略与战术 AI 引擎
+ * 负责非玩家国家的：国策选择、科技研发、军工分配、建造、新师招募、前线调动与局部进攻评估。
+ */
+
+
+
+
+
+/**
+ * 每日执行一次 AI 国家内政与军事决策
+ */
+function runNationAI(nationId, state) {
+  const nation = state.nations[nationId];
+  if (!nation || nation.capitulated || nationId === state.playerNationId) return;
+
+  // 1. 自动选择国家焦点
+  if (!nation.activeFocus) {
+    const avail = NATIONAL_FOCUSES.filter(
+      (f) =>
+        !nation.completedFocuses.includes(f.id) &&
+        f.prereq.every((p) => nation.completedFocuses.includes(p))
+    );
+    if (avail.length > 0) {
+      const preferred =
+        avail.find((f) => nation.aiProfile?.focusPriority?.includes(f.id)) || avail[0];
+      state.startFocus(nationId, preferred.id);
+    }
+  }
+
+  // 2. 自动选择科技研发
+  if (!nation.activeTech) {
+    const availTech = TECHNOLOGIES.filter(
+      (t) =>
+        !nation.completedTechs.includes(t.id) &&
+        t.prereq.every((p) => nation.completedTechs.includes(p))
+    );
+    if (availTech.length > 0) {
+      state.startResearch(nationId, availTech[0].id);
+    }
+  }
+
+  // 3. 自动分配空闲军工工厂
+  const econ = computeNationEconomy(nationId, state);
+  if (econ.freeMil > 0) {
+    const targetLine =
+      nation.productionLines.find((l) => l.equipmentId === 'infantry_eq') ||
+      nation.productionLines[0];
+    if (targetLine) targetLine.factories += econ.freeMil;
+  }
+
+  // 4. 自动建造（队列为空时优先扩建军工）
+  if (nation.constructionQueue.length === 0) {
+    const ownedProvs = Object.values(state.provinces).filter((p) => p.owner === nationId);
+    if (ownedProvs.length > 0) {
+      const targetProv = ownedProvs.find((p) => p.id === nation.capital) || ownedProvs[0];
+      queueConstruction(nationId, targetProv.id, 'milFactory', state);
+    }
+  }
+
+  // 5. 自动训练步兵师（最多保持 2 个并发训练任务）
+  if (nation.trainingQueue.length < 2 && nation.manpower > 50000) {
+    queueDivisionTraining(nationId, 'infantry', nation.capital, state);
+  }
+
+  // 6. 历史趋势外交事件：高侵略性 AI 在完成关键焦点或日期推进后主动宣战
+  if (
+    nationId === 'GER' &&
+    state.totalDays >= 45 &&
+    !areAtWar('GER', 'POL', state) &&
+    !state.nations.POL.capitulated
+  ) {
+    declareWar('GER', 'POL', state);
+  }
+
+  // 7. 军事前线调度与进攻评估
+  manageMilitaryFronts(nationId, state);
+}
+
+function manageMilitaryFronts(nationId, state) {
+  const myDivs = Object.values(state.divisions).filter(
+    (d) => d.owner === nationId && !d.movingTo && !d.inCombat
+  );
+  if (myDivs.length === 0) return;
+
+  const enemyProvinces = new Set(
+    Object.values(state.provinces)
+      .filter((p) => areAtWar(nationId, p.owner, state))
+      .map((p) => p.id)
+  );
+
+  // 处于和平状态：不主动进攻，保持首都与边境驻防
+  if (enemyProvinces.size === 0) return;
+
+  // 找出所有接壤敌军的前线省份
+  const frontlineProvs = Object.values(state.provinces).filter(
+    (p) => p.owner === nationId && getAllNeighbors(p).some((nb) => enemyProvinces.has(nb))
+  );
+
+  for (const div of myDivs) {
+    if (div.org < 22) continue; // 低组织度先休整
+
+    const currProv = state.provinces[div.provinceId];
+    const neighbors = getAllNeighbors(currProv);
+
+    // 优先检查相邻敌省是否可发起优势进攻
+    const adjacentEnemies = neighbors.filter((nbId) => enemyProvinces.has(nbId));
+    if (adjacentEnemies.length > 0) {
+      const myCountHere = Object.values(state.divisions).filter(
+        (d) => d.owner === nationId && d.provinceId === currProv.id && d.org >= 20
+      ).length;
+
+      let bestTarget = null;
+      let bestScore = -Infinity;
+
+      for (const enemyId of adjacentEnemies) {
+        const enemyDivs = Object.values(state.divisions).filter(
+          (d) => d.provinceId === enemyId && areAtWar(nationId, d.owner, state)
+        ).length;
+        const score = myCountHere - enemyDivs * 1.1 + (state.provinces[enemyId].vp || 0) * 0.05;
+        if (score > bestScore) {
+          bestScore = score;
+          bestTarget = enemyId;
+        }
+      }
+
+      if (bestTarget && bestScore >= 0.2) {
+        state.orderMoveDivision(div.id, bestTarget);
+        continue;
+      }
+    }
+
+    // 若当前在后方，向前线空虚或薄弱省份增援
+    if (adjacentEnemies.length === 0 && frontlineProvs.length > 0) {
+      const nextStep = findStepToward(currProv.id, frontlineProvs.map((p) => p.id), nationId, state);
+      if (nextStep) {
+        state.orderMoveDivision(div.id, nextStep);
+      }
+    }
+  }
+}
+
+/**
+ * 简单 BFS 寻找后方部队通向前线省份的下一步邻省
+ */
+function findStepToward(startId, goalIds, nationId, state) {
+  const goalSet = new Set(goalIds);
+  const visited = new Set([startId]);
+  const queue = [{ id: startId, firstStep: null }];
+
+  while (queue.length > 0) {
+    const { id, firstStep } = queue.shift();
+    if (goalSet.has(id) && firstStep) return firstStep;
+
+    const prov = state.provinces[id];
+    for (const nbId of getAllNeighbors(prov)) {
+      if (visited.has(nbId)) continue;
+      const nb = state.provinces[nbId];
+      if (!nb || nb.owner !== nationId) continue;
+      visited.add(nbId);
+      queue.push({ id: nbId, firstStep: firstStep || nbId });
+    }
+  }
+  return null;
+}
+
+
+// ===== src/engine/gameEngine.js =====
+/**
+ * Web HOI 核心大战略游戏引擎
+ * 统一管理世界状态、时间推进（小时/日）、部队移动与交战、科研/焦点、外交与存档序列化。
+ */
+class GameEngine {
+  constructor(playerNationId = 'GER') {
+    this.reset(playerNationId);
+  }
+
+  reset(playerNationId = 'GER') {
+    this.playerNationId = NATIONS[playerNationId] ? playerNationId : 'GER';
+    this.year = 1936;
+    this.month = 1;
+    this.day = 1;
+    this.hour = 0;
+    this.totalDays = 0;
+    this.worldTension = 10;
+    this.paused = true;
+    this.speed = 2; // 1..5
+    this.nextDivSeq = 1;
+    this.wars = [];
+    this.battles = [];
+    this.logs = [];
+    this.provinces = {};
+    this.nations = {};
+    this.divisions = {};
+
+    // 初始化省份
+    for (const p of PROVINCES) {
+      this.provinces[p.id] = {
+        ...p,
+        coreOwner: p.owner,
+        fortLevel: p.fortLevel || 0,
+        resources: { ...p.resources },
+        neighbors: [...p.neighbors],
+        seaNeighbors: [...(p.seaNeighbors || [])],
+        supplyCapacity: 15,
+        supplyUsed: 0,
+      };
+    }
+
+    // 初始化国家
+    for (const [id, n] of Object.entries(NATIONS)) {
+      this.nations[id] = {
+        ...n,
+        equipment: { ...n.startingEquipment },
+        completedTechs: [],
+        activeTech: null, // { id, daysLeft, totalDays }
+        completedFocuses: [],
+        activeFocus: null, // { id, daysLeft, totalDays }
+        constructionQueue: [],
+        trainingQueue: [],
+        productionLines: [
+          { equipmentId: 'infantry_eq', factories: 3 },
+          { equipmentId: 'artillery', factories: 1 },
+          { equipmentId: 'trucks', factories: 1 },
+          { equipmentId: 'tanks', factories: 2 },
+        ],
+        capitulated: false,
+        surrenderProgress: 0,
+      };
+
+      // 按实际初始军工数校准产线工厂数
+      const initMil = Object.values(this.provinces)
+        .filter((p) => p.owner === id)
+        .reduce((s, p) => s + p.milFactories, 0);
+      this._balanceInitialProduction(this.nations[id], initMil);
+
+      // 生成初始部队
+      for (const d of n.startingDivisions) {
+        this.spawnDivision(id, d.template, d.province, d.name);
+      }
+    }
+
+    updateAllSupply(this, false);
+    this.addLog(`1936年1月1日：${this.nations[this.playerNationId].name}进入战备状态。选择部队后右键相邻省份即可行军或进攻。`, 'system');
+  }
+
+  _balanceInitialProduction(nation, totalMil) {
+    const weights = [0.4, 0.2, 0.15, 0.25];
+    let assigned = 0;
+    nation.productionLines.forEach((line, idx) => {
+      const alloc = idx === nation.productionLines.length - 1
+        ? Math.max(0, totalMil - assigned)
+        : Math.floor(totalMil * weights[idx]);
+      line.factories = alloc;
+      assigned += alloc;
+    });
+  }
+
+  spawnDivision(ownerId, templateId, provinceId, customName = null) {
+    const tpl = DIVISION_TEMPLATES[templateId] || DIVISION_TEMPLATES.infantry;
+    const nation = this.nations[ownerId];
+    const mods = computeNationTechModifiers(nation);
+    const id = `div_${this.nextDivSeq++}`;
+    this.divisions[id] = {
+      id,
+      owner: ownerId,
+      template: templateId,
+      name: customName || `${nation.shortName}第${this.nextDivSeq - 1}${tpl.shortName}师`,
+      provinceId,
+      hp: tpl.maxHp,
+      org: tpl.maxOrg + mods.maxOrgFlat,
+      supply: 1.0,
+      encircled: false,
+      entrenchment: 1,
+      movingTo: null,
+      moveProgress: 0,
+      inCombat: false,
+    };
+    return this.divisions[id];
+  }
+
+  addLog(text, type = 'info') {
+    this.logs.unshift({
+      date: this.formatDate(),
+      text,
+      type,
+    });
+    if (this.logs.length > 80) this.logs.length = 80;
+  }
+
+  formatDate() {
+    const m = String(this.month).padStart(2, '0');
+    const d = String(this.day).padStart(2, '0');
+    return `${this.year}-${m}-${d}`;
+  }
+
+  /**
+   * 推进游戏 6 小时（每 4 次为 1 天）
+   */
+  tickStep() {
+    this.hour += 6;
+    const isNewDay = this.hour >= 24;
+    if (isNewDay) {
+      this.hour = 0;
+      this.advanceCalendarDay();
+    }
+
+    this.processMovements();
+    this.processBattles();
+
+    if (isNewDay) {
+      this.processDailyUpdate();
+    }
+  }
+
+  advanceCalendarDay() {
+    const daysInMonth = [31, 28, 31, 30, 31, 30, 31, 31, 30, 31, 30, 31];
+    this.day += 1;
+    this.totalDays += 1;
+    if (this.day > daysInMonth[this.month - 1]) {
+      this.day = 1;
+      this.month += 1;
+      if (this.month > 12) {
+        this.month = 1;
+        this.year += 1;
+      }
+    }
+  }
+
+  /**
+   * 命令单个部队向相邻省份移动或发起进攻
+   */
+  orderMoveDivision(divisionId, targetProvinceId) {
+    const div = this.divisions[divisionId];
+    if (!div) return { ok: false, reason: '部队不存在' };
+    const fromProv = this.provinces[div.provinceId];
+    const toProv = this.provinces[targetProvinceId];
+    if (!fromProv || !toProv) return { ok: false, reason: '省份无效' };
+    if (div.provinceId === targetProvinceId) return { ok: false, reason: '部队已在该省份' };
+
+    const neighbors = getAllNeighbors(fromProv);
+    if (!neighbors.includes(targetProvinceId)) {
+      return { ok: false, reason: '只能向相邻或海路直连省份移动' };
+    }
+
+    const isEnemyProv = areAtWar(div.owner, toProv.owner, this);
+    const isFriendlyProv =
+      toProv.owner === div.owner ||
+      this.nations[div.owner].faction === this.nations[toProv.owner].faction;
+
+    if (!isFriendlyProv && !isEnemyProv) {
+      return { ok: false, reason: `未与${this.nations[toProv.owner].shortName}处于交战状态，请先宣战` };
+    }
+
+    div.movingTo = targetProvinceId;
+    div.moveProgress = 0;
+    div.entrenchment = 0;
+
+    // 若目标省份有敌军驻守，立即开启/加入战斗
+    if (isEnemyProv) {
+      const defenders = Object.values(this.divisions).filter(
+        (d) => d.provinceId === targetProvinceId && areAtWar(div.owner, d.owner, this)
+      );
+      if (defenders.length > 0) {
+        this.joinOrCreateBattle(div, targetProvinceId, defenders);
+      }
+    }
+    return { ok: true };
+  }
+
+  joinOrCreateBattle(attackerDiv, targetProvinceId, defenders) {
+    let battle = this.battles.find(
+      (b) => b.provinceId === targetProvinceId && b.attackerNation === attackerDiv.owner
+    );
+    if (!battle) {
+      battle = {
+        id: `bat_${targetProvinceId}_${Date.now()}_${Math.random().toString(36).slice(2, 5)}`,
+        provinceId: targetProvinceId,
+        attackerNation: attackerDiv.owner,
+        defenderNation: defenders[0].owner,
+        attackerIds: [],
+        defenderIds: defenders.map((d) => d.id),
+        progress: 50,
+        hoursElapsed: 0,
+      };
+      this.battles.push(battle);
+    }
+    if (!battle.attackerIds.includes(attackerDiv.id)) {
+      battle.attackerIds.push(attackerDiv.id);
+    }
+    attackerDiv.inCombat = true;
+    for (const def of defenders) {
+      if (!battle.defenderIds.includes(def.id)) battle.defenderIds.push(def.id);
+      def.inCombat = true;
+    }
+  }
+
+  processMovements() {
+    for (const div of Object.values(this.divisions)) {
+      if (!div.movingTo || div.inCombat) continue;
+
+      const targetProv = this.provinces[div.movingTo];
+      if (!targetProv) {
+        div.movingTo = null;
+        continue;
+      }
+
+      // 移动途中如目标省出现敌军则转入战斗
+      if (areAtWar(div.owner, targetProv.owner, this)) {
+        const defenders = Object.values(this.divisions).filter(
+          (d) => d.provinceId === targetProv.id && areAtWar(div.owner, d.owner, this)
+        );
+        if (defenders.length > 0) {
+          this.joinOrCreateBattle(div, targetProv.id, defenders);
+          continue;
+        }
+      }
+
+      const nation = this.nations[div.owner];
+      const stats = computeDivisionStats(div, nation, targetProv, true);
+      const terrain = TERRAIN_TYPES[targetProv.terrain] || TERRAIN_TYPES.plains;
+      // 每 6 小时推进进度（100 = 抵达）
+      const stepDelta = (stats.speed * 18) / terrain.moveCost;
+      div.moveProgress += stepDelta;
+
+      if (div.moveProgress >= 100) {
+        div.provinceId = targetProv.id;
+        div.movingTo = null;
+        div.moveProgress = 0;
+
+        if (areAtWar(div.owner, targetProv.owner, this)) {
+          const prevOwner = targetProv.owner;
+          targetProv.owner = div.owner;
+          this.addLog(
+            `🚩 ${nation.shortName}部队占领了${this.nations[prevOwner].shortName}的${targetProv.name}！`,
+            'military'
+          );
+          checkCapitulations(this, div.owner);
+        }
+      }
+    }
+  }
+
+  processBattles() {
+    for (let i = this.battles.length - 1; i >= 0; i--) {
+      const battle = this.battles[i];
+      const res = stepBattle(battle, this);
+
+      if (res.status === 'attacker_won') {
+        const prov = this.provinces[battle.provinceId];
+        // 防守方撤退至相邻友方省份；若无退路则被包围全歼
+        for (const defId of battle.defenderIds) {
+          const def = this.divisions[defId];
+          if (!def) continue;
+          def.inCombat = false;
+          const retreatProv = getAllNeighbors(prov).find(
+            (nbId) => this.provinces[nbId]?.owner === def.owner
+          );
+          if (retreatProv) {
+            def.provinceId = retreatProv;
+            def.movingTo = null;
+            def.org = Math.max(5, def.org);
+          } else {
+            this.addLog(`💥 ${def.name}在${prov.name}被包围歼灭！`, 'war');
+            delete this.divisions[defId];
+          }
+        }
+        // 进攻方解除战斗并继续快速进入目标省
+        for (const atkId of battle.attackerIds) {
+          const atk = this.divisions[atkId];
+          if (!atk) continue;
+          atk.inCombat = false;
+          atk.moveProgress = Math.max(atk.moveProgress, 65);
+        }
+        this.battles.splice(i, 1);
+      } else if (res.status === 'defender_won') {
+        for (const atkId of battle.attackerIds) {
+          const atk = this.divisions[atkId];
+          if (!atk) continue;
+          atk.inCombat = false;
+          atk.movingTo = null;
+          atk.moveProgress = 0;
+        }
+        for (const defId of battle.defenderIds) {
+          const def = this.divisions[defId];
+          if (def) def.inCombat = false;
+        }
+        this.battles.splice(i, 1);
+      }
+    }
+  }
+
+  processDailyUpdate() {
+    updateAllSupply(this, true);
+
+    for (const nation of Object.values(this.nations)) {
+      if (nation.capitulated) continue;
+
+      // 政治点数每日增长
+      nation.politicalPower = Number((nation.politicalPower + 1.5 + nation.stability * 0.8).toFixed(1));
+
+      // 科研进度推进
+      if (nation.activeTech) {
+        nation.activeTech.daysLeft -= 1;
+        if (nation.activeTech.daysLeft <= 0) {
+          const tech = TECHNOLOGIES.find((t) => t.id === nation.activeTech.id);
+          nation.completedTechs.push(nation.activeTech.id);
+          nation.activeTech = null;
+          if (tech) {
+            this.addLog(`🔬 ${nation.shortName}完成科技研发：${tech.name}。`, 'tech');
+          }
+        }
+      }
+
+      // 国家焦点推进
+      if (nation.activeFocus) {
+        nation.activeFocus.daysLeft -= 1;
+        if (nation.activeFocus.daysLeft <= 0) {
+          const focus = NATIONAL_FOCUSES.find((f) => f.id === nation.activeFocus.id);
+          nation.completedFocuses.push(nation.activeFocus.id);
+          nation.activeFocus = null;
+          if (focus) {
+            this.applyFocusEffect(nation, focus);
+          }
+        }
+      }
+
+      // 工业、生产、建造与补员
+      processDailyEconomy(nation.id, this);
+    }
+
+    // 非战斗部队恢复组织度与挖掘堑壕
+    for (const div of Object.values(this.divisions)) {
+      if (div.inCombat) continue;
+      const nation = this.nations[div.owner];
+      const mods = computeNationTechModifiers(nation);
+      const tpl = DIVISION_TEMPLATES[div.template] || DIVISION_TEMPLATES.infantry;
+      const maxOrg = tpl.maxOrg + mods.maxOrgFlat;
+      if (div.org < maxOrg && div.supply >= 0.4) {
+        div.org = Math.min(maxOrg, div.org + 3.2 * mods.orgRecoveryMult * div.supply);
+      }
+      if (!div.movingTo) {
+        div.entrenchment = Math.min(5, (div.entrenchment || 0) + 0.5);
+      }
+    }
+
+    // 运行所有 AI 国家
+    for (const nationId of Object.keys(this.nations)) {
+      if (nationId !== this.playerNationId) {
+        runNationAI(nationId, this);
+      }
+    }
+  }
+
+  applyFocusEffect(nation, focus) {
+    const eff = focus.effect || {};
+    const cap = this.provinces[nation.capital];
+    if (eff.addCivToCapital && cap && cap.owner === nation.id) cap.civFactories += eff.addCivToCapital;
+    if (eff.addMilToCapital && cap && cap.owner === nation.id) cap.milFactories += eff.addMilToCapital;
+    if (eff.politicalPower) nation.politicalPower += eff.politicalPower;
+    if (eff.stability) nation.stability = Math.min(1, nation.stability + eff.stability);
+    if (eff.warSupport) nation.warSupport = Math.min(1, nation.warSupport + eff.warSupport);
+    if (eff.manpower) nation.manpower += eff.manpower;
+    if (eff.tension) this.worldTension = Math.min(100, this.worldTension + eff.tension);
+    if (eff.equipment) {
+      for (const [eqId, amt] of Object.entries(eff.equipment)) {
+        nation.equipment[eqId] = (nation.equipment[eqId] || 0) + amt;
+      }
+    }
+    this.addLog(`📜 ${nation.shortName}完成国家焦点：${focus.name}。`, 'focus');
+  }
+
+  startResearch(nationId, techId) {
+    const nation = this.nations[nationId];
+    const tech = TECHNOLOGIES.find((t) => t.id === techId);
+    if (!nation || !tech) return { ok: false, reason: '无效科技' };
+    if (nation.activeTech) return { ok: false, reason: '当前已有正在研发的科技' };
+    if (nation.completedTechs.includes(techId)) return { ok: false, reason: '该科技已研发完成' };
+    if (!tech.prereq.every((p) => nation.completedTechs.includes(p))) {
+      return { ok: false, reason: '前置科技尚未完成' };
+    }
+    nation.activeTech = { id: tech.id, daysLeft: tech.costDays, totalDays: tech.costDays };
+    return { ok: true };
+  }
+
+  startFocus(nationId, focusId) {
+    const nation = this.nations[nationId];
+    const focus = NATIONAL_FOCUSES.find((f) => f.id === focusId);
+    if (!nation || !focus) return { ok: false, reason: '无效国家焦点' };
+    if (nation.activeFocus) return { ok: false, reason: '当前已有正在执行的焦点' };
+    if (nation.completedFocuses.includes(focusId)) return { ok: false, reason: '该焦点已完成' };
+    if (!focus.prereq.every((p) => nation.completedFocuses.includes(p))) {
+      return { ok: false, reason: '前置焦点尚未完成' };
+    }
+    nation.activeFocus = { id: focus.id, daysLeft: focus.days, totalDays: focus.days };
+    return { ok: true };
+  }
+
+  adjustProductionLine(nationId, equipmentId, delta) {
+    const nation = this.nations[nationId];
+    if (!nation) return { ok: false, reason: '无效国家' };
+    const line = nation.productionLines.find((l) => l.equipmentId === equipmentId);
+    if (!line) return { ok: false, reason: '产线不存在' };
+    const econ = computeNationEconomy(nationId, this);
+    if (delta > 0 && econ.freeMil < delta) return { ok: false, reason: '没有空闲军用工厂' };
+    if (delta < 0 && line.factories + delta < 0) return { ok: false, reason: '工厂数不能为负' };
+    line.factories += delta;
+    return { ok: true };
+  }
+
+  declareWar(attackerId, defenderId) {
+    return declareWar(attackerId, defenderId, this);
+  }
+
+  queueConstruction(nationId, provinceId, type) {
+    return queueConstruction(nationId, provinceId, type, this);
+  }
+
+  queueDivisionTraining(nationId, templateId, deployProvinceId) {
+    return queueDivisionTraining(nationId, templateId, deployProvinceId, this);
+  }
+
+  /**
+   * 序列化完整世界状态为 JSON 字符串（支持存档与回放）
+   */
+  serialize() {
+    return JSON.stringify({
+      version: '1.0.0',
+      playerNationId: this.playerNationId,
+      year: this.year,
+      month: this.month,
+      day: this.day,
+      hour: this.hour,
+      totalDays: this.totalDays,
+      worldTension: this.worldTension,
+      nextDivSeq: this.nextDivSeq,
+      wars: this.wars,
+      battles: this.battles,
+      logs: this.logs,
+      provinces: this.provinces,
+      nations: this.nations,
+      divisions: this.divisions,
+    });
+  }
+
+  /**
+   * 从 JSON 存档恢复游戏状态
+   */
+  deserialize(jsonStr) {
+    const data = typeof jsonStr === 'string' ? JSON.parse(jsonStr) : jsonStr;
+    if (!data || !data.provinces || !data.nations) {
+      throw new Error('无效存档格式');
+    }
+    this.playerNationId = data.playerNationId;
+    this.year = data.year;
+    this.month = data.month;
+    this.day = data.day;
+    this.hour = data.hour;
+    this.totalDays = data.totalDays;
+    this.worldTension = data.worldTension;
+    this.nextDivSeq = data.nextDivSeq;
+    this.wars = data.wars;
+    this.battles = data.battles;
+    this.logs = data.logs;
+    this.provinces = data.provinces;
+    this.nations = data.nations;
+    this.divisions = data.divisions;
+    updateAllSupply(this, false);
+  }
+}
+
+
+// ===== src/ui/audio.js =====
+/**
+ * Web Audio API 军事风格合成音效引擎（零外部音频文件依赖）
+ */
+class SoundEffects {
+  constructor() {
+    this.muted = false;
+    this.ctx = null;
+  }
+
+  ensureContext() {
+    if (this.muted) return null;
+    if (!this.ctx && typeof window !== 'undefined') {
+      const AudioCtx = window.AudioContext || window.webkitAudioContext;
+      if (AudioCtx) this.ctx = new AudioCtx();
+    }
+    if (this.ctx && this.ctx.state === 'suspended') {
+      this.ctx.resume().catch(() => {});
+    }
+    return this.ctx;
+  }
+
+  playTone(freq, duration = 0.08, type = 'triangle', gainVal = 0.08) {
+    const ctx = this.ensureContext();
+    if (!ctx) return;
+    const osc = ctx.createOscillator();
+    const gain = ctx.createGain();
+    osc.type = type;
+    osc.frequency.setValueAtTime(freq, ctx.currentTime);
+    gain.gain.setValueAtTime(gainVal, ctx.currentTime);
+    gain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + duration);
+    osc.connect(gain);
+    gain.connect(ctx.destination);
+    osc.start();
+    osc.stop(ctx.currentTime + duration);
+  }
+
+  click() {
+    this.playTone(520, 0.05, 'triangle', 0.05);
+  }
+
+  march() {
+    this.playTone(220, 0.09, 'sawtooth', 0.06);
+    setTimeout(() => this.playTone(280, 0.09, 'sawtooth', 0.05), 70);
+  }
+
+  warHorn() {
+    this.playTone(146, 0.35, 'sawtooth', 0.09);
+    setTimeout(() => this.playTone(110, 0.45, 'sawtooth', 0.09), 180);
+  }
+
+  toggleMute() {
+    this.muted = !this.muted;
+    return this.muted;
+  }
+}
+
+
+// ===== src/ui/renderer.js =====
+/**
+ * HTML5 Canvas 战略地图渲染器
+ * 使用半平面裁剪 (Sutherland-Hodgman) 从省份质心实时生成无接缝 Voronoi 省界多边形，
+ * 支持政治/地形/补给三大地图模式、国界线高亮、海路航线、NATO 部队徽标、行军箭头与战斗气泡。
+ */
+
+
+
+const LOGICAL_W = 1000;
+const LOGICAL_H = 640;
+
+/**
+ * 使用半平面裁剪计算多边形 P 与垂直平分线 (a -> b) 靠近 a 一侧的交集
+ */
+function clipPolygonByBisector(poly, ax, ay, bx, by) {
+  if (poly.length === 0) return [];
+  const mx = (ax + bx) / 2;
+  const my = (ay + by) / 2;
+  const nx = bx - ax;
+  const ny = by - ay;
+
+  const isInside = (p) => (p[0] - mx) * nx + (p[1] - my) * ny <= 0;
+
+  const output = [];
+  for (let i = 0; i < poly.length; i++) {
+    const curr = poly[i];
+    const prev = poly[(i + poly.length - 1) % poly.length];
+    const currIn = isInside(curr);
+    const prevIn = isInside(prev);
+
+    if (currIn !== prevIn) {
+      const dx = curr[0] - prev[0];
+      const dy = curr[1] - prev[1];
+      const denom = dx * nx + dy * ny;
+      if (Math.abs(denom) > 1e-9) {
+        const t = ((mx - prev[0]) * nx + (my - prev[1]) * ny) / denom;
+        output.push([prev[0] + t * dx, prev[1] + t * dy]);
+      }
+    }
+    if (currIn) output.push(curr);
+  }
+  return output;
+}
+
+/**
+ * 判断点是否在多边形内（射线法）
+ */
+function pointInPolygon(x, y, poly) {
+  let inside = false;
+  for (let i = 0, j = poly.length - 1; i < poly.length; j = i++) {
+    const xi = poly[i][0];
+    const yi = poly[i][1];
+    const xj = poly[j][0];
+    const yj = poly[j][1];
+    const intersect = yi > y !== yj > y && x < ((xj - xi) * (y - yi)) / (yj - yi + 1e-9) + xi;
+    if (intersect) inside = !inside;
+  }
+  return inside;
+}
+class MapRenderer {
+  constructor(canvas, engine) {
+    this.canvas = canvas;
+    this.ctx = canvas.getContext('2d');
+    this.engine = engine;
+    this.mapMode = 'political'; // 'political' | 'terrain' | 'supply'
+    this.selectedProvinceId = null;
+    this.selectedDivisionIds = new Set();
+    this.hoverProvinceId = null;
+    this.zoom = 1.0;
+    this.panX = 0;
+    this.panY = 0;
+    this.animPhase = 0;
+
+    this.polygons = this.buildProvincePolygons();
+  }
+
+  buildProvincePolygons() {
+    const result = {};
+    const byRegion = { britain: [], mainland: [] };
+    for (const p of Object.values(this.engine.provinces)) {
+      byRegion[p.region || 'mainland'].push(p);
+    }
+
+    for (const [region, list] of Object.entries(byRegion)) {
+      const mask = LAND_MASKS[region];
+      for (const p of list) {
+        let poly = mask.map((pt) => [pt[0], pt[1]]);
+        for (const other of list) {
+          if (other.id === p.id) continue;
+          poly = clipPolygonByBisector(poly, p.x, p.y, other.x, other.y);
+        }
+        result[p.id] = poly;
+      }
+    }
+    return result;
+  }
+
+  resize() {
+    const parent = this.canvas.parentElement;
+    if (!parent) return;
+    const rect = parent.getBoundingClientRect();
+    const dpr = Math.min(window.devicePixelRatio || 1, 2);
+    this.canvas.width = Math.max(300, Math.floor(rect.width * dpr));
+    this.canvas.height = Math.max(260, Math.floor(rect.height * dpr));
+    this.canvas.style.width = `${rect.width}px`;
+    this.canvas.style.height = `${rect.height}px`;
+    this.dpr = dpr;
+    this.viewW = rect.width;
+    this.viewH = rect.height;
+  }
+
+  getTransform() {
+    const baseScale = Math.min(this.viewW / LOGICAL_W, this.viewH / LOGICAL_H);
+    const scale = baseScale * this.zoom;
+    const offsetX = (this.viewW - LOGICAL_W * scale) / 2 + this.panX;
+    const offsetY = (this.viewH - LOGICAL_H * scale) / 2 + this.panY;
+    return { scale, offsetX, offsetY };
+  }
+
+  screenToLogical(clientX, clientY) {
+    const rect = this.canvas.getBoundingClientRect();
+    const sx = clientX - rect.left;
+    const sy = clientY - rect.top;
+    const { scale, offsetX, offsetY } = this.getTransform();
+    return {
+      x: (sx - offsetX) / scale,
+      y: (sy - offsetY) / scale,
+    };
+  }
+
+  hitTestProvince(lx, ly) {
+    for (const [id, poly] of Object.entries(this.polygons)) {
+      if (poly.length >= 3 && pointInPolygon(lx, ly, poly)) {
+        return id;
+      }
+    }
+    return null;
+  }
+
+  render() {
+    const ctx = this.ctx;
+    if (!this.viewW || !this.viewH) this.resize();
+    this.animPhase = (this.animPhase + 0.04) % (Math.PI * 2);
+
+    ctx.save();
+    ctx.scale(this.dpr || 1, this.dpr || 1);
+
+    // 1. 海洋背景与经纬网格
+    const grad = ctx.createLinearGradient(0, 0, 0, this.viewH);
+    grad.addColorStop(0, '#122230');
+    grad.addColorStop(1, '#0b1620');
+    ctx.fillStyle = grad;
+    ctx.fillRect(0, 0, this.viewW, this.viewH);
+
+    const { scale, offsetX, offsetY } = this.getTransform();
+    ctx.translate(offsetX, offsetY);
+    ctx.scale(scale, scale);
+
+    this.drawGraticule(ctx);
+    this.drawSeaLanes(ctx);
+    this.drawProvinces(ctx);
+    this.drawNationalHighlights(ctx);
+    this.drawSupplyHubsAndNames(ctx);
+    this.drawMovementArrows(ctx);
+    this.drawDivisions(ctx);
+    this.drawBattles(ctx);
+
+    ctx.restore();
+  }
+
+  drawGraticule(ctx) {
+    ctx.strokeStyle = 'rgba(130, 175, 210, 0.08)';
+    ctx.lineWidth = 1;
+    for (let x = 0; x <= LOGICAL_W; x += 80) {
+      ctx.beginPath();
+      ctx.moveTo(x, 0);
+      ctx.lineTo(x, LOGICAL_H);
+      ctx.stroke();
+    }
+    for (let y = 0; y <= LOGICAL_H; y += 80) {
+      ctx.beginPath();
+      ctx.moveTo(0, y);
+      ctx.lineTo(LOGICAL_W, y);
+      ctx.stroke();
+    }
+    ctx.fillStyle = 'rgba(155, 195, 225, 0.25)';
+    ctx.font = 'italic 600 13px Inter, sans-serif';
+    ctx.fillText('北 海 / NORTH SEA', 250, 125);
+    ctx.fillText('英吉利海峡', 140, 282);
+    ctx.fillText('地中海 / MEDITERRANEAN', 240, 560);
+  }
+
+  drawSeaLanes(ctx) {
+    ctx.save();
+    ctx.strokeStyle = 'rgba(125, 200, 255, 0.55)';
+    ctx.lineWidth = 2;
+    ctx.setLineDash([6, 5]);
+    for (const p of Object.values(this.engine.provinces)) {
+      for (const sn of p.seaNeighbors || []) {
+        if (p.id < sn) {
+          const target = this.engine.provinces[sn];
+          ctx.beginPath();
+          ctx.moveTo(p.x, p.y);
+          ctx.lineTo(target.x, target.y);
+          ctx.stroke();
+        }
+      }
+    }
+    ctx.restore();
+  }
+
+  getProvinceFillColor(prov) {
+    if (this.mapMode === 'terrain') {
+      return (TERRAIN_TYPES[prov.terrain] || TERRAIN_TYPES.plains).color;
+    }
+    if (this.mapMode === 'supply') {
+      const ratio = prov.supplyCapacity > 0 ? prov.supplyUsed / prov.supplyCapacity : 0;
+      if (ratio <= 0.5) return '#2f6e49';
+      if (ratio <= 0.85) return '#8d8033';
+      return '#9a3434';
+    }
+    const nation = this.engine.nations[prov.owner];
+    return nation ? nation.color : '#555';
+  }
+
+  drawProvinces(ctx) {
+    for (const prov of Object.values(this.engine.provinces)) {
+      const poly = this.polygons[prov.id];
+      if (!poly || poly.length < 3) continue;
+
+      ctx.beginPath();
+      ctx.moveTo(poly[0][0], poly[0][1]);
+      for (let i = 1; i < poly.length; i++) ctx.lineTo(poly[i][0], poly[i][1]);
+      ctx.closePath();
+
+      ctx.fillStyle = this.getProvinceFillColor(prov);
+      ctx.fill();
+
+      // 悬停或选中高亮
+      if (prov.id === this.selectedProvinceId) {
+        ctx.fillStyle = 'rgba(255, 224, 130, 0.24)';
+        ctx.fill();
+      } else if (prov.id === this.hoverProvinceId) {
+        ctx.fillStyle = 'rgba(255, 255, 255, 0.12)';
+        ctx.fill();
+      }
+
+      // 省份边界线
+      ctx.strokeStyle = prov.id === this.selectedProvinceId ? '#facc15' : 'rgba(15, 22, 28, 0.65)';
+      ctx.lineWidth = prov.id === this.selectedProvinceId ? 2.4 : 1.2;
+      ctx.stroke();
+    }
+  }
+
+  drawNationalHighlights(ctx) {
+    // 绘制海岸线外轮廓阴影，增强陆海层次感
+    ctx.save();
+    ctx.strokeStyle = 'rgba(220, 200, 150, 0.45)';
+    ctx.lineWidth = 2;
+    for (const mask of Object.values(LAND_MASKS)) {
+      ctx.beginPath();
+      ctx.moveTo(mask[0][0], mask[0][1]);
+      for (let i = 1; i < mask.length; i++) ctx.lineTo(mask[i][0], mask[i][1]);
+      ctx.closePath();
+      ctx.stroke();
+    }
+    ctx.restore();
+  }
+
+  drawSupplyHubsAndNames(ctx) {
+    for (const prov of Object.values(this.engine.provinces)) {
+      // 首都五角星或城市胜利点
+      if (prov.isCapital) {
+        ctx.fillStyle = '#facc15';
+        ctx.strokeStyle = '#1f2937';
+        ctx.lineWidth = 1.4;
+        ctx.beginPath();
+        ctx.arc(prov.x, prov.y - 16, 5.5, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.stroke();
+      } else if (prov.vp >= 12) {
+        ctx.fillStyle = '#e2e8f0';
+        ctx.beginPath();
+        ctx.arc(prov.x, prov.y - 15, 3, 0, Math.PI * 2);
+        ctx.fill();
+      }
+
+      // 补给枢纽图标（补给模式或要塞标记）
+      if (this.mapMode === 'supply' && prov.supplyHub) {
+        ctx.fillStyle = '#38bdf8';
+        ctx.fillRect(prov.x - 18, prov.y - 22, 8, 8);
+      }
+      if (prov.fortLevel > 0) {
+        ctx.fillStyle = '#cbd5e1';
+        ctx.font = '700 9px Inter, sans-serif';
+        ctx.fillText(`🛡${prov.fortLevel}`, prov.x + 12, prov.y - 12);
+      }
+
+      // 省份名
+      ctx.font = prov.isCapital ? '700 12px Inter, sans-serif' : '600 10.5px Inter, sans-serif';
+      ctx.textAlign = 'center';
+      ctx.fillStyle = 'rgba(10, 14, 18, 0.85)';
+      ctx.fillText(prov.name, prov.x + 1, prov.y + 24);
+      ctx.fillStyle = prov.isCapital ? '#fef08a' : '#f1f5f9';
+      ctx.fillText(prov.name, prov.x, prov.y + 23);
+    }
+  }
+
+  drawMovementArrows(ctx) {
+    for (const div of Object.values(this.engine.divisions)) {
+      if (!div.movingTo) continue;
+      const from = this.engine.provinces[div.provinceId];
+      const to = this.engine.provinces[div.movingTo];
+      if (!from || !to) continue;
+
+      const isAttack = areAtWar(div.owner, to.owner, this.engine);
+      ctx.save();
+      ctx.strokeStyle = isAttack ? '#ef4444' : '#38bdf8';
+      ctx.lineWidth = 3;
+      ctx.setLineDash([7, 4]);
+      ctx.lineDashOffset = -this.animPhase * 12;
+      ctx.beginPath();
+      ctx.moveTo(from.x, from.y);
+      ctx.lineTo(to.x, to.y);
+      ctx.stroke();
+
+      // 箭头头部
+      const angle = Math.atan2(to.y - from.y, to.x - from.x);
+      const ax = from.x + (to.x - from.x) * 0.68;
+      const ay = from.y + (to.y - from.y) * 0.68;
+      ctx.setLineDash([]);
+      ctx.fillStyle = isAttack ? '#ef4444' : '#38bdf8';
+      ctx.beginPath();
+      ctx.moveTo(ax, ay);
+      ctx.lineTo(ax - 10 * Math.cos(angle - 0.45), ay - 10 * Math.sin(angle - 0.45));
+      ctx.lineTo(ax - 10 * Math.cos(angle + 0.45), ay - 10 * Math.sin(angle + 0.45));
+      ctx.closePath();
+      ctx.fill();
+      ctx.restore();
+    }
+  }
+
+  drawDivisions(ctx) {
+    // 按省份与所属国家聚合显示 NATO 徽标
+    const grouped = {};
+    for (const div of Object.values(this.engine.divisions)) {
+      const key = `${div.provinceId}__${div.owner}`;
+      if (!grouped[key]) grouped[key] = [];
+      grouped[key].push(div);
+    }
+
+    for (const list of Object.values(grouped)) {
+      const first = list[0];
+      const prov = this.engine.provinces[first.provinceId];
+      const nation = this.engine.nations[first.owner];
+      if (!prov || !nation) continue;
+
+      const anySelected = list.some((d) => this.selectedDivisionIds.has(d.id));
+      const anyEncircled = list.some((d) => d.encircled);
+      const avgOrg =
+        list.reduce((s, d) => s + d.org / (DIVISION_TEMPLATES[d.template]?.maxOrg || 60), 0) /
+        list.length;
+      const avgHp =
+        list.reduce((s, d) => s + d.hp / (DIVISION_TEMPLATES[d.template]?.maxHp || 100), 0) /
+        list.length;
+
+      const cx = prov.x;
+      const cy = prov.y;
+      const w = 36;
+      const h = 22;
+
+      ctx.save();
+      // 阴影与主体卡片
+      ctx.fillStyle = 'rgba(0, 0, 0, 0.45)';
+      ctx.fillRect(cx - w / 2 + 2, cy - h / 2 + 2, w, h);
+
+      ctx.fillStyle = nation.color;
+      ctx.fillRect(cx - w / 2, cy - h / 2, w, h);
+
+      ctx.strokeStyle = anySelected ? '#facc15' : '#e2e8f0';
+      ctx.lineWidth = anySelected ? 2.4 : 1.2;
+      ctx.strokeRect(cx - w / 2, cy - h / 2, w, h);
+
+      // NATO 符号与数量
+      const hasArmor = list.some((d) => d.template === 'armor');
+      ctx.fillStyle = '#ffffff';
+      ctx.font = '700 10px Inter, sans-serif';
+      ctx.textAlign = 'center';
+      ctx.fillText(`${hasArmor ? '⬭' : '✕'} ${list.length}`, cx, cy + 2);
+
+      // 组织度条（绿）与兵力条（橙）
+      ctx.fillStyle = '#0f172a';
+      ctx.fillRect(cx - w / 2 + 2, cy + h / 2 - 5, w - 4, 2);
+      ctx.fillStyle = '#22c55e';
+      ctx.fillRect(cx - w / 2 + 2, cy + h / 2 - 5, (w - 4) * Math.min(1, avgOrg), 2);
+
+      ctx.fillStyle = '#0f172a';
+      ctx.fillRect(cx - w / 2 + 2, cy + h / 2 - 2.5, w - 4, 2);
+      ctx.fillStyle = '#f59e0b';
+      ctx.fillRect(cx - w / 2 + 2, cy + h / 2 - 2.5, (w - 4) * Math.min(1, avgHp), 2);
+
+      if (anyEncircled) {
+        ctx.fillStyle = '#ef4444';
+        ctx.beginPath();
+        ctx.arc(cx + w / 2, cy - h / 2, 5, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.fillStyle = '#fff';
+        ctx.font = '700 8px Inter, sans-serif';
+        ctx.fillText('!', cx + w / 2, cy - h / 2 + 3);
+      }
+      ctx.restore();
+    }
+  }
+
+  drawBattles(ctx) {
+    for (const battle of this.engine.battles) {
+      const prov = this.engine.provinces[battle.provinceId];
+      if (!prov) continue;
+      const bx = prov.x + 22;
+      const by = prov.y - 16;
+      const pulse = 1 + Math.sin(this.animPhase * 2) * 0.08;
+
+      ctx.save();
+      ctx.translate(bx, by);
+      ctx.scale(pulse, pulse);
+
+      ctx.fillStyle = '#1e293b';
+      ctx.beginPath();
+      ctx.arc(0, 0, 12, 0, Math.PI * 2);
+      ctx.fill();
+
+      // 战斗进度环
+      const color = battle.progress >= 55 ? '#22c55e' : battle.progress <= 45 ? '#ef4444' : '#facc15';
+      ctx.strokeStyle = color;
+      ctx.lineWidth = 3;
+      ctx.beginPath();
+      ctx.arc(0, 0, 12, -Math.PI / 2, -Math.PI / 2 + (Math.PI * 2 * battle.progress) / 100);
+      ctx.stroke();
+
+      ctx.fillStyle = '#ffffff';
+      ctx.font = '700 9px Inter, sans-serif';
+      ctx.textAlign = 'center';
+      ctx.fillText(`${battle.progress}`, 0, 3);
+      ctx.restore();
+    }
+  }
+}
+
+
+// ===== src/ui/app.js =====
+/**
+ * Web HOI 前端交互主控制器
+ * 连接 GameEngine、MapRenderer、SoundEffects 与 DOM 控制面板。
+ */
+
+
+
+
+
+
+
+
+
+const SPEED_INTERVALS_MS = { 1: 750, 2: 420, 3: 240, 4: 130, 5: 65 };
+class WebHoiApp {
+  constructor() {
+    this.engine = new GameEngine('GER');
+    this.sfx = new SoundEffects();
+    this.canvas = document.getElementById('mapCanvas');
+    this.renderer = new MapRenderer(this.canvas, this.engine);
+    this.activeTab = 'military';
+    this.moveOrderMode = false;
+    this.tickTimer = null;
+    this.isDragging = false;
+    this.dragMoved = false;
+    this.lastMouse = { x: 0, y: 0 };
+
+    this.initNationSelector();
+    this.bindEvents();
+    this.renderer.resize();
+    this.renderer.selectedProvinceId = this.engine.nations[this.engine.playerNationId].capital;
+    this.renderAll();
+    this.startRenderLoop();
+  }
+
+  initNationSelector() {
+    const sel = document.getElementById('nationSelect');
+    sel.innerHTML = Object.values(NATIONS)
+      .map((n) => `<option value="${n.id}">${n.flag} ${n.name} (${n.ideology})</option>`)
+      .join('');
+    sel.value = this.engine.playerNationId;
+  }
+
+  showToast(msg) {
+    const el = document.getElementById('toast');
+    el.textContent = msg;
+    el.classList.add('show');
+    clearTimeout(this._toastTimer);
+    this._toastTimer = setTimeout(() => el.classList.remove('show'), 2600);
+  }
+
+  bindEvents() {
+    window.addEventListener('resize', () => {
+      this.renderer.resize();
+      this.renderer.render();
+    });
+
+    // 切换玩家国家（重开一局）
+    document.getElementById('nationSelect').addEventListener('change', (e) => {
+      this.stopClock();
+      this.engine.reset(e.target.value);
+      this.renderer.selectedDivisionIds.clear();
+      this.renderer.selectedProvinceId = this.engine.nations[this.engine.playerNationId].capital;
+      this.sfx.click();
+      this.renderAll();
+      this.showToast(`已切换指挥国家：${this.engine.nations[this.engine.playerNationId].name}`);
+    });
+
+    // 暂停/继续与倍速控制
+    document.getElementById('btnPause').addEventListener('click', () => this.togglePause());
+    document.querySelectorAll('[data-speed]').forEach((btn) => {
+      btn.addEventListener('click', () => {
+        this.engine.speed = Number(btn.dataset.speed);
+        if (this.engine.paused) this.engine.paused = false;
+        this.restartClock();
+        this.sfx.click();
+        this.renderTopbar();
+      });
+    });
+
+    // 空格键暂停/继续
+    window.addEventListener('keydown', (e) => {
+      if (e.code === 'Space' && e.target.tagName !== 'INPUT' && e.target.tagName !== 'SELECT') {
+        e.preventDefault();
+        this.togglePause();
+      }
+    });
+
+    // 静音、存档、读档
+    document.getElementById('btnMute').addEventListener('click', (e) => {
+      const muted = this.sfx.toggleMute();
+      e.target.textContent = muted ? '🔇' : '🔊';
+    });
+
+    document.getElementById('btnSave').addEventListener('click', () => {
+      try {
+        localStorage.setItem('web_hoi_save_v1', this.engine.serialize());
+        this.showToast('战局已保存至本地浏览器存档。');
+      } catch {
+        this.showToast('当前环境限制本地存储，已生成内存快照。');
+        this._memSave = this.engine.serialize();
+      }
+    });
+
+    document.getElementById('btnLoad').addEventListener('click', () => {
+      try {
+        const raw = localStorage.getItem('web_hoi_save_v1') || this._memSave;
+        if (!raw) return this.showToast('暂无可用存档。');
+        this.engine.deserialize(raw);
+        document.getElementById('nationSelect').value = this.engine.playerNationId;
+        this.renderer.selectedDivisionIds.clear();
+        this.renderAll();
+        this.showToast(`已读取存档：${this.engine.formatDate()}`);
+      } catch {
+        this.showToast('读取存档失败。');
+      }
+    });
+
+    // 地图模式切换与缩放
+    document.querySelectorAll('[data-mapmode]').forEach((btn) => {
+      btn.addEventListener('click', () => {
+        this.renderer.mapMode = btn.dataset.mapmode;
+        document.querySelectorAll('[data-mapmode]').forEach((b) => b.classList.remove('active'));
+        btn.classList.add('active');
+        this.sfx.click();
+      });
+    });
+
+    document.getElementById('btnZoomIn').addEventListener('click', () => {
+      this.renderer.zoom = Math.min(2.2, this.renderer.zoom + 0.2);
+    });
+    document.getElementById('btnZoomOut').addEventListener('click', () => {
+      this.renderer.zoom = Math.max(0.75, this.renderer.zoom - 0.2);
+    });
+    document.getElementById('btnResetView').addEventListener('click', () => {
+      this.renderer.zoom = 1.0;
+      this.renderer.panX = 0;
+      this.renderer.panY = 0;
+    });
+
+    // 左侧标签页切换
+    document.querySelectorAll('.tab-btn').forEach((btn) => {
+      btn.addEventListener('click', () => {
+        this.activeTab = btn.dataset.tab;
+        document.querySelectorAll('.tab-btn').forEach((b) => b.classList.remove('active'));
+        btn.classList.add('active');
+        this.sfx.click();
+        this.renderSidebar();
+      });
+    });
+
+    // Canvas 交互：左键选中省份/部队，右键下达行军或进攻命令，滚轮缩放，拖拽平移
+    this.canvas.addEventListener('mousedown', (e) => {
+      if (e.button === 0) {
+        this.isDragging = true;
+        this.dragMoved = false;
+        this.lastMouse = { x: e.clientX, y: e.clientY };
+      }
+    });
+
+    window.addEventListener('mousemove', (e) => {
+      if (this.isDragging) {
+        const dx = e.clientX - this.lastMouse.x;
+        const dy = e.clientY - this.lastMouse.y;
+        if (Math.abs(dx) > 3 || Math.abs(dy) > 3) this.dragMoved = true;
+        this.renderer.panX += dx;
+        this.renderer.panY += dy;
+        this.lastMouse = { x: e.clientX, y: e.clientY };
+      } else {
+        const pt = this.renderer.screenToLogical(e.clientX, e.clientY);
+        this.renderer.hoverProvinceId = this.renderer.hitTestProvince(pt.x, pt.y);
+      }
+    });
+
+    window.addEventListener('mouseup', () => {
+      this.isDragging = false;
+    });
+
+    this.canvas.addEventListener('click', (e) => {
+      if (this.dragMoved) return;
+      const pt = this.renderer.screenToLogical(e.clientX, e.clientY);
+      const provId = this.renderer.hitTestProvince(pt.x, pt.y);
+      if (!provId) return;
+
+      // 触控/指令模式下，左键直接作为行军目标
+      if (this.moveOrderMode && this.renderer.selectedDivisionIds.size > 0) {
+        this.issueMoveToProvince(provId);
+        this.moveOrderMode = false;
+        return;
+      }
+
+      this.renderer.selectedProvinceId = provId;
+      // 若该省有玩家部队，自动全选该省玩家部队
+      const myDivsHere = Object.values(this.engine.divisions).filter(
+        (d) => d.provinceId === provId && d.owner === this.engine.playerNationId
+      );
+      if (myDivsHere.length > 0) {
+        this.renderer.selectedDivisionIds = new Set(myDivsHere.map((d) => d.id));
+      } else {
+        this.renderer.selectedDivisionIds.clear();
+      }
+      this.sfx.click();
+      this.renderInspector();
+      this.renderSidebar();
+    });
+
+    this.canvas.addEventListener('contextmenu', (e) => {
+      e.preventDefault();
+      const pt = this.renderer.screenToLogical(e.clientX, e.clientY);
+      const provId = this.renderer.hitTestProvince(pt.x, pt.y);
+      if (!provId) return;
+      this.issueMoveToProvince(provId);
+    });
+
+    this.canvas.addEventListener(
+      'wheel',
+      (e) => {
+        e.preventDefault();
+        const delta = e.deltaY < 0 ? 0.12 : -0.12;
+        this.renderer.zoom = Math.max(0.75, Math.min(2.2, this.renderer.zoom + delta));
+      },
+      { passive: false }
+    );
+  }
+
+  issueMoveToProvince(targetProvId) {
+    if (this.renderer.selectedDivisionIds.size === 0) {
+      this.showToast('请先左键点击驻有己方部队的省份以选中部队。');
+      return;
+    }
+    let success = 0;
+    let lastErr = '';
+    for (const divId of this.renderer.selectedDivisionIds) {
+      const res = this.engine.orderMoveDivision(divId, targetProvId);
+      if (res.ok) success += 1;
+      else lastErr = res.reason;
+    }
+    if (success > 0) {
+      this.sfx.march();
+      this.showToast(`已命令 ${success} 个师开赴 ${this.engine.provinces[targetProvId].name}。`);
+      this.renderAll();
+    } else if (lastErr) {
+      this.showToast(lastErr);
+    }
+  }
+
+  togglePause() {
+    this.engine.paused = !this.engine.paused;
+    if (this.engine.paused) this.stopClock();
+    else this.restartClock();
+    this.sfx.click();
+    this.renderTopbar();
+  }
+
+  stopClock() {
+    if (this.tickTimer) {
+      clearInterval(this.tickTimer);
+      this.tickTimer = null;
+    }
+  }
+
+  restartClock() {
+    this.stopClock();
+    if (this.engine.paused) return;
+    const ms = SPEED_INTERVALS_MS[this.engine.speed] || 300;
+    this.tickTimer = setInterval(() => {
+      this.engine.tickStep();
+      this.renderAll();
+    }, ms);
+  }
+
+  startRenderLoop() {
+    const loop = () => {
+      this.renderer.render();
+      requestAnimationFrame(loop);
+    };
+    requestAnimationFrame(loop);
+  }
+
+  renderAll() {
+    this.renderTopbar();
+    this.renderSidebar();
+    this.renderInspector();
+    this.renderLog();
+  }
+
+  renderTopbar() {
+    const n = this.engine.nations[this.engine.playerNationId];
+    const econ = computeNationEconomy(n.id, this.engine);
+    const myDivCount = Object.values(this.engine.divisions).filter((d) => d.owner === n.id).length;
+
+    document.getElementById('statPP').textContent = Math.floor(n.politicalPower);
+    document.getElementById('statMP').textContent = `${(n.manpower / 1000).toFixed(0)}k`;
+    document.getElementById('statFac').textContent = `${econ.civFactories}民/${econ.milFactories}军`;
+    document.getElementById('statDivs').textContent = myDivCount;
+    document.getElementById('statTension').textContent = `${Math.round(this.engine.worldTension)}%`;
+    document.getElementById('dateDisplay').textContent = `${this.engine.formatDate()} ${String(this.engine.hour).padStart(2, '0')}:00`;
+
+    const pauseBtn = document.getElementById('btnPause');
+    pauseBtn.textContent = this.engine.paused ? '▶ 开始' : '⏸ 暂停';
+    pauseBtn.classList.toggle('active', !this.engine.paused);
+
+    document.querySelectorAll('[data-speed]').forEach((b) => {
+      b.classList.toggle('active', !this.engine.paused && Number(b.dataset.speed) === this.engine.speed);
+    });
+  }
+
+  renderSidebar() {
+    const container = document.getElementById('panelBody');
+    const n = this.engine.nations[this.engine.playerNationId];
+
+    if (this.activeTab === 'military') {
+      this.renderMilitaryTab(container, n);
+    } else if (this.activeTab === 'production') {
+      this.renderProductionTab(container, n);
+    } else if (this.activeTab === 'research') {
+      this.renderResearchTab(container, n);
+    } else if (this.activeTab === 'focus') {
+      this.renderFocusTab(container, n);
+    } else if (this.activeTab === 'diplomacy') {
+      this.renderDiplomacyTab(container, n);
+    }
+  }
+
+  renderMilitaryTab(container, nation) {
+    const myDivs = Object.values(this.engine.divisions).filter((d) => d.owner === nation.id);
+    container.innerHTML = `
+      <div class="card">
+        <div class="card-title">
+          <span>部队招募（部署于首都 ${this.engine.provinces[nation.capital]?.name || ''}）</span>
+        </div>
+        ${Object.values(DIVISION_TEMPLATES)
+          .map(
+            (tpl) => `
+          <div class="row">
+            <div>
+              <div><strong>${tpl.name}</strong> <span class="muted">软攻${tpl.softAttack} 装甲${tpl.armor}</span></div>
+              <div class="muted">人力 ${(tpl.manpower / 1000).toFixed(1)}k · 训练 ${tpl.trainDays}天</div>
+            </div>
+            <button class="btn sm" data-train="${tpl.id}">招募</button>
+          </div>`
+          )
+          .join('')}
+      </div>
+      <div class="card">
+        <div class="card-title"><span>训练队列 (${nation.trainingQueue.length})</span></div>
+        ${
+          nation.trainingQueue.length === 0
+            ? '<div class="muted">暂无正在训练的部队</div>'
+            : nation.trainingQueue
+                .map((item) => {
+                  const pct = Math.round(((item.totalDays - item.daysLeft) / item.totalDays) * 100);
+                  return `<div class="row" style="flex-direction:column;align-items:stretch;">
+                    <div style="display:flex;justify-content:space-between;">
+                      <span>${DIVISION_TEMPLATES[item.templateId].name}</span>
+                      <span class="muted">剩余 ${item.daysLeft} 天</span>
+                    </div>
+                    <div class="progress-bar"><div class="progress-fill" style="width:${pct}%"></div></div>
+                  </div>`;
+                })
+                .join('')
+        }
+      </div>
+      <div class="card">
+        <div class="card-title">
+          <span>现役师列表 (${myDivs.length})</span>
+          <button class="btn sm ${this.moveOrderMode ? 'active' : ''}" id="btnMoveMode">指令移动</button>
+        </div>
+        ${myDivs
+          .map((d) => {
+            const p = this.engine.provinces[d.provinceId];
+            const selected = this.renderer.selectedDivisionIds.has(d.id);
+            return `<div class="row" style="cursor:pointer;${selected ? 'background:rgba(212,175,55,0.14);padding:4px 6px;border-radius:4px;' : ''}" data-select-div="${d.id}">
+              <div>
+                <div><strong>${d.name}</strong> ${d.encircled ? '<span class="badge war">断补</span>' : ''}</div>
+                <div class="muted">${p?.name || ''} · 组织 ${Math.round(d.org)} · 兵力 ${Math.round(d.hp)}%</div>
+              </div>
+              <span class="muted">${d.movingTo ? '→' + this.engine.provinces[d.movingTo].name : d.inCombat ? '⚔️交战' : '驻守'}</span>
+            </div>`;
+          })
+          .join('')}
+      </div>
+    `;
+
+    container.querySelectorAll('[data-train]').forEach((btn) => {
+      btn.addEventListener('click', () => {
+        const res = this.engine.queueDivisionTraining(nation.id, btn.dataset.train, nation.capital);
+        this.showToast(res.ok ? '已加入新师训练队列。' : res.reason);
+        this.sfx.click();
+        this.renderAll();
+      });
+    });
+
+    container.querySelector('#btnMoveMode')?.addEventListener('click', () => {
+      this.moveOrderMode = !this.moveOrderMode;
+      this.showToast(this.moveOrderMode ? '请点击地图上的目标相邻省份下达行军指令。' : '已取消指令移动模式。');
+      this.renderSidebar();
+    });
+
+    container.querySelectorAll('[data-select-div]').forEach((row) => {
+      row.addEventListener('click', () => {
+        const div = this.engine.divisions[row.dataset.selectDiv];
+        if (!div) return;
+        this.renderer.selectedDivisionIds = new Set([div.id]);
+        this.renderer.selectedProvinceId = div.provinceId;
+        this.renderInspector();
+        this.renderSidebar();
+      });
+    });
+  }
+
+  renderProductionTab(container, nation) {
+    const econ = computeNationEconomy(nation.id, this.engine);
+    container.innerHTML = `
+      <div class="card">
+        <div class="card-title">
+          <span>军工产线分配</span>
+          <span class="muted">空闲军工: ${econ.freeMil} · 效率 ${Math.round(econ.resourceEfficiency * 100)}%</span>
+        </div>
+        ${nation.productionLines
+          .map((line) => {
+            const eq = EQUIPMENT_CATALOG[line.equipmentId];
+            const stock = Math.floor(nation.equipment[line.equipmentId] || 0);
+            return `<div class="row">
+              <div>
+                <div><strong>${eq.name}</strong> <span class="muted">库存 ${stock}</span></div>
+                <div class="muted">分配军工: ${line.factories} 座</div>
+              </div>
+              <div style="display:flex;gap:4px;">
+                <button class="btn sm" data-prod-sub="${line.equipmentId}">-</button>
+                <button class="btn sm" data-prod-add="${line.equipmentId}">+</button>
+              </div>
+            </div>`;
+          })
+          .join('')}
+      </div>
+      <div class="card">
+        <div class="card-title"><span>战略资源供需</span></div>
+        <div class="row"><span>钢铁 (Steel)</span><span>${econ.resources.steel} / 需 ${econ.resourceNeed.steel}</span></div>
+        <div class="row"><span>石油 (Oil)</span><span>${econ.resources.oil} / 需 ${econ.resourceNeed.oil}</span></div>
+        <div class="row"><span>钨矿 (Tungsten)</span><span>${econ.resources.tungsten} / 需 ${econ.resourceNeed.tungsten}</span></div>
+      </div>
+      <div class="card">
+        <div class="card-title"><span>民用建造队列 (可用民工 ${econ.availableCiv})</span></div>
+        ${
+          nation.constructionQueue.length === 0
+            ? '<div class="muted">在地图选中己方省份后可发起工厂/要塞建设</div>'
+            : nation.constructionQueue
+                .map((task) => {
+                  const pct = Math.min(100, Math.round((task.progress / task.cost) * 100));
+                  return `<div class="row" style="flex-direction:column;align-items:stretch;">
+                    <div style="display:flex;justify-content:space-between;">
+                      <span>${this.engine.provinces[task.provinceId]?.name} · ${CONSTRUCTION_COSTS[task.type].name}</span>
+                      <span class="muted">${pct}%</span>
+                    </div>
+                    <div class="progress-bar"><div class="progress-fill" style="width:${pct}%"></div></div>
+                  </div>`;
+                })
+                .join('')
+        }
+      </div>
+    `;
+
+    container.querySelectorAll('[data-prod-add]').forEach((b) =>
+      b.addEventListener('click', () => {
+        const res = this.engine.adjustProductionLine(nation.id, b.dataset.prodAdd, 1);
+        if (!res.ok) this.showToast(res.reason);
+        this.renderAll();
+      })
+    );
+    container.querySelectorAll('[data-prod-sub]').forEach((b) =>
+      b.addEventListener('click', () => {
+        this.engine.adjustProductionLine(nation.id, b.dataset.prodSub, -1);
+        this.renderAll();
+      })
+    );
+  }
+
+  renderResearchTab(container, nation) {
+    const active = nation.activeTech ? TECHNOLOGIES.find((t) => t.id === nation.activeTech.id) : null;
+    container.innerHTML = `
+      <div class="card">
+        <div class="card-title"><span>当前科研槽</span></div>
+        ${
+          active
+            ? `<div><strong>${active.name}</strong> <span class="muted">剩余 ${nation.activeTech.daysLeft} 天</span></div>
+               <div class="progress-bar"><div class="progress-fill" style="width:${Math.round(
+                 ((nation.activeTech.totalDays - nation.activeTech.daysLeft) / nation.activeTech.totalDays) * 100
+               )}%"></div></div>`
+            : '<div class="muted">科研槽空闲，请从下方选择科技项目</div>'
+        }
+      </div>
+      <div class="card">
+        <div class="card-title"><span>科技树 (${nation.completedTechs.length}/${TECHNOLOGIES.length})</span></div>
+        ${TECHNOLOGIES.map((t) => {
+          const done = nation.completedTechs.includes(t.id);
+          const running = nation.activeTech?.id === t.id;
+          const prereqMet = t.prereq.every((p) => nation.completedTechs.includes(p));
+          return `<div class="row">
+            <div>
+              <div><strong>${t.name}</strong> <span class="badge">${t.branchName}</span></div>
+              <div class="muted">${t.desc}</div>
+            </div>
+            ${
+              done
+                ? '<span class="badge ally">已掌握</span>'
+                : running
+                ? '<span class="badge">研发中</span>'
+                : `<button class="btn sm" data-tech="${t.id}" ${!prereqMet || nation.activeTech ? 'disabled' : ''}>${t.costDays}天</button>`
+            }
+          </div>`;
+        }).join('')}
+      </div>
+    `;
+
+    container.querySelectorAll('[data-tech]').forEach((b) =>
+      b.addEventListener('click', () => {
+        const res = this.engine.startResearch(nation.id, b.dataset.tech);
+        if (!res.ok) this.showToast(res.reason);
+        this.sfx.click();
+        this.renderAll();
+      })
+    );
+  }
+
+  renderFocusTab(container, nation) {
+    const active = nation.activeFocus ? NATIONAL_FOCUSES.find((f) => f.id === nation.activeFocus.id) : null;
+    container.innerHTML = `
+      <div class="card">
+        <div class="card-title"><span>当前国家焦点</span></div>
+        ${
+          active
+            ? `<div><strong>${active.name}</strong> <span class="muted">剩余 ${nation.activeFocus.daysLeft} 天</span></div>
+               <div class="progress-bar"><div class="progress-fill" style="width:${Math.round(
+                 ((nation.activeFocus.totalDays - nation.activeFocus.daysLeft) / nation.activeFocus.totalDays) * 100
+               )}%"></div></div>`
+            : '<div class="muted">未选择国家焦点，请从下方启动国策</div>'
+        }
+      </div>
+      <div class="card">
+        <div class="card-title"><span>国家焦点树</span></div>
+        ${NATIONAL_FOCUSES.map((f) => {
+          const done = nation.completedFocuses.includes(f.id);
+          const running = nation.activeFocus?.id === f.id;
+          const prereqMet = f.prereq.every((p) => nation.completedFocuses.includes(p));
+          return `<div class="row">
+            <div>
+              <div><strong>${f.name}</strong> <span class="badge">${f.category}</span></div>
+              <div class="muted">${f.desc}</div>
+            </div>
+            ${
+              done
+                ? '<span class="badge ally">已完成</span>'
+                : running
+                ? '<span class="badge">进行中</span>'
+                : `<button class="btn sm" data-focus="${f.id}" ${!prereqMet || nation.activeFocus ? 'disabled' : ''}>${f.days}天</button>`
+            }
+          </div>`;
+        }).join('')}
+      </div>
+    `;
+
+    container.querySelectorAll('[data-focus]').forEach((b) =>
+      b.addEventListener('click', () => {
+        const res = this.engine.startFocus(nation.id, b.dataset.focus);
+        if (!res.ok) this.showToast(res.reason);
+        this.sfx.click();
+        this.renderAll();
+      })
+    );
+  }
+
+  renderDiplomacyTab(container, nation) {
+    container.innerHTML = `
+      <div class="card">
+        <div class="card-title"><span>欧洲列强外交与战局</span></div>
+        ${Object.values(this.engine.nations)
+          .filter((other) => other.id !== nation.id)
+          .map((other) => {
+            const atWar = areAtWar(nation.id, other.id, this.engine);
+            const ally = areAllies(nation.id, other.id, this.engine);
+            const divs = Object.values(this.engine.divisions).filter((d) => d.owner === other.id).length;
+            const provs = Object.values(this.engine.provinces).filter((p) => p.owner === other.id).length;
+            return `<div class="row">
+              <div>
+                <div><strong>${other.flag} ${other.name}</strong> ${
+                  other.capitulated
+                    ? '<span class="badge">已投降</span>'
+                    : atWar
+                    ? '<span class="badge war">交战中</span>'
+                    : ally
+                    ? '<span class="badge ally">同盟国</span>'
+                    : `<span class="badge">${other.faction}</span>`
+                }</div>
+                <div class="muted">省份 ${provs} · 部队 ${divs} 师 · 投降度 ${Math.round(
+                  (other.surrenderProgress || 0) * 100
+                )}%</div>
+              </div>
+              ${
+                !other.capitulated && !atWar && !ally
+                  ? `<button class="btn sm danger" data-war="${other.id}">宣战</button>`
+                  : ''
+              }
+            </div>`;
+          })
+          .join('')}
+      </div>
+    `;
+
+    container.querySelectorAll('[data-war]').forEach((b) =>
+      b.addEventListener('click', () => {
+        const res = this.engine.declareWar(nation.id, b.dataset.war);
+        if (res.ok) {
+          this.sfx.warHorn();
+          this.showToast(`已向 ${this.engine.nations[b.dataset.war].name} 宣战！`);
+        } else {
+          this.showToast(res.reason);
+        }
+        this.renderAll();
+      })
+    );
+  }
+
+  renderInspector() {
+    const box = document.getElementById('provinceInspector');
+    const prov = this.engine.provinces[this.renderer.selectedProvinceId];
+    if (!prov) {
+      box.innerHTML = '<div class="muted">点击地图省份查看详情，选中己方部队后右键相邻省份即可行军或进攻。</div>';
+      return;
+    }
+
+    const owner = this.engine.nations[prov.owner];
+    const terrain = TERRAIN_TYPES[prov.terrain];
+    const divs = Object.values(this.engine.divisions).filter((d) => d.provinceId === prov.id);
+    const isMine = prov.owner === this.engine.playerNationId;
+
+    box.innerHTML = `
+      <div class="card-title" style="margin-bottom:4px;">
+        <span>${owner.flag} ${prov.name} (${terrain.name})</span>
+        <span class="muted">VP ${prov.vp}</span>
+      </div>
+      <div class="muted" style="margin-bottom:6px;">
+        控制者: ${owner.shortName} · 工厂 ${prov.civFactories}民/${prov.milFactories}军 · 基建 ${prov.infra} · 要塞 ${prov.fortLevel || 0}<br/>
+        补给负载: ${prov.supplyUsed} / ${prov.supplyCapacity} · 驻军: ${divs.length} 师
+      </div>
+      ${
+        isMine
+          ? `<div style="display:flex;gap:4px;flex-wrap:wrap;">
+              <button class="btn sm" data-build="civFactory">+民工</button>
+              <button class="btn sm" data-build="milFactory">+军工</button>
+              <button class="btn sm" data-build="infra">+基建</button>
+              <button class="btn sm" data-build="fort">+要塞</button>
+            </div>`
+          : `<div class="muted">相邻省份: ${getAllNeighbors(prov)
+              .map((id) => this.engine.provinces[id]?.name)
+              .join('、')}</div>`
+      }
+    `;
+
+    box.querySelectorAll('[data-build]').forEach((b) =>
+      b.addEventListener('click', () => {
+        const res = this.engine.queueConstruction(this.engine.playerNationId, prov.id, b.dataset.build);
+        this.showToast(res.ok ? `已将${CONSTRUCTION_COSTS[b.dataset.build].name}加入建造队列。` : res.reason);
+        this.sfx.click();
+        this.renderAll();
+      })
+    );
+  }
+
+  renderLog() {
+    const el = document.getElementById('eventLog');
+    el.innerHTML = this.engine.logs
+      .slice(0, 12)
+      .map((l) => `<div class="log-item ${l.type}">[${l.date}] ${l.text}</div>`)
+      .join('');
+  }
+}
+
+window.addEventListener('load', () => {
+  window.__webHoiApp = new WebHoiApp();
+});
+
+</script>
+</body>
+</html>

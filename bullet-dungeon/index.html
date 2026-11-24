@@ -1,0 +1,77 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>枪弹地牢 · Bullet Dungeon</title>
+  <link rel="stylesheet" href="src/styles/main.css" />
+</head>
+<body>
+  <div class="app-shell">
+    <header class="hud-bar">
+      <div class="hud-group">
+        <div class="stat-pill"><span class="label">生命</span><span id="hudHearts" class="hearts-display">♥♥♥</span></div>
+        <div class="stat-pill"><span class="label">护甲</span><span id="hudArmor" class="armor-display">1</span></div>
+        <div class="stat-pill"><span class="label">空白弹</span><span id="hudBlanks" class="blank-display">2</span></div>
+        <div class="stat-pill"><span class="label">金币</span><span id="hudCoins" class="coin-display">15</span></div>
+        <div class="stat-pill"><span class="label">楼层</span><span id="hudFloor">F1</span></div>
+        <div class="stat-pill"><span class="label">得分</span><span id="hudScore">0</span></div>
+        <div class="stat-pill"><span class="label">最高</span><span id="hudBest">0</span></div>
+      </div>
+      <div class="hud-actions">
+        <button id="muteBtn" class="btn" type="button">音效: 开</button>
+        <button id="pauseBtn" class="btn" type="button">暂停 (P)</button>
+        <button id="restartBtn" class="btn" type="button">重开</button>
+      </div>
+    </header>
+
+    <main id="stageWrap" class="stage-wrap">
+      <canvas id="gameCanvas" aria-label="枪弹地牢游戏画布"></canvas>
+      <div id="toast" class="toast" role="status" aria-live="polite"></div>
+
+      <div id="overlay" class="overlay">
+        <div class="modal-card">
+          <h1 id="overlayTitle" class="modal-title">枪弹地牢 · BULLET DUNGEON</h1>
+          <p id="overlaySubtitle" class="modal-subtitle">
+            在程序生成的三层地牢中穿梭弹幕，善用翻滚无敌帧与空白清弹，击败每层守关 Boss！
+          </p>
+          <div class="controls-grid">
+            <div class="control-item"><kbd>WASD</kbd> 移动角色</div>
+            <div class="control-item"><kbd>鼠标左键</kbd> 瞄准与射击</div>
+            <div class="control-item"><kbd>Space/右键</kbd> 翻滚（无敌帧）</div>
+            <div class="control-item"><kbd>Q</kbd> 释放空白弹清屏</div>
+            <div class="control-item"><kbd>R</kbd> 手动装弹</div>
+            <div class="control-item"><kbd>E</kbd> 开宝箱/购买/传送</div>
+            <div class="control-item"><kbd>1-4 / 滚轮</kbd> 切换武器</div>
+            <div class="control-item"><kbd>P / Esc</kbd> 暂停游戏</div>
+          </div>
+          <button id="startBtn" class="btn btn-primary" type="button">开始探险</button>
+        </div>
+      </div>
+    </main>
+
+    <footer class="bottom-bar">
+      <div id="weaponStrip" class="weapon-strip" aria-label="武器栏"></div>
+      <div class="touch-controls" aria-label="移动端虚拟按键">
+        <div class="dpad">
+          <div></div>
+          <button id="btnUp" class="touch-btn" type="button">↑</button>
+          <div></div>
+          <button id="btnLeft" class="touch-btn" type="button">←</button>
+          <button id="btnDown" class="touch-btn" type="button">↓</button>
+          <button id="btnRight" class="touch-btn" type="button">→</button>
+        </div>
+        <div class="touch-actions">
+          <button id="btnFire" class="touch-btn" type="button">射击</button>
+          <button id="btnRoll" class="touch-btn" type="button">翻滚</button>
+          <button id="btnBlank" class="touch-btn" type="button">清弹</button>
+          <button id="btnReload" class="touch-btn" type="button">装弹</button>
+          <button id="btnInteract" class="touch-btn" type="button">交互</button>
+        </div>
+      </div>
+    </footer>
+  </div>
+
+  <script type="module" src="src/main.js"></script>
+</body>
+</html>

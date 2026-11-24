@@ -1,0 +1,3784 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>网页太鼓达人 · Web Taiko Master</title>
+  <style>
+:root {
+  --bg-deep: #130f1e;
+  --bg-card: #1f1930;
+  --bg-card-hover: #2a2240;
+  --border: rgba(251, 191, 36, 0.22);
+  --text-main: #f8fafc;
+  --text-muted: #cbd5e1;
+  --accent-red: #ef4444;
+  --accent-blue: #0ea5e9;
+  --accent-gold: #f59e0b;
+  --accent-yellow: #fde047;
+  --radius: 14px;
+}
+
+* {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+}
+
+body {
+  font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'PingFang SC', 'Hiragino Sans GB', 'Microsoft YaHei', sans-serif;
+  background: radial-gradient(circle at top, #2d1436 0%, var(--bg-deep) 60%);
+  color: var(--text-main);
+  min-height: 100vh;
+  line-height: 1.5;
+  overflow-x: hidden;
+}
+
+.hidden {
+  display: none !important;
+}
+
+.app-shell {
+  max-width: 1080px;
+  margin: 0 auto;
+  padding: 16px;
+}
+
+/* Header */
+.topbar {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 12px 18px;
+  background: rgba(31, 25, 48, 0.88);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  margin-bottom: 18px;
+  backdrop-filter: blur(8px);
+}
+
+.brand {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.brand-icon {
+  width: 40px;
+  height: 40px;
+  border-radius: 50%;
+  background: radial-gradient(circle at 35% 35%, #f87171, #dc2626 65%);
+  border: 4px solid #38bdf8;
+  box-shadow: 0 0 12px rgba(239, 68, 68, 0.45);
+  display: grid;
+  place-items: center;
+  font-weight: 900;
+  font-size: 16px;
+  color: #fff;
+}
+
+.brand h1 {
+  font-size: 1.2rem;
+  font-weight: 800;
+  letter-spacing: 0.02em;
+}
+
+.brand p {
+  font-size: 0.78rem;
+  color: var(--text-muted);
+}
+
+.toolbar {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  align-items: center;
+}
+
+.btn {
+  border: 1px solid var(--border);
+  background: rgba(255, 255, 255, 0.06);
+  color: var(--text-main);
+  padding: 8px 14px;
+  border-radius: 10px;
+  font-size: 0.88rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: transform 0.12s ease, background 0.15s ease, border-color 0.15s ease;
+}
+
+.btn:hover {
+  background: rgba(255, 255, 255, 0.13);
+  border-color: var(--accent-gold);
+}
+
+.btn:active {
+  transform: scale(0.97);
+}
+
+.btn.active {
+  background: linear-gradient(135deg, #f59e0b, #d97706);
+  color: #111827;
+  border-color: #fde047;
+}
+
+.btn-primary {
+  background: linear-gradient(135deg, #ef4444, #dc2626);
+  border-color: #fca5a5;
+  color: #fff;
+  padding: 11px 24px;
+  font-size: 1rem;
+  box-shadow: 0 6px 18px rgba(239, 68, 68, 0.35);
+}
+
+.btn-primary:hover {
+  background: linear-gradient(135deg, #f87171, #ef4444);
+}
+
+.btn:disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
+}
+
+/* Song Select */
+.panel {
+  background: rgba(31, 25, 48, 0.85);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 18px;
+}
+
+.select-header {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: space-between;
+  align-items: center;
+  gap: 12px;
+  margin-bottom: 16px;
+}
+
+.diff-tabs {
+  display: flex;
+  gap: 8px;
+}
+
+.diff-btn {
+  padding: 7px 14px;
+  border-radius: 999px;
+  border: 1px solid var(--border);
+  background: rgba(255, 255, 255, 0.05);
+  color: var(--text-main);
+  font-weight: 700;
+  font-size: 0.86rem;
+  cursor: pointer;
+}
+
+.diff-btn[data-diff="easy"].active { background: #16a34a; border-color: #86efac; }
+.diff-btn[data-diff="normal"].active { background: #d97706; border-color: #fde047; }
+.diff-btn[data-diff="oni"].active { background: #dc2626; border-color: #fca5a5; }
+
+.song-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+  gap: 14px;
+  margin-bottom: 18px;
+}
+
+.song-card {
+  text-align: left;
+  background: var(--bg-card);
+  border: 2px solid rgba(255, 255, 255, 0.08);
+  border-left: 5px solid var(--song-accent, #ef4444);
+  border-radius: 12px;
+  padding: 14px;
+  color: var(--text-main);
+  cursor: pointer;
+  transition: transform 0.14s ease, border-color 0.14s ease, background 0.14s ease;
+}
+
+.song-card:hover {
+  background: var(--bg-card-hover);
+  transform: translateY(-2px);
+}
+
+.song-card.selected {
+  border-color: var(--accent-yellow);
+  background: #2f2449;
+  box-shadow: 0 0 0 1px rgba(253, 224, 71, 0.4);
+}
+
+.song-card-top {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: 8px;
+  margin-bottom: 8px;
+}
+
+.song-title {
+  font-size: 1.05rem;
+  font-weight: 800;
+}
+
+.song-sub {
+  font-size: 0.78rem;
+  color: var(--text-muted);
+}
+
+.song-card-meta {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin-bottom: 8px;
+}
+
+.tag {
+  font-size: 0.74rem;
+  background: rgba(255, 255, 255, 0.08);
+  padding: 2px 8px;
+  border-radius: 999px;
+  color: var(--text-muted);
+}
+
+.song-stars {
+  font-size: 0.82rem;
+  font-weight: 700;
+  letter-spacing: 0.03em;
+}
+
+.best-badge {
+  font-size: 0.74rem;
+  font-weight: 800;
+  padding: 3px 8px;
+  border-radius: 8px;
+  background: rgba(250, 204, 21, 0.18);
+  color: #fde047;
+  white-space: nowrap;
+}
+
+.best-badge.empty {
+  background: rgba(148, 163, 184, 0.15);
+  color: #94a3b8;
+}
+
+.launch-bar {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: space-between;
+  align-items: center;
+  gap: 12px;
+  padding-top: 14px;
+  border-top: 1px solid var(--border);
+}
+
+.key-hint {
+  margin-top: 14px;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px;
+  font-size: 0.82rem;
+  color: var(--text-muted);
+}
+
+.key-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 4px 10px;
+  border-radius: 8px;
+  background: rgba(255, 255, 255, 0.06);
+}
+
+.dot-don { width: 10px; height: 10px; border-radius: 50%; background: var(--accent-red); display: inline-block; }
+.dot-ka { width: 10px; height: 10px; border-radius: 50%; background: var(--accent-blue); display: inline-block; }
+
+/* Play Stage */
+.hud-bar {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: space-between;
+  align-items: center;
+  gap: 10px;
+  margin-bottom: 10px;
+}
+
+.hud-stats {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 16px;
+  align-items: center;
+}
+
+.hud-metric {
+  display: flex;
+  flex-direction: column;
+}
+
+.hud-metric .label {
+  font-size: 0.72rem;
+  color: var(--text-muted);
+}
+
+.hud-metric .val {
+  font-size: 1.15rem;
+  font-weight: 800;
+  color: var(--accent-yellow);
+  font-variant-numeric: tabular-nums;
+}
+
+.progress-track {
+  width: 100%;
+  height: 6px;
+  background: rgba(255, 255, 255, 0.1);
+  border-radius: 999px;
+  overflow: hidden;
+  margin-bottom: 10px;
+}
+
+.progress-fill {
+  height: 100%;
+  width: 0%;
+  background: linear-gradient(90deg, #f59e0b, #ef4444);
+  transition: width 0.1s linear;
+}
+
+.stage-wrap {
+  position: relative;
+  width: 100%;
+  height: 340px;
+  border-radius: 14px;
+  overflow: hidden;
+  border: 2px solid var(--border);
+  background: #0f172a;
+}
+
+#taiko-canvas {
+  width: 100%;
+  height: 100%;
+  display: block;
+}
+
+.pause-overlay {
+  position: absolute;
+  inset: 0;
+  background: rgba(15, 23, 42, 0.82);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 14px;
+  backdrop-filter: blur(4px);
+}
+
+/* Interactive Drum Pads */
+.drum-pad-grid {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 10px;
+  margin-top: 14px;
+}
+
+.drum-pad {
+  padding: 18px 8px;
+  border-radius: 14px;
+  border: 2px solid rgba(255, 255, 255, 0.18);
+  font-weight: 800;
+  color: #fff;
+  cursor: pointer;
+  user-select: none;
+  touch-action: manipulation;
+  transition: transform 0.06s ease, filter 0.08s ease;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 4px;
+}
+
+.drum-pad.ka { background: linear-gradient(180deg, #0284c7, #0369a1); }
+.drum-pad.don { background: linear-gradient(180deg, #ef4444, #b91c1c); }
+
+.drum-pad.active,
+.drum-pad:active {
+  transform: scale(0.95);
+  filter: brightness(1.3);
+}
+
+.pad-key {
+  font-size: 0.95rem;
+}
+
+.pad-sub {
+  font-size: 0.72rem;
+  opacity: 0.85;
+}
+
+/* Results View */
+.result-header {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  margin-bottom: 18px;
+}
+
+.result-rank {
+  width: 78px;
+  height: 78px;
+  border-radius: 50%;
+  display: grid;
+  place-items: center;
+  font-size: 2.1rem;
+  font-weight: 900;
+  border: 4px solid #fde047;
+  background: radial-gradient(circle, rgba(250, 204, 21, 0.25), rgba(15, 23, 42, 0.9));
+  color: #fde047;
+}
+
+.result-stamp {
+  font-size: 1rem;
+  font-weight: 800;
+  padding: 6px 14px;
+  border-radius: 999px;
+}
+
+.result-stamp.cleared { background: rgba(34, 197, 94, 0.2); color: #86efac; border: 1px solid #22c55e; }
+.result-stamp.failed { background: rgba(239, 68, 68, 0.2); color: #fca5a5; border: 1px solid #ef4444; }
+
+.result-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+  gap: 12px;
+  margin-bottom: 18px;
+}
+
+.stat-box {
+  background: rgba(255, 255, 255, 0.05);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: 10px;
+  padding: 12px;
+}
+
+.stat-box .k { font-size: 0.78rem; color: var(--text-muted); }
+.stat-box .v { font-size: 1.25rem; font-weight: 800; margin-top: 2px; }
+
+.histogram-box {
+  background: rgba(15, 23, 42, 0.55);
+  border-radius: 12px;
+  padding: 14px;
+  margin-bottom: 18px;
+}
+
+.histogram {
+  display: flex;
+  align-items: flex-end;
+  justify-content: space-between;
+  gap: 8px;
+  height: 92px;
+  margin-top: 10px;
+}
+
+.hist-col {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  height: 100%;
+}
+
+.hist-bar-wrap {
+  flex: 1;
+  width: 100%;
+  display: flex;
+  align-items: flex-end;
+  justify-content: center;
+}
+
+.hist-bar {
+  width: 70%;
+  background: #38bdf8;
+  border-radius: 4px 4px 0 0;
+}
+
+.hist-bar.center {
+  background: #facc15;
+}
+
+.hist-label {
+  font-size: 0.72rem;
+  color: var(--text-muted);
+  margin-top: 4px;
+}
+
+/* Editor View */
+.editor-textarea {
+  width: 100%;
+  min-height: 240px;
+  background: #0f172a;
+  color: #e2e8f0;
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  padding: 12px;
+  font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+  font-size: 0.88rem;
+  resize: vertical;
+  margin: 10px 0;
+}
+
+.editor-error {
+  color: #fca5a5;
+  background: rgba(239, 68, 68, 0.16);
+  padding: 8px 12px;
+  border-radius: 8px;
+  font-size: 0.84rem;
+  margin-bottom: 10px;
+}
+
+/* Settings Modal */
+.modal-backdrop {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.72);
+  display: grid;
+  place-items: center;
+  padding: 16px;
+  z-index: 50;
+}
+
+.modal-card {
+  width: 100%;
+  max-width: 520px;
+  background: #1e1830;
+  border: 1px solid var(--border);
+  border-radius: 16px;
+  padding: 20px;
+  max-height: 90vh;
+  overflow-y: auto;
+}
+
+.setting-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 12px;
+  margin: 12px 0;
+}
+
+.setting-row input[type="range"] {
+  flex: 1;
+  accent-color: var(--accent-gold);
+}
+
+.keybind-grid {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 10px;
+  margin: 10px 0 14px;
+}
+
+.keybind-item {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  background: rgba(255, 255, 255, 0.05);
+  padding: 8px 12px;
+  border-radius: 10px;
+  font-size: 0.86rem;
+}
+
+.btn.listening {
+  background: #ef4444;
+  color: #fff;
+}
+
+.toast {
+  position: fixed;
+  bottom: 20px;
+  left: 50%;
+  transform: translateX(-50%);
+  background: #111827;
+  color: #fef08a;
+  border: 1px solid #f59e0b;
+  padding: 10px 18px;
+  border-radius: 999px;
+  font-size: 0.86rem;
+  font-weight: 600;
+  z-index: 60;
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.45);
+}
+
+@media (max-width: 640px) {
+  .stage-wrap { height: 270px; }
+  .drum-pad { padding: 14px 4px; }
+  .brand p { display: none; }
+}
+
+  </style>
+</head>
+<body>
+  <div class="app-shell">
+    <header class="topbar">
+      <div class="brand">
+        <div class="brand-icon" aria-hidden="true">太</div>
+        <div>
+          <h1>网页太鼓达人 · Web Taiko Master</h1>
+          <p>Web Audio 实时合成 · 60fps Canvas 判定引擎 · TJA-Lite 谱面系统</p>
+        </div>
+      </div>
+      <nav class="toolbar" aria-label="主工具栏">
+        <button type="button" class="btn active" data-nav="select">选曲大厅</button>
+        <button type="button" class="btn" data-nav="editor">谱面编辑器</button>
+        <button type="button" class="btn" id="btn-toggle-auto">自动演奏: 关</button>
+        <button type="button" class="btn" id="btn-mute">🔊 音效</button>
+        <button type="button" class="btn" id="btn-open-settings">⚙ 设置与校准</button>
+      </nav>
+    </header>
+
+    <!-- Song Select View -->
+    <main id="view-select" class="panel">
+      <div class="select-header">
+        <div>
+          <h2>选择曲目与难度</h2>
+          <p style="font-size:0.84rem;color:var(--text-muted);">支持键盘 D / F / J / K 与触屏/鼠标鼓面双模式敲击</p>
+        </div>
+        <div class="diff-tabs" role="tablist" aria-label="难度选择">
+          <button type="button" class="diff-btn" data-diff="easy">简单 · かんたん</button>
+          <button type="button" class="diff-btn active" data-diff="normal">普通 · ふつう</button>
+          <button type="button" class="diff-btn" data-diff="oni">鬼级 · おに</button>
+        </div>
+      </div>
+
+      <div id="song-list" class="song-grid"></div>
+
+      <div class="launch-bar">
+        <div>
+          <div id="selected-song-title" style="font-weight:800;font-size:1.05rem;"></div>
+          <div id="selected-song-meta" style="font-size:0.82rem;color:var(--text-muted);"></div>
+        </div>
+        <button type="button" id="btn-start-game" class="btn btn-primary">🥁 开始演奏</button>
+      </div>
+
+      <div class="key-hint">
+        <span class="key-chip"><span class="dot-ka"></span> D / K = 咔 (蓝·鼓边)</span>
+        <span class="key-chip"><span class="dot-don"></span> F / J = 咚 (红·鼓面)</span>
+        <span class="key-chip">⚡ 良 ±25ms · 可 ±75ms · 不可 ±108ms</span>
+        <span class="key-chip">ESC = 暂停</span>
+      </div>
+    </main>
+
+    <!-- Gameplay View -->
+    <section id="view-play" class="panel hidden">
+      <div class="hud-bar">
+        <div>
+          <strong id="hud-song-title">曲目演奏中</strong>
+          <span id="hud-auto-badge" class="tag hidden" style="margin-left:8px;background:#f59e0b;color:#111827;font-weight:800;">AUTO</span>
+        </div>
+        <div class="hud-stats">
+          <div class="hud-metric">
+            <span class="label">得分</span>
+            <span class="val" id="hud-score">0</span>
+          </div>
+          <div class="hud-metric">
+            <span class="label">连击</span>
+            <span class="val" id="hud-combo">0</span>
+          </div>
+          <div class="hud-metric">
+            <span class="label">准确率</span>
+            <span class="val" id="hud-accuracy">100.0%</span>
+          </div>
+          <button type="button" class="btn" id="btn-pause">⏸ 暂停</button>
+          <button type="button" class="btn" id="btn-restart">↻ 重来</button>
+          <button type="button" class="btn" id="btn-exit-play">✕ 返回</button>
+        </div>
+      </div>
+
+      <div class="progress-track" aria-label="演奏进度">
+        <div id="hud-progress-fill" class="progress-fill"></div>
+      </div>
+
+      <div class="stage-wrap">
+        <canvas id="taiko-canvas" aria-label="太鼓达人演奏舞台"></canvas>
+        <div id="pause-overlay" class="pause-overlay hidden">
+          <h3>演奏已暂停</h3>
+          <button type="button" class="btn btn-primary" id="btn-resume">▶ 继续演奏</button>
+        </div>
+      </div>
+
+      <div class="drum-pad-grid" aria-label="触控鼓面">
+        <button type="button" class="drum-pad ka" data-pad="leftKa">
+          <span class="pad-key">D · 咔</span>
+          <span class="pad-sub">左鼓边</span>
+        </button>
+        <button type="button" class="drum-pad don" data-pad="leftDon">
+          <span class="pad-key">F · 咚</span>
+          <span class="pad-sub">左鼓面</span>
+        </button>
+        <button type="button" class="drum-pad don" data-pad="rightDon">
+          <span class="pad-key">J · 咚</span>
+          <span class="pad-sub">右鼓面</span>
+        </button>
+        <button type="button" class="drum-pad ka" data-pad="rightKa">
+          <span class="pad-key">K · 咔</span>
+          <span class="pad-sub">右鼓边</span>
+        </button>
+      </div>
+    </section>
+
+    <!-- Results View -->
+    <section id="view-result" class="panel hidden">
+      <div class="result-header">
+        <div>
+          <h2 id="res-song-title">演奏结算</h2>
+          <div style="margin-top:8px;">
+            <span id="res-stamp" class="result-stamp cleared">CLEAR</span>
+          </div>
+        </div>
+        <div id="res-rank" class="result-rank">S</div>
+      </div>
+
+      <div class="result-grid">
+        <div class="stat-box"><div class="k">最终得分</div><div class="v" id="res-score">0</div></div>
+        <div class="stat-box"><div class="k">准确率</div><div class="v" id="res-accuracy">100%</div></div>
+        <div class="stat-box"><div class="k">最大连击</div><div class="v" id="res-max-combo">0</div></div>
+        <div class="stat-box"><div class="k">魂槽进度</div><div class="v" id="res-soul">0%</div></div>
+        <div class="stat-box"><div class="k">良 (GREAT)</div><div class="v" style="color:#fde047" id="res-great">0</div></div>
+        <div class="stat-box"><div class="k">可 (GOOD)</div><div class="v" style="color:#e2e8f0" id="res-good">0</div></div>
+        <div class="stat-box"><div class="k">不可 (MISS)</div><div class="v" style="color:#94a3b8" id="res-miss">0</div></div>
+        <div class="stat-box"><div class="k">平均偏移</div><div class="v" id="res-mean-offset">0 ms</div></div>
+      </div>
+
+      <div class="histogram-box">
+        <div style="font-size:0.84rem;font-weight:700;">打击偏移分布 (ms · 负值为偏早，正值为偏晚)</div>
+        <div id="res-histogram" class="histogram"></div>
+      </div>
+
+      <div style="display:flex;gap:10px;flex-wrap:wrap;">
+        <button type="button" class="btn btn-primary" id="btn-res-retry">↻ 再来一局</button>
+        <button type="button" class="btn" id="btn-res-back">← 返回选曲大厅</button>
+      </div>
+    </section>
+
+    <!-- Custom TJA-Lite Chart Editor View -->
+    <section id="view-editor" class="panel hidden">
+      <div style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:10px;">
+        <div>
+          <h2>TJA-Lite 自定义谱面编辑器</h2>
+          <p style="font-size:0.82rem;color:var(--text-muted);">支持指令 <code>#BPMCHANGE</code>、<code>#SCROLL</code>、<code>#GOGOSTART</code>、<code>#GOGOEND</code> 与音符 0-8</p>
+        </div>
+        <div style="display:flex;gap:8px;">
+          <button type="button" class="btn" id="btn-editor-sample">载入示例谱面</button>
+          <button type="button" class="btn btn-primary" id="btn-editor-play">▶ 立即试玩</button>
+        </div>
+      </div>
+
+      <textarea id="tja-editor-input" class="editor-textarea" spellcheck="false" aria-label="TJA-Lite 谱面代码"></textarea>
+      <div id="tja-editor-error" class="editor-error hidden"></div>
+      <div id="tja-editor-stats" style="font-size:0.84rem;color:var(--accent-yellow);font-weight:600;"></div>
+    </section>
+  </div>
+
+  <!-- Settings & Calibration Modal -->
+  <div id="settings-modal" class="modal-backdrop hidden" role="dialog" aria-modal="true" aria-labelledby="settings-title">
+    <div class="modal-card">
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px;">
+        <h3 id="settings-title">⚙ 游戏设置与音频延迟校准</h3>
+        <button type="button" class="btn" id="btn-close-settings">关闭</button>
+      </div>
+
+      <div class="setting-row">
+        <label for="setting-offset" style="min-width:110px;">音频延迟补偿</label>
+        <input type="range" id="setting-offset" min="-150" max="150" step="5" value="0" />
+        <span id="setting-offset-val" style="min-width:60px;text-align:right;font-weight:700;">0 ms</span>
+      </div>
+
+      <div class="setting-row">
+        <label for="setting-speed" style="min-width:110px;">音符流速</label>
+        <input type="range" id="setting-speed" min="0.5" max="2.0" step="0.1" value="1.0" />
+        <span id="setting-speed-val" style="min-width:60px;text-align:right;font-weight:700;">1.0x</span>
+      </div>
+
+      <div class="setting-row">
+        <label for="setting-bgm" style="min-width:110px;">背景音乐音量</label>
+        <input type="range" id="setting-bgm" min="0" max="100" step="5" value="75" />
+        <span id="setting-bgm-val" style="min-width:60px;text-align:right;font-weight:700;">75%</span>
+      </div>
+
+      <div class="setting-row">
+        <label for="setting-sfx" style="min-width:110px;">鼓声打击音量</label>
+        <input type="range" id="setting-sfx" min="0" max="100" step="5" value="90" />
+        <span id="setting-sfx-val" style="min-width:60px;text-align:right;font-weight:700;">90%</span>
+      </div>
+
+      <div style="margin-top:14px;font-weight:700;font-size:0.9rem;">自定义键位（点击按钮后按下目标键）</div>
+      <div class="keybind-grid">
+        <div class="keybind-item"><span>左鼓边 (咔)</span><button type="button" class="btn" data-keybind="leftKa">D</button></div>
+        <div class="keybind-item"><span>左鼓面 (咚)</span><button type="button" class="btn" data-keybind="leftDon">F</button></div>
+        <div class="keybind-item"><span>右鼓面 (咚)</span><button type="button" class="btn" data-keybind="rightDon">J</button></div>
+        <div class="keybind-item"><span>右鼓边 (咔)</span><button type="button" class="btn" data-keybind="rightKa">K</button></div>
+      </div>
+
+      <div style="background:rgba(255,255,255,0.05);padding:12px;border-radius:10px;margin-bottom:14px;">
+        <div style="display:flex;justify-content:space-between;align-items:center;gap:10px;">
+          <strong style="font-size:0.88rem;">互动节拍校准工具 (120 BPM)</strong>
+          <button type="button" class="btn" id="btn-calibrate">开始节拍校准</button>
+        </div>
+        <div id="calibrate-status" style="font-size:0.8rem;color:var(--text-muted);margin-top:6px;">
+          点击开始后，跟随节拍器敲击 Space / F / J 键 8 次即可自动计算并保存延迟补偿。
+        </div>
+      </div>
+
+      <div style="display:flex;justify-content:flex-end;">
+        <button type="button" class="btn" id="btn-reset-settings">恢复默认设置</button>
+      </div>
+    </div>
+  </div>
+
+  <div id="toast" class="toast hidden" role="status" aria-live="polite"></div>
+
+  <script>
+(function () {
+  "use strict";
+
+  // ===== src/engine/constants.js =====
+/**
+ * Core constants, judgement windows, scoring rules, and visual tokens
+ * for Web Taiko Master (网页太鼓达人).
+ */
+
+const NOTE_TYPES = Object.freeze({
+  DON: 'don',           // Red inner drum hit (咚)
+  KA: 'ka',             // Blue rim hit (咔)
+  BIG_DON: 'big_don',   // Large red hit (大咚)
+  BIG_KA: 'big_ka',     // Large blue hit (大咔)
+  DRUMROLL: 'drumroll', // Yellow continuous roll (连打)
+  BALLOON: 'balloon',   // Orange balloon note requiring N hits (气球)
+});
+
+const INPUT_TYPES = Object.freeze({
+  DON: 'don',
+  KA: 'ka',
+});
+
+const JUDGEMENTS = Object.freeze({
+  GREAT: 'great', // 良
+  GOOD: 'good',   // 可
+  MISS: 'miss',   // 不可
+});
+
+/**
+ * Timing windows in milliseconds (symmetric around target time).
+ * Based on classic arcade rhythm game standards.
+ */
+const TIMING_WINDOWS_MS = Object.freeze({
+  GREAT: 25, // ±25ms -> 良
+  GOOD: 75,  // ±75ms -> 可
+  MISS: 108, // ±108ms -> 不可 (bad hit)
+});
+
+const SCORING = Object.freeze({
+  GREAT_BASE: 1000,
+  GOOD_BASE: 500,
+  BIG_MULTIPLIER: 2,
+  COMBO_STEP: 10,        // Every 10 combo adds bonus tier
+  COMBO_TIER_BONUS: 100, // +100 per tier (capped at tier 10)
+  COMBO_MAX_TIER: 10,
+  DRUMROLL_HIT: 200,
+  BALLOON_HIT: 300,
+  BALLOON_POP_BONUS: 3000,
+  GOGO_MULTIPLIER: 1.2,
+});
+
+const DIFFICULTIES = Object.freeze({
+  EASY: {
+    id: 'easy',
+    label: '简单',
+    jpLabel: 'かんたん',
+    color: '#22c55e',
+    clearThreshold: 60, // 60% soul gauge to clear
+    missPenalty: 1.4,
+    goodRatio: 0.65,
+  },
+  NORMAL: {
+    id: 'normal',
+    label: '普通',
+    jpLabel: 'ふつう',
+    color: '#f59e0b',
+    clearThreshold: 70, // 70% soul gauge to clear
+    missPenalty: 1.8,
+    goodRatio: 0.55,
+  },
+  ONI: {
+    id: 'oni',
+    label: '鬼级',
+    jpLabel: 'おに',
+    color: '#ef4444',
+    clearThreshold: 80, // 80% soul gauge to clear
+    missPenalty: 2.2,
+    goodRatio: 0.5,
+  },
+});
+
+const DEFAULT_SETTINGS = Object.freeze({
+  keyBindings: {
+    leftKa: 'KeyD',
+    leftDon: 'KeyF',
+    rightDon: 'KeyJ',
+    rightKa: 'KeyK',
+  },
+  audioOffsetMs: 0,     // -150 to +150 ms
+  scrollSpeed: 1.0,     // 0.5x to 2.0x
+  bgmVolume: 0.75,      // 0.0 to 1.0
+  sfxVolume: 0.9,       // 0.0 to 1.0
+  muted: false,
+  autoPlay: false,
+});
+
+const RANK_THRESHOLDS = Object.freeze([
+  { rank: 'SS', minAccuracy: 98, requireFullCombo: true, color: '#fde047' },
+  { rank: 'S',  minAccuracy: 95, requireFullCombo: false, color: '#facc15' },
+  { rank: 'A',  minAccuracy: 88, requireFullCombo: false, color: '#fb923c' },
+  { rank: 'B',  minAccuracy: 78, requireFullCombo: false, color: '#38bdf8' },
+  { rank: 'C',  minAccuracy: 65, requireFullCombo: false, color: '#a78bfa' },
+  { rank: 'D',  minAccuracy: 0,  requireFullCombo: false, color: '#94a3b8' },
+]);
+
+function isDonNote(type) {
+  return type === NOTE_TYPES.DON || type === NOTE_TYPES.BIG_DON;
+}
+
+function isKaNote(type) {
+  return type === NOTE_TYPES.KA || type === NOTE_TYPES.BIG_KA;
+}
+
+function isBigNote(type) {
+  return type === NOTE_TYPES.BIG_DON || type === NOTE_TYPES.BIG_KA;
+}
+
+function isHittableStandardNote(type) {
+  return (
+    type === NOTE_TYPES.DON ||
+    type === NOTE_TYPES.KA ||
+    type === NOTE_TYPES.BIG_DON ||
+    type === NOTE_TYPES.BIG_KA
+  );
+}
+
+
+  // ===== src/engine/chart.js =====
+
+/**
+ * Chart parser & compiler for Web Taiko Master.
+ * Supports both structured JSON chart definitions and TJA-Lite text notation:
+ *   0 = rest
+ *   1 = don (咚)
+ *   2 = ka (咔)
+ *   3 = big_don (大咚)
+ *   4 = big_ka (大咔)
+ *   5 = drumroll start
+ *   7 = balloon start
+ *   8 = drumroll/balloon end
+ * Directives supported in TJA-Lite:
+ *   #BPMCHANGE <number>
+ *   #SCROLL <number>
+ *   #GOGOSTART
+ *   #GOGOEND
+ */
+
+const CHAR_TO_NOTE = {
+  '1': NOTE_TYPES.DON,
+  '2': NOTE_TYPES.KA,
+  '3': NOTE_TYPES.BIG_DON,
+  '4': NOTE_TYPES.BIG_KA,
+};
+
+/**
+ * Parse a TJA-Lite text chart into normalized timed note events.
+ * @param {object} config
+ * @param {string} config.title
+ * @param {number} config.bpm - Initial BPM (> 0)
+ * @param {number} [config.offsetMs=0] - Chart lead-in offset in ms
+ * @param {number} [config.beatsPerMeasure=4] - Default beats per measure
+ * @param {string[]} config.measures - Array of measure strings or directive lines
+ * @param {number[]} [config.balloonCounts] - Hit targets for each balloon in order
+ * @returns {{ notes: Array, durationMs: number, gogoRanges: Array, stats: object }}
+ */
+function parseTJALiteChart(config) {
+  if (!config || typeof config !== 'object') {
+    throw new Error('Chart config must be an object');
+  }
+  const initialBpm = Number(config.bpm);
+  if (!Number.isFinite(initialBpm) || initialBpm <= 0 || initialBpm > 400) {
+    throw new Error(`Invalid BPM: ${config.bpm}`);
+  }
+  const measures = Array.isArray(config.measures) ? config.measures : [];
+  if (measures.length === 0) {
+    throw new Error('Chart must contain at least one measure');
+  }
+
+  let currentBpm = initialBpm;
+  let currentScroll = 1.0;
+  let currentTimeMs = Number.isFinite(Number(config.offsetMs)) ? Number(config.offsetMs) : 0;
+  const beatsPerMeasure = Number(config.beatsPerMeasure) > 0 ? Number(config.beatsPerMeasure) : 4;
+  const balloonCounts = Array.isArray(config.balloonCounts) ? [...config.balloonCounts] : [];
+  let balloonIdx = 0;
+
+  let inGogo = false;
+  let gogoStartMs = null;
+  const gogoRanges = [];
+  const notes = [];
+  let activeSpecial = null; // { type: 'drumroll'|'balloon', startMs, scroll, gogo, requiredHits? }
+  let noteId = 1;
+
+  for (const rawLine of measures) {
+    if (typeof rawLine !== 'string') continue;
+    const line = rawLine.trim();
+    if (!line || line.startsWith('//')) continue;
+
+    if (line.startsWith('#')) {
+      const upper = line.toUpperCase();
+      if (upper.startsWith('#BPMCHANGE')) {
+        const nextBpm = Number(line.split(/\s+/)[1]);
+        if (Number.isFinite(nextBpm) && nextBpm > 0 && nextBpm <= 400) {
+          currentBpm = nextBpm;
+        }
+      } else if (upper.startsWith('#SCROLL')) {
+        const nextScroll = Number(line.split(/\s+/)[1]);
+        if (Number.isFinite(nextScroll) && nextScroll > 0 && nextScroll <= 4) {
+          currentScroll = nextScroll;
+        }
+      } else if (upper === '#GOGOSTART') {
+        if (!inGogo) {
+          inGogo = true;
+          gogoStartMs = currentTimeMs;
+        }
+      } else if (upper === '#GOGOEND') {
+        if (inGogo) {
+          inGogo = false;
+          gogoRanges.push({ startMs: gogoStartMs, endMs: currentTimeMs });
+          gogoStartMs = null;
+        }
+      }
+      continue;
+    }
+
+    // Strip trailing comma and whitespace inside measure string
+    const cleaned = line.replace(/,$/g, '').replace(/\s+/g, '');
+    const measureDurationMs = (60000 / currentBpm) * beatsPerMeasure;
+
+    if (cleaned.length === 0) {
+      currentTimeMs += measureDurationMs;
+      continue;
+    }
+
+    const stepMs = measureDurationMs / cleaned.length;
+
+    for (let i = 0; i < cleaned.length; i++) {
+      const ch = cleaned[i];
+      const timeMs = Math.round((currentTimeMs + i * stepMs) * 100) / 100;
+
+      if (ch === '0') continue;
+
+      if (CHAR_TO_NOTE[ch]) {
+        notes.push({
+          id: noteId++,
+          type: CHAR_TO_NOTE[ch],
+          timeMs,
+          endTimeMs: timeMs,
+          bpm: currentBpm,
+          scroll: currentScroll,
+          gogo: inGogo,
+          judged: false,
+          judgement: null,
+        });
+      } else if (ch === '5' && !activeSpecial) {
+        activeSpecial = {
+          id: noteId++,
+          type: NOTE_TYPES.DRUMROLL,
+          timeMs,
+          bpm: currentBpm,
+          scroll: currentScroll,
+          gogo: inGogo,
+          hits: 0,
+        };
+      } else if (ch === '7' && !activeSpecial) {
+        const requiredHits = Math.max(1, Number(balloonCounts[balloonIdx++] ?? 5));
+        activeSpecial = {
+          id: noteId++,
+          type: NOTE_TYPES.BALLOON,
+          timeMs,
+          bpm: currentBpm,
+          scroll: currentScroll,
+          gogo: inGogo,
+          requiredHits,
+          hits: 0,
+          popped: false,
+        };
+      } else if (ch === '8' && activeSpecial) {
+        activeSpecial.endTimeMs = Math.max(activeSpecial.timeMs + 100, timeMs);
+        activeSpecial.judged = false;
+        notes.push(activeSpecial);
+        activeSpecial = null;
+      }
+    }
+
+    currentTimeMs += measureDurationMs;
+  }
+
+  // Close any unclosed special note cleanly
+  if (activeSpecial) {
+    activeSpecial.endTimeMs = Math.max(activeSpecial.timeMs + 500, currentTimeMs);
+    activeSpecial.judged = false;
+    notes.push(activeSpecial);
+  }
+  if (inGogo && gogoStartMs !== null) {
+    gogoRanges.push({ startMs: gogoStartMs, endMs: currentTimeMs });
+  }
+
+  notes.sort((a, b) => a.timeMs - b.timeMs || a.id - b.id);
+
+  const stats = computeChartStats(notes);
+  const lastEventMs = notes.length > 0
+    ? Math.max(...notes.map((n) => n.endTimeMs ?? n.timeMs))
+    : currentTimeMs;
+  const durationMs = Math.max(currentTimeMs, lastEventMs + 1500);
+
+  return {
+    notes,
+    durationMs: Math.round(durationMs),
+    gogoRanges,
+    stats,
+  };
+}
+
+/**
+ * Parse raw user-entered TJA-Lite text block (with optional header lines like TITLE:, BPM:, OFFSET:, BALLOON:).
+ * @param {string} rawText
+ */
+function parseRawTJAText(rawText) {
+  if (typeof rawText !== 'string' || !rawText.trim()) {
+    throw new Error('谱面文本不能为空');
+  }
+  let title = '自定义谱面';
+  let bpm = 130;
+  let offsetMs = 1500;
+  let balloonCounts = [];
+  const measures = [];
+
+  const lines = rawText.split(/\r?\n/);
+  for (const raw of lines) {
+    const line = raw.trim();
+    if (!line || line.startsWith('//')) continue;
+
+    if (/^TITLE\s*:/i.test(line)) {
+      title = line.replace(/^TITLE\s*:/i, '').trim() || title;
+    } else if (/^BPM\s*:/i.test(line)) {
+      const val = Number(line.replace(/^BPM\s*:/i, '').trim());
+      if (Number.isFinite(val) && val > 0) bpm = val;
+    } else if (/^OFFSET\s*:/i.test(line)) {
+      const val = Number(line.replace(/^OFFSET\s*:/i, '').trim());
+      if (Number.isFinite(val)) offsetMs = Math.max(0, val);
+    } else if (/^BALLOON\s*:/i.test(line)) {
+      balloonCounts = line
+        .replace(/^BALLOON\s*:/i, '')
+        .split(',')
+        .map((v) => Number(v.trim()))
+        .filter((v) => Number.isFinite(v) && v > 0);
+    } else if (line.startsWith('#') || /^[0-8,\s]+$/.test(line)) {
+      measures.push(line);
+    }
+  }
+
+  if (measures.length === 0) {
+    throw new Error('未检测到有效小节数据（请使用数字 0-8 编写谱面）');
+  }
+
+  const compiled = parseTJALiteChart({
+    title,
+    bpm,
+    offsetMs,
+    measures,
+    balloonCounts,
+  });
+
+  return {
+    title,
+    bpm,
+    offsetMs,
+    ...compiled,
+  };
+}
+
+function computeChartStats(notes) {
+  let standardCount = 0;
+  let donCount = 0;
+  let kaCount = 0;
+  let bigCount = 0;
+  let drumrollCount = 0;
+  let balloonCount = 0;
+
+  for (const n of notes) {
+    if (isHittableStandardNote(n.type)) {
+      standardCount++;
+      if (n.type === NOTE_TYPES.DON || n.type === NOTE_TYPES.BIG_DON) donCount++;
+      if (n.type === NOTE_TYPES.KA || n.type === NOTE_TYPES.BIG_KA) kaCount++;
+      if (n.type === NOTE_TYPES.BIG_DON || n.type === NOTE_TYPES.BIG_KA) bigCount++;
+    } else if (n.type === NOTE_TYPES.DRUMROLL) {
+      drumrollCount++;
+    } else if (n.type === NOTE_TYPES.BALLOON) {
+      balloonCount++;
+    }
+  }
+
+  return {
+    totalNotes: notes.length,
+    standardCount,
+    donCount,
+    kaCount,
+    bigCount,
+    drumrollCount,
+    balloonCount,
+  };
+}
+
+/**
+ * Deep-clone compiled notes for a fresh playthrough so source charts stay immutable.
+ */
+function cloneNotes(notes) {
+  return notes.map((n) => ({
+    ...n,
+    judged: false,
+    judgement: null,
+    hits: 0,
+    popped: false,
+  }));
+}
+
+
+  // ===== src/engine/judge.js =====
+
+
+/**
+ * Pure, deterministic Taiko judgement, scoring, combo, and soul-gauge engine.
+ * Designed to run identically in the browser loop and in Node.js automated tests.
+ */
+class TaikoGameEngine {
+  /**
+   * @param {object} options
+   * @param {Array} options.notes - Compiled note list from parseTJALiteChart
+   * @param {string} [options.difficulty='normal'] - 'easy' | 'normal' | 'oni'
+   * @param {Array} [options.gogoRanges=[]] - [{startMs, endMs}]
+   */
+  constructor({ notes, difficulty = 'normal', gogoRanges = [] }) {
+    if (!Array.isArray(notes)) {
+      throw new Error('TaikoGameEngine requires a notes array');
+    }
+    const diffKey = String(difficulty).toUpperCase();
+    this.difficultyConfig = DIFFICULTIES[diffKey] || DIFFICULTIES.NORMAL;
+    this.notes = cloneNotes(notes);
+    this.gogoRanges = Array.isArray(gogoRanges) ? gogoRanges : [];
+
+    this.standardTotal = this.notes.filter((n) => isHittableStandardNote(n.type)).length;
+    // Soul gauge per-note increment: calibrated so ~85% GREAT reaches 100%
+    this.soulUnit = this.standardTotal > 0 ? 100 / (this.standardTotal * 0.82) : 0;
+
+    this.reset();
+  }
+
+  reset() {
+    for (const n of this.notes) {
+      n.judged = false;
+      n.judgement = null;
+      n.hits = 0;
+      n.popped = false;
+    }
+    this.score = 0;
+    this.combo = 0;
+    this.maxCombo = 0;
+    this.soul = 0; // 0 .. 100
+    this.counts = {
+      great: 0,
+      good: 0,
+      miss: 0,
+      drumrollHits: 0,
+      balloonHits: 0,
+      balloonsPopped: 0,
+    };
+    this.timingDeltas = []; // signed ms (negative = early, positive = late)
+    this.cursor = 0;
+  }
+
+  isGogoTime(timeMs) {
+    for (const r of this.gogoRanges) {
+      if (timeMs >= r.startMs && timeMs <= r.endMs) return true;
+    }
+    return false;
+  }
+
+  /**
+   * Process a drum hit input ('don' or 'ka') at songTimeMs.
+   * @param {'don'|'ka'} inputType
+   * @param {number} songTimeMs
+   * @returns {object} Event descriptor for visual/audio feedback
+   */
+  processInput(inputType, songTimeMs) {
+    if (inputType !== INPUT_TYPES.DON && inputType !== INPUT_TYPES.KA) {
+      throw new Error(`Unsupported inputType: ${inputType}`);
+    }
+
+    // 1. Check active special notes (drumroll / balloon) first
+    for (let i = this.cursor; i < this.notes.length; i++) {
+      const note = this.notes[i];
+      if (note.timeMs > songTimeMs + TIMING_WINDOWS_MS.MISS) break;
+      if (note.judged) continue;
+
+      if (note.type === NOTE_TYPES.DRUMROLL) {
+        if (songTimeMs >= note.timeMs && songTimeMs <= note.endTimeMs) {
+          note.hits++;
+          this.counts.drumrollHits++;
+          const gogoMult = note.gogo ? SCORING.GOGO_MULTIPLIER : 1;
+          const pts = Math.round(SCORING.DRUMROLL_HIT * gogoMult);
+          this.score += pts;
+          return {
+            matched: true,
+            kind: 'drumroll',
+            note,
+            points: pts,
+            inputType,
+            deltaMs: 0,
+          };
+        }
+      } else if (note.type === NOTE_TYPES.BALLOON) {
+        if (songTimeMs >= note.timeMs && songTimeMs <= note.endTimeMs && !note.popped) {
+          // Balloons only accept DON hits in classic Taiko
+          if (inputType !== INPUT_TYPES.DON) {
+            return { matched: false, kind: 'wrong_balloon_input', inputType };
+          }
+          note.hits++;
+          this.counts.balloonHits++;
+          const gogoMult = note.gogo ? SCORING.GOGO_MULTIPLIER : 1;
+          let pts = Math.round(SCORING.BALLOON_HIT * gogoMult);
+          let popped = false;
+          if (note.hits >= note.requiredHits) {
+            note.popped = true;
+            note.judged = true;
+            popped = true;
+            this.counts.balloonsPopped++;
+            pts += Math.round(SCORING.BALLOON_POP_BONUS * gogoMult);
+          }
+          this.score += pts;
+          return {
+            matched: true,
+            kind: popped ? 'balloon_pop' : 'balloon_hit',
+            note,
+            points: pts,
+            remaining: Math.max(0, note.requiredHits - note.hits),
+            inputType,
+            deltaMs: 0,
+          };
+        }
+      }
+    }
+
+    // 2. Find earliest unjudged standard note within the MISS window
+    let targetNote = null;
+    for (let i = this.cursor; i < this.notes.length; i++) {
+      const note = this.notes[i];
+      if (note.judged) continue;
+      if (!isHittableStandardNote(note.type)) continue;
+
+      const delta = songTimeMs - note.timeMs; // negative = early, positive = late
+      if (delta < -TIMING_WINDOWS_MS.MISS) {
+        break; // Notes are sorted; no earlier candidate
+      }
+      if (Math.abs(delta) <= TIMING_WINDOWS_MS.MISS) {
+        targetNote = note;
+        break;
+      }
+    }
+
+    if (!targetNote) {
+      return { matched: false, kind: 'empty', inputType };
+    }
+
+    const correctColor =
+      (inputType === INPUT_TYPES.DON && isDonNote(targetNote.type)) ||
+      (inputType === INPUT_TYPES.KA && isKaNote(targetNote.type));
+
+    const deltaMs = Math.round((songTimeMs - targetNote.timeMs) * 100) / 100;
+    const absDelta = Math.abs(deltaMs);
+
+    if (!correctColor) {
+      // Wrong drum surface inside timing window -> ignore if too far, or penalize as miss if inside GOOD window
+      if (absDelta <= TIMING_WINDOWS_MS.GOOD) {
+        return this._applyJudgement(targetNote, JUDGEMENTS.MISS, deltaMs, 'wrong_color');
+      }
+      return { matched: false, kind: 'wrong_color_ignored', inputType };
+    }
+
+    let judgement;
+    if (absDelta <= TIMING_WINDOWS_MS.GREAT) {
+      judgement = JUDGEMENTS.GREAT;
+    } else if (absDelta <= TIMING_WINDOWS_MS.GOOD) {
+      judgement = JUDGEMENTS.GOOD;
+    } else {
+      judgement = JUDGEMENTS.MISS;
+    }
+
+    return this._applyJudgement(targetNote, judgement, deltaMs, 'hit');
+  }
+
+  /**
+   * Sweep past notes whose miss window has elapsed and mark them as missed.
+   * Also closes expired drumrolls/balloons.
+   * @param {number} songTimeMs
+   * @returns {Array} List of auto-missed note events
+   */
+  update(songTimeMs) {
+    const missedEvents = [];
+
+    while (this.cursor < this.notes.length) {
+      const note = this.notes[this.cursor];
+      if (note.judged) {
+        this.cursor++;
+        continue;
+      }
+
+      if (isHittableStandardNote(note.type)) {
+        if (songTimeMs - note.timeMs > TIMING_WINDOWS_MS.MISS) {
+          const ev = this._applyJudgement(note, JUDGEMENTS.MISS, TIMING_WINDOWS_MS.MISS + 1, 'timeout');
+          missedEvents.push(ev);
+          this.cursor++;
+          continue;
+        }
+        break;
+      } else {
+        // Drumroll or balloon ends after endTimeMs
+        if (songTimeMs > note.endTimeMs) {
+          note.judged = true;
+          this.cursor++;
+          continue;
+        }
+        break;
+      }
+    }
+
+    return missedEvents;
+  }
+
+  /**
+   * Helper for Auto-Play mode: returns inputs that should fire at songTimeMs.
+   */
+  getAutoPlayInputs(songTimeMs, lastDrumrollTickMs = 0) {
+    const actions = [];
+    for (let i = this.cursor; i < this.notes.length; i++) {
+      const note = this.notes[i];
+      if (note.judged) continue;
+      if (note.timeMs > songTimeMs + 5) break;
+
+      if (isHittableStandardNote(note.type) && songTimeMs >= note.timeMs) {
+        const inputType = isDonNote(note.type) ? INPUT_TYPES.DON : INPUT_TYPES.KA;
+        actions.push({ inputType, note, timeMs: note.timeMs });
+      } else if (
+        (note.type === NOTE_TYPES.DRUMROLL || (note.type === NOTE_TYPES.BALLOON && !note.popped)) &&
+        songTimeMs >= note.timeMs &&
+        songTimeMs <= note.endTimeMs &&
+        songTimeMs - lastDrumrollTickMs >= 75
+      ) {
+        actions.push({ inputType: INPUT_TYPES.DON, note, timeMs: songTimeMs, isRoll: true });
+      }
+    }
+    return actions;
+  }
+
+  _applyJudgement(note, judgement, deltaMs, reason) {
+    note.judged = true;
+    note.judgement = judgement;
+
+    let points = 0;
+
+    if (judgement === JUDGEMENTS.GREAT) {
+      this.counts.great++;
+      this.combo++;
+      if (this.combo > this.maxCombo) this.maxCombo = this.combo;
+      this.timingDeltas.push(deltaMs);
+
+      const tier = Math.min(SCORING.COMBO_MAX_TIER, Math.floor(this.combo / SCORING.COMBO_STEP));
+      const base = SCORING.GREAT_BASE + tier * SCORING.COMBO_TIER_BONUS;
+      const bigMult = isBigNote(note.type) ? SCORING.BIG_MULTIPLIER : 1;
+      const gogoMult = note.gogo ? SCORING.GOGO_MULTIPLIER : 1;
+      points = Math.round(base * bigMult * gogoMult);
+      this.score += points;
+
+      this.soul = Math.min(100, this.soul + this.soulUnit);
+    } else if (judgement === JUDGEMENTS.GOOD) {
+      this.counts.good++;
+      this.combo++;
+      if (this.combo > this.maxCombo) this.maxCombo = this.combo;
+      this.timingDeltas.push(deltaMs);
+
+      const tier = Math.min(SCORING.COMBO_MAX_TIER, Math.floor(this.combo / SCORING.COMBO_STEP));
+      const base = SCORING.GOOD_BASE + Math.floor((tier * SCORING.COMBO_TIER_BONUS) / 2);
+      const bigMult = isBigNote(note.type) ? SCORING.BIG_MULTIPLIER : 1;
+      const gogoMult = note.gogo ? SCORING.GOGO_MULTIPLIER : 1;
+      points = Math.round(base * bigMult * gogoMult);
+      this.score += points;
+
+      this.soul = Math.min(100, this.soul + this.soulUnit * this.difficultyConfig.goodRatio);
+    } else {
+      this.counts.miss++;
+      this.combo = 0;
+      this.soul = Math.max(0, this.soul - this.soulUnit * this.difficultyConfig.missPenalty);
+    }
+
+    return {
+      matched: true,
+      kind: 'judgement',
+      judgement,
+      note,
+      points,
+      deltaMs,
+      reason,
+      combo: this.combo,
+      soul: this.soul,
+    };
+  }
+
+  getAccuracy() {
+    const judged = this.counts.great + this.counts.good + this.counts.miss;
+    if (judged === 0) return 100;
+    const weighted = this.counts.great + this.counts.good * 0.5;
+    return Math.round((weighted / judged) * 10000) / 100;
+  }
+
+  isCleared() {
+    return this.soul >= this.difficultyConfig.clearThreshold;
+  }
+
+  isFullCombo() {
+    return this.standardTotal > 0 && this.counts.miss === 0 && (this.counts.great + this.counts.good) === this.standardTotal;
+  }
+
+  getRank() {
+    const acc = this.getAccuracy();
+    const fc = this.isFullCombo();
+    for (const r of RANK_THRESHOLDS) {
+      if (acc >= r.minAccuracy && (!r.requireFullCombo || fc)) {
+        return r.rank;
+      }
+    }
+    return 'D';
+  }
+
+  getMeanOffsetMs() {
+    if (this.timingDeltas.length === 0) return 0;
+    const sum = this.timingDeltas.reduce((a, b) => a + b, 0);
+    return Math.round((sum / this.timingDeltas.length) * 10) / 10;
+  }
+
+  getSummary() {
+    return {
+      score: this.score,
+      combo: this.combo,
+      maxCombo: this.maxCombo,
+      soul: Math.round(this.soul * 10) / 10,
+      cleared: this.isCleared(),
+      clearThreshold: this.difficultyConfig.clearThreshold,
+      fullCombo: this.isFullCombo(),
+      accuracy: this.getAccuracy(),
+      rank: this.getRank(),
+      meanOffsetMs: this.getMeanOffsetMs(),
+      counts: { ...this.counts },
+      standardTotal: this.standardTotal,
+      timingDeltas: [...this.timingDeltas],
+    };
+  }
+}
+
+
+  // ===== src/data/songs.js =====
+
+/**
+ * Curated song catalog for Web Taiko Master (网页太鼓达人).
+ * Each song includes:
+ *  - Metadata (id, title, subtitle, bpm, genre, accentColor)
+ *  - Procedural Web Audio BGM pattern (scale notes, bassline, lead melody, drum backing)
+ *  - 3 difficulty charts (easy, normal, oni) written in TJA-Lite notation
+ */
+
+const SONG_CATALOG = [
+  {
+    id: 'summer-matsuri',
+    title: '夏祭り・花火',
+    subtitle: 'Summer Festival Fireworks',
+    genre: '和风祭典 / Matsuri',
+    bpm: 132,
+    offsetMs: 1600,
+    accent: '#ef4444',
+    bgm: {
+      // D minor pentatonic / Yo scale (D4, E4, G4, A4, B4, D5, E5, G5)
+      lead: [
+        587.33, 0, 659.25, 783.99, 880.00, 0, 783.99, 659.25,
+        587.33, 659.25, 783.99, 0, 880.00, 987.77, 880.00, 0,
+        1174.66, 0, 987.77, 880.00, 783.99, 0, 659.25, 783.99,
+        880.00, 783.99, 659.25, 587.33, 659.25, 0, 587.33, 0,
+      ],
+      bass: [
+        146.83, 0, 146.83, 0, 196.00, 0, 196.00, 0,
+        220.00, 0, 220.00, 0, 146.83, 0, 164.81, 0,
+      ],
+      wave: 'triangle',
+      stepDivision: 2, // 8th notes
+    },
+    charts: {
+      easy: {
+        stars: 3,
+        balloonCounts: [5],
+        measures: [
+          '10001000', '20001000', '10102000', '30000000',
+          '10002000', '10102000', '20001000', '50000008',
+          '#GOGOSTART',
+          '10102010', '30002000', '10201020', '30004000',
+          '10102000', '20201000', '70000008', '30000000',
+          '#GOGOEND',
+        ],
+      },
+      normal: {
+        stars: 6,
+        balloonCounts: [7, 8],
+        measures: [
+          '10102010', '10201000', '11201020', '30002010',
+          '10102210', '20101020', '11202210', '50000008',
+          '#GOGOSTART',
+          '11201120', '30102010', '12102120', '30204010',
+          '11201012', '22102021', '70000008', '30102010',
+          '11221120', '10201120', '70000008', '30004000',
+          '#GOGOEND',
+        ],
+      },
+      oni: {
+        stars: 8,
+        balloonCounts: [10, 12],
+        measures: [
+          '1120121011202010', '1122102012123000',
+          '1210212011201210', '3012102140212010',
+          '1112201112201210', '2121102011221210',
+          '1120121222102121', '5000000000000008',
+          '#GOGOSTART',
+          '1121121012122120', '3011201240221021',
+          '1112111222212221', '1212112021212210',
+          '1120112012121210', '3012121040212120',
+          '7000000000000008', '1122112230004000',
+          '1211201221221021', '1112211122121210',
+          '7000000000000008', '3012121040003000',
+          '#GOGOEND',
+        ],
+      },
+    },
+  },
+  {
+    id: 'sakura-blizzard',
+    title: '桜吹雪',
+    subtitle: 'Sakura Blizzard',
+    genre: '疾走和风 / Anime Pop',
+    bpm: 150,
+    offsetMs: 1500,
+    accent: '#ec4899',
+    bgm: {
+      // Hirajoshi-inspired bright pentatonic (E4, F#4, G#4, B4, C#5, E5, F#5)
+      lead: [
+        659.25, 739.99, 830.61, 0, 987.77, 830.61, 739.99, 659.25,
+        830.61, 987.77, 1108.73, 0, 987.77, 830.61, 739.99, 0,
+        1318.51, 0, 1108.73, 987.77, 830.61, 987.77, 1108.73, 0,
+        987.77, 830.61, 739.99, 659.25, 739.99, 830.61, 659.25, 0,
+      ],
+      bass: [
+        164.81, 0, 164.81, 164.81, 246.94, 0, 246.94, 0,
+        220.00, 0, 220.00, 220.00, 185.00, 0, 246.94, 0,
+      ],
+      wave: 'sawtooth',
+      stepDivision: 2,
+    },
+    charts: {
+      easy: {
+        stars: 4,
+        balloonCounts: [6],
+        measures: [
+          '10001020', '10002000', '10102020', '30000000',
+          '20001010', '20001000', '10201020', '50000008',
+          '#GOGOSTART',
+          '10102010', '20201020', '30001020', '40002010',
+          '10201010', '20102020', '70000008', '30004000',
+          '#GOGOEND',
+        ],
+      },
+      normal: {
+        stars: 7,
+        balloonCounts: [8],
+        measures: [
+          '10102011', '20101020', '11201210', '30102000',
+          '20201120', '10122010', '11221020', '50000008',
+          '#GOGOSTART',
+          '11201210', '22102120', '30112022', '40221011',
+          '12102120', '11202210', '10122021', '30104020',
+          '11201120', '22102210', '70000008', '30000000',
+          '#GOGOEND',
+        ],
+      },
+      oni: {
+        stars: 9,
+        balloonCounts: [12, 14],
+        measures: [
+          '1120121011221020', '2120112012124000',
+          '1112201211122010', '3012121021214000',
+          '1121122022122110', '1212112021212210',
+          '1112221012121120', '5000000000000008',
+          '#GOGOSTART',
+          '1121121222122121', '3011221040221120',
+          '1212112221212211', '1112111222212221',
+          '1120121222102121', '3012112040212210',
+          '7000000000000008', '1212121230004000',
+          '1122121122112122', '1112211122211222',
+          '7000000000000008', '3011221140003000',
+          '#GOGOEND',
+        ],
+      },
+    },
+  },
+  {
+    id: 'raijin-thunder',
+    title: '雷神の太鼓',
+    subtitle: "Raijin's Thunder",
+    genre: '高速疾走 / Boss Track',
+    bpm: 172,
+    offsetMs: 1400,
+    accent: '#f59e0b',
+    bgm: {
+      // Intense A minor / Phrygian Japanese battle scale
+      lead: [
+        440.00, 440.00, 523.25, 587.33, 659.25, 0, 587.33, 523.25,
+        493.88, 523.25, 587.33, 659.25, 783.99, 0, 659.25, 0,
+        880.00, 0, 783.99, 659.25, 587.33, 659.25, 783.99, 880.00,
+        987.77, 880.00, 783.99, 659.25, 587.33, 523.25, 440.00, 0,
+      ],
+      bass: [
+        110.00, 110.00, 0, 110.00, 130.81, 0, 146.83, 0,
+        164.81, 164.81, 0, 164.81, 146.83, 0, 130.81, 0,
+      ],
+      wave: 'square',
+      stepDivision: 2,
+    },
+    charts: {
+      easy: {
+        stars: 5,
+        balloonCounts: [6],
+        measures: [
+          '10101020', '10201000', '20201010', '30004000',
+          '10102020', '10201020', '30001020', '50000008',
+          '#GOGOSTART',
+          '10102010', '10102020', '30002010', '40001020',
+          '10201020', '10102010', '70000008', '30003000',
+          '#GOGOEND',
+        ],
+      },
+      normal: {
+        stars: 8,
+        balloonCounts: [9, 10],
+        measures: [
+          '11201120', '10201122', '21201120', '30112040',
+          '11102220', '12102120', '11221120', '50000008',
+          '#GOGOSTART',
+          '11211210', '22122120', '30121210', '40212120',
+          '11122210', '22211120', '70000008', '30112210',
+          '12121120', '21212210', '70000008', '30004000',
+          '#GOGOEND',
+        ],
+      },
+      oni: {
+        stars: 10,
+        balloonCounts: [14, 16],
+        measures: [
+          '1112111222121120', '1212112221214000',
+          '1121121222122121', '3011122040222110',
+          '1122112212121120', '2211221121212210',
+          '1112221112221212', '5000000000000008',
+          '#GOGOSTART',
+          '1112121122212122', '3011211240221221',
+          '1211212211212212', '1111222212121212',
+          '1121122122122112', '3012121240212121',
+          '7000000000000008', '1122112230124021',
+          '1112112222212211', '1212111221212221',
+          '7000000000000008', '3011122240003000',
+          '#GOGOEND',
+        ],
+      },
+    },
+  },
+  {
+    id: 'moonlit-shamisen',
+    title: '月夜の三味線',
+    subtitle: 'Moonlit Shamisen Groove',
+    genre: '律动练习 / Groove',
+    bpm: 116,
+    offsetMs: 1600,
+    accent: '#38bdf8',
+    bgm: {
+      // C minor pentatonic chill groove
+      lead: [
+        523.25, 0, 622.25, 0, 698.46, 783.99, 698.46, 622.25,
+        523.25, 0, 466.16, 523.25, 622.25, 0, 523.25, 0,
+        783.99, 0, 698.46, 622.25, 523.25, 622.25, 698.46, 0,
+        622.25, 523.25, 466.16, 392.00, 466.16, 0, 523.25, 0,
+      ],
+      bass: [
+        130.81, 0, 0, 130.81, 155.56, 0, 174.61, 0,
+        196.00, 0, 0, 196.00, 174.61, 0, 155.56, 0,
+      ],
+      wave: 'sine',
+      stepDivision: 2,
+    },
+    charts: {
+      easy: {
+        stars: 2,
+        balloonCounts: [4],
+        measures: [
+          '10002000', '10002000', '10102000', '30000000',
+          '20001000', '10002000', '20201000', '50000008',
+          '#GOGOSTART',
+          '10201020', '30002000', '20102010', '40001000',
+          '10102000', '20201000', '70000008', '30000000',
+          '#GOGOEND',
+        ],
+      },
+      normal: {
+        stars: 5,
+        balloonCounts: [6],
+        measures: [
+          '10201012', '20102010', '11201020', '30002010',
+          '20102210', '10201120', '12102120', '50000008',
+          '#GOGOSTART',
+          '11202210', '30102012', '22101120', '40201021',
+          '10122021', '11202210', '70000008', '30004000',
+          '#GOGOEND',
+        ],
+      },
+      oni: {
+        stars: 7,
+        balloonCounts: [8, 10],
+        measures: [
+          '1012201011202012', '2021102022103000',
+          '1120121022102120', '3012102040212010',
+          '1210112021202210', '1122101222112021',
+          '1011202210122021', '5000000000000008',
+          '#GOGOSTART',
+          '1120121222102121', '3011201240221021',
+          '1212112021212210', '1112201122211022',
+          '7000000000000008', '3012121040212120',
+          '1122121022112120', '3000400030000000',
+          '#GOGOEND',
+        ],
+      },
+    },
+  },
+];
+
+function getSongById(songId) {
+  return SONG_CATALOG.find((s) => s.id === songId) || SONG_CATALOG[0];
+}
+
+function compileSongChart(songId, difficulty = 'normal') {
+  const song = getSongById(songId);
+  const diffChart = song.charts[difficulty] || song.charts.normal;
+  const compiled = parseTJALiteChart({
+    title: song.title,
+    bpm: song.bpm,
+    offsetMs: song.offsetMs,
+    measures: diffChart.measures,
+    balloonCounts: diffChart.balloonCounts || [],
+  });
+  return {
+    song,
+    difficulty,
+    stars: diffChart.stars,
+    ...compiled,
+  };
+}
+
+
+  // ===== src/engine/audio.js =====
+/**
+ * Zero-asset Web Audio API engine for Web Taiko Master.
+ * Synthesizes realistic Taiko drum SFX (Don, Ka, Big Don/Ka, Balloon pop, Combo chime)
+ * and schedules beat-accurate procedural BGM using AudioContext.currentTime lookahead.
+ */
+
+class TaikoAudioEngine {
+  constructor() {
+    this.ctx = null;
+    this.masterGain = null;
+    this.bgmGain = null;
+    this.sfxGain = null;
+    this.noiseBuffer = null;
+
+    this.muted = false;
+    this.bgmVolume = 0.75;
+    this.sfxVolume = 0.9;
+
+    // Lookahead BGM scheduler state
+    this.isPlaying = false;
+    this.song = null;
+    this.songStartAudioTime = 0;
+    this.nextStepIndex = 0;
+    this.schedulerTimer = null;
+    this.pausedElapsedMs = 0;
+  }
+
+  ensureContext() {
+    if (!this.ctx) {
+      const AudioCtx = window.AudioContext || window.webkitAudioContext;
+      if (!AudioCtx) return null;
+      this.ctx = new AudioCtx();
+
+      this.masterGain = this.ctx.createGain();
+      this.bgmGain = this.ctx.createGain();
+      this.sfxGain = this.ctx.createGain();
+
+      this.bgmGain.connect(this.masterGain);
+      this.sfxGain.connect(this.masterGain);
+      this.masterGain.connect(this.ctx.destination);
+
+      this._createNoiseBuffer();
+      this._applyVolumes();
+    }
+    if (this.ctx.state === 'suspended') {
+      this.ctx.resume().catch(() => {});
+    }
+    return this.ctx;
+  }
+
+  _createNoiseBuffer() {
+    if (!this.ctx) return;
+    const length = Math.floor(this.ctx.sampleRate * 0.25);
+    const buffer = this.ctx.createBuffer(1, length, this.ctx.sampleRate);
+    const data = buffer.getChannelData(0);
+    for (let i = 0; i < length; i++) {
+      data[i] = (Math.random() * 2 - 1) * Math.exp(-i / (length * 0.25));
+    }
+    this.noiseBuffer = buffer;
+  }
+
+  setVolumes({ bgmVolume, sfxVolume, muted }) {
+    if (typeof bgmVolume === 'number') this.bgmVolume = Math.max(0, Math.min(1, bgmVolume));
+    if (typeof sfxVolume === 'number') this.sfxVolume = Math.max(0, Math.min(1, sfxVolume));
+    if (typeof muted === 'boolean') this.muted = muted;
+    this._applyVolumes();
+  }
+
+  _applyVolumes() {
+    if (!this.ctx) return;
+    const now = this.ctx.currentTime;
+    this.masterGain.gain.setTargetAtTime(this.muted ? 0 : 1, now, 0.01);
+    this.bgmGain.gain.setTargetAtTime(this.bgmVolume * 0.42, now, 0.01);
+    this.sfxGain.gain.setTargetAtTime(this.sfxVolume * 0.95, now, 0.01);
+  }
+
+  /**
+   * Synthesize Taiko DON (center drumhead hit: deep resonant pitch-drop + skin transient).
+   */
+  playDon(big = false) {
+    const ctx = this.ensureContext();
+    if (!ctx) return;
+    const t = ctx.currentTime;
+
+    // Low membrane body
+    const osc = ctx.createOscillator();
+    const gain = ctx.createGain();
+    osc.type = 'sine';
+    osc.frequency.setValueAtTime(big ? 165 : 190, t);
+    osc.frequency.exponentialRampToValueAtTime(big ? 58 : 72, t + (big ? 0.22 : 0.16));
+
+    gain.gain.setValueAtTime(big ? 1.15 : 0.9, t);
+    gain.gain.exponentialRampToValueAtTime(0.001, t + (big ? 0.28 : 0.2));
+
+    osc.connect(gain);
+    gain.connect(this.sfxGain);
+    osc.start(t);
+    osc.stop(t + (big ? 0.3 : 0.22));
+
+    // Punchy attack harmonic
+    const osc2 = ctx.createOscillator();
+    const gain2 = ctx.createGain();
+    osc2.type = 'triangle';
+    osc2.frequency.setValueAtTime(big ? 280 : 320, t);
+    osc2.frequency.exponentialRampToValueAtTime(110, t + 0.06);
+    gain2.gain.setValueAtTime(0.45, t);
+    gain2.gain.exponentialRampToValueAtTime(0.001, t + 0.07);
+
+    osc2.connect(gain2);
+    gain2.connect(this.sfxGain);
+    osc2.start(t);
+    osc2.stop(t + 0.08);
+  }
+
+  /**
+   * Synthesize Taiko KA (wooden rim hit: crisp bandpass click + high woody body).
+   */
+  playKa(big = false) {
+    const ctx = this.ensureContext();
+    if (!ctx) return;
+    const t = ctx.currentTime;
+
+    // Crisp rim click via filtered noise
+    if (this.noiseBuffer) {
+      const noise = ctx.createBufferSource();
+      noise.buffer = this.noiseBuffer;
+
+      const filter = ctx.createBiquadFilter();
+      filter.type = 'bandpass';
+      filter.frequency.setValueAtTime(big ? 2100 : 2500, t);
+      filter.Q.setValueAtTime(2.6, t);
+
+      const nGain = ctx.createGain();
+      nGain.gain.setValueAtTime(big ? 0.95 : 0.78, t);
+      nGain.gain.exponentialRampToValueAtTime(0.001, t + 0.075);
+
+      noise.connect(filter);
+      filter.connect(nGain);
+      nGain.connect(this.sfxGain);
+      noise.start(t);
+      noise.stop(t + 0.085);
+    }
+
+    // Wooden rim resonance tone
+    const osc = ctx.createOscillator();
+    const gain = ctx.createGain();
+    osc.type = 'triangle';
+    osc.frequency.setValueAtTime(big ? 860 : 1040, t);
+    osc.frequency.exponentialRampToValueAtTime(big ? 520 : 640, t + 0.055);
+    gain.gain.setValueAtTime(big ? 0.55 : 0.42, t);
+    gain.gain.exponentialRampToValueAtTime(0.001, t + 0.07);
+
+    osc.connect(gain);
+    gain.connect(this.sfxGain);
+    osc.start(t);
+    osc.stop(t + 0.08);
+  }
+
+  playBalloonPop() {
+    const ctx = this.ensureContext();
+    if (!ctx) return;
+    const t = ctx.currentTime;
+    const osc = ctx.createOscillator();
+    const gain = ctx.createGain();
+    osc.type = 'sine';
+    osc.frequency.setValueAtTime(520, t);
+    osc.frequency.exponentialRampToValueAtTime(1400, t + 0.09);
+    gain.gain.setValueAtTime(0.7, t);
+    gain.gain.exponentialRampToValueAtTime(0.001, t + 0.14);
+    osc.connect(gain);
+    gain.connect(this.sfxGain);
+    osc.start(t);
+    osc.stop(t + 0.15);
+  }
+
+  playComboChime() {
+    const ctx = this.ensureContext();
+    if (!ctx) return;
+    const t = ctx.currentTime;
+    [880, 1174.66, 1318.51].forEach((freq, idx) => {
+      const osc = ctx.createOscillator();
+      const gain = ctx.createGain();
+      osc.type = 'triangle';
+      osc.frequency.setValueAtTime(freq, t + idx * 0.045);
+      gain.gain.setValueAtTime(0.28, t + idx * 0.045);
+      gain.gain.exponentialRampToValueAtTime(0.001, t + idx * 0.045 + 0.22);
+      osc.connect(gain);
+      gain.connect(this.sfxGain);
+      osc.start(t + idx * 0.045);
+      osc.stop(t + idx * 0.045 + 0.24);
+    });
+  }
+
+  playMetronomeTick(accent = false) {
+    const ctx = this.ensureContext();
+    if (!ctx) return;
+    const t = ctx.currentTime;
+    const osc = ctx.createOscillator();
+    const gain = ctx.createGain();
+    osc.type = 'sine';
+    osc.frequency.setValueAtTime(accent ? 1200 : 840, t);
+    gain.gain.setValueAtTime(0.35, t);
+    gain.gain.exponentialRampToValueAtTime(0.001, t + 0.045);
+    osc.connect(gain);
+    gain.connect(this.sfxGain);
+    osc.start(t);
+    osc.stop(t + 0.05);
+  }
+
+  /**
+   * Start beat-synchronized procedural BGM playback.
+   */
+  startSong(song, durationMs) {
+    const ctx = this.ensureContext();
+    if (!ctx) return 0;
+    this.stopSong();
+
+    this.song = song;
+    this.songDurationMs = durationMs;
+    this.isPlaying = true;
+    this.pausedElapsedMs = 0;
+    this.songStartAudioTime = ctx.currentTime + 0.05;
+    this.nextStepIndex = 0;
+
+    this._startScheduler();
+    return this.songStartAudioTime;
+  }
+
+  pauseSong() {
+    if (!this.isPlaying || !this.ctx) return;
+    this.pausedElapsedMs = this.getSongTimeMs();
+    this.isPlaying = false;
+    if (this.schedulerTimer) {
+      clearInterval(this.schedulerTimer);
+      this.schedulerTimer = null;
+    }
+  }
+
+  resumeSong() {
+    if (this.isPlaying || !this.ctx || !this.song) return;
+    this.songStartAudioTime = this.ctx.currentTime - this.pausedElapsedMs / 1000;
+    this.isPlaying = true;
+    const stepMs = (60000 / this.song.bpm) / (this.song.bgm?.stepDivision || 2);
+    const offsetMs = this.song.offsetMs || 0;
+    this.nextStepIndex = Math.max(0, Math.ceil((this.pausedElapsedMs - offsetMs) / stepMs));
+    this._startScheduler();
+  }
+
+  stopSong() {
+    this.isPlaying = false;
+    if (this.schedulerTimer) {
+      clearInterval(this.schedulerTimer);
+      this.schedulerTimer = null;
+    }
+  }
+
+  getSongTimeMs() {
+    if (!this.ctx) return this.pausedElapsedMs;
+    if (!this.isPlaying) return this.pausedElapsedMs;
+    return (this.ctx.currentTime - this.songStartAudioTime) * 1000;
+  }
+
+  _startScheduler() {
+    if (this.schedulerTimer) clearInterval(this.schedulerTimer);
+    this.schedulerTimer = setInterval(() => this._scheduleAhead(), 25);
+    this._scheduleAhead();
+  }
+
+  _scheduleAhead() {
+    if (!this.isPlaying || !this.ctx || !this.song) return;
+    const bgm = this.song.bgm;
+    if (!bgm) return;
+
+    const lookaheadSec = 0.14;
+    const stepDurationSec = (60 / this.song.bpm) / (bgm.stepDivision || 2);
+    const offsetSec = (this.song.offsetMs || 0) / 1000;
+    const maxSec = (this.songDurationMs || 60000) / 1000;
+
+    while (true) {
+      const stepTimeSec = this.songStartAudioTime + offsetSec + this.nextStepIndex * stepDurationSec;
+      const songPosSec = offsetSec + this.nextStepIndex * stepDurationSec;
+      if (songPosSec > maxSec - 0.8) break;
+      if (stepTimeSec > this.ctx.currentTime + lookaheadSec) break;
+
+      if (stepTimeSec >= this.ctx.currentTime - 0.05) {
+        this._scheduleBgmStep(this.nextStepIndex, stepTimeSec, stepDurationSec, bgm);
+      }
+      this.nextStepIndex++;
+    }
+  }
+
+  _scheduleBgmStep(stepIdx, time, stepDur, bgm) {
+    const leadFreq = bgm.lead[stepIdx % bgm.lead.length];
+    const bassFreq = bgm.bass[stepIdx % bgm.bass.length];
+
+    // Shamisen / festival synth lead
+    if (leadFreq > 0) {
+      const osc = this.ctx.createOscillator();
+      const filter = this.ctx.createBiquadFilter();
+      const gain = this.ctx.createGain();
+      osc.type = bgm.wave || 'triangle';
+      osc.frequency.setValueAtTime(leadFreq, time);
+
+      filter.type = 'lowpass';
+      filter.frequency.setValueAtTime(2800, time);
+      filter.frequency.exponentialRampToValueAtTime(900, time + stepDur * 0.85);
+
+      gain.gain.setValueAtTime(0.001, time);
+      gain.gain.linearRampToValueAtTime(0.32, time + 0.012);
+      gain.gain.exponentialRampToValueAtTime(0.001, time + stepDur * 0.92);
+
+      osc.connect(filter);
+      filter.connect(gain);
+      gain.connect(this.bgmGain);
+      osc.start(time);
+      osc.stop(time + stepDur);
+    }
+
+    // Bass groove
+    if (bassFreq > 0) {
+      const osc = this.ctx.createOscillator();
+      const gain = this.ctx.createGain();
+      osc.type = 'sine';
+      osc.frequency.setValueAtTime(bassFreq, time);
+      gain.gain.setValueAtTime(0.4, time);
+      gain.gain.exponentialRampToValueAtTime(0.001, time + stepDur * 0.9);
+      osc.connect(gain);
+      gain.connect(this.bgmGain);
+      osc.start(time);
+      osc.stop(time + stepDur);
+    }
+
+    // Subtle backing hi-hat / festival clap on off-beats
+    if (stepIdx % 2 === 1 && this.noiseBuffer) {
+      const noise = this.ctx.createBufferSource();
+      noise.buffer = this.noiseBuffer;
+      const hp = this.ctx.createBiquadFilter();
+      hp.type = 'highpass';
+      hp.frequency.setValueAtTime(5200, time);
+      const gain = this.ctx.createGain();
+      gain.gain.setValueAtTime(0.09, time);
+      gain.gain.exponentialRampToValueAtTime(0.001, time + 0.04);
+      noise.connect(hp);
+      hp.connect(gain);
+      gain.connect(this.bgmGain);
+      noise.start(time);
+      noise.stop(time + 0.05);
+    }
+  }
+}
+
+
+  // ===== src/engine/renderer.js =====
+
+/**
+ * High-DPI HTML5 Canvas renderer for Web Taiko Master.
+ * Renders the Japanese Matsuri stage, animated mascot, soul gauge,
+ * scrolling note track, drum hit feedback, judgement bursts, and Go-Go fever effects.
+ */
+class TaikoCanvasRenderer {
+  constructor(canvas) {
+    this.canvas = canvas;
+    this.ctx = canvas.getContext('2d');
+    this.width = 960;
+    this.height = 360;
+    this.dpr = 1;
+
+    // Transient visual effects
+    this.drumFlash = { leftKa: 0, leftDon: 0, rightDon: 0, rightKa: 0 };
+    this.judgementPopups = [];
+    this.hitRings = [];
+    this.flyingNotes = [];
+    this.confetti = [];
+    this.mascotBounce = 0;
+
+    this.resize();
+  }
+
+  resize() {
+    const rect = this.canvas.getBoundingClientRect();
+    const w = Math.max(320, Math.floor(rect.width || 960));
+    const h = Math.max(240, Math.floor(rect.height || 360));
+    this.dpr = Math.min(window.devicePixelRatio || 1, 2);
+    this.width = w;
+    this.height = h;
+    this.canvas.width = Math.floor(w * this.dpr);
+    this.canvas.height = Math.floor(h * this.dpr);
+    this.ctx.setTransform(this.dpr, 0, 0, this.dpr, 0, 0);
+  }
+
+  triggerDrumFlash(zone) {
+    if (zone in this.drumFlash) {
+      this.drumFlash[zone] = 1.0;
+    }
+  }
+
+  triggerHitEffect(event) {
+    const hitX = this._getHitZoneX();
+    const laneY = this._getLaneCenterY();
+
+    if (event.kind === 'judgement') {
+      const label =
+        event.judgement === JUDGEMENTS.GREAT
+          ? '良'
+          : event.judgement === JUDGEMENTS.GOOD
+          ? '可'
+          : '不可';
+      const color =
+        event.judgement === JUDGEMENTS.GREAT
+          ? '#fde047'
+          : event.judgement === JUDGEMENTS.GOOD
+          ? '#f8fafc'
+          : '#94a3b8';
+
+      this.judgementPopups.push({
+        label,
+        color,
+        x: hitX,
+        y: laneY - 42,
+        alpha: 1,
+        scale: 1.35,
+        age: 0,
+      });
+
+      if (event.judgement !== JUDGEMENTS.MISS) {
+        this.hitRings.push({
+          x: hitX,
+          y: laneY,
+          radius: 26,
+          maxRadius: event.judgement === JUDGEMENTS.GREAT ? 76 : 56,
+          color: event.judgement === JUDGEMENTS.GREAT ? '#facc15' : '#e2e8f0',
+          alpha: 1,
+        });
+        this.flyingNotes.push({
+          startX: hitX,
+          startY: laneY,
+          targetX: this.width - 70,
+          targetY: 46,
+          progress: 0,
+          isDon: isDonNote(event.note.type),
+          isBig: isBigNote(event.note.type),
+        });
+        this.mascotBounce = 1.0;
+      }
+    } else if (event.kind === 'drumroll' || event.kind === 'balloon_hit' || event.kind === 'balloon_pop') {
+      this.hitRings.push({
+        x: hitX,
+        y: laneY,
+        radius: 22,
+        maxRadius: event.kind === 'balloon_pop' ? 92 : 54,
+        color: event.kind === 'balloon_pop' ? '#fb923c' : '#fde047',
+        alpha: 1,
+      });
+      if (event.kind === 'balloon_pop') {
+        this.judgementPopups.push({
+          label: '割れた! +3000',
+          color: '#fb923c',
+          x: hitX + 18,
+          y: laneY - 50,
+          alpha: 1,
+          scale: 1.4,
+          age: 0,
+        });
+      }
+      this.mascotBounce = 0.8;
+    }
+  }
+
+  _getHitZoneX() {
+    return Math.max(115, Math.min(180, this.width * 0.2));
+  }
+
+  _getLaneCenterY() {
+    return this.height * 0.62;
+  }
+
+  _getLaneHeight() {
+    return Math.max(92, Math.min(126, this.height * 0.34));
+  }
+
+  render(state, dtSec = 0.016) {
+    const ctx = this.ctx;
+    const W = this.width;
+    const H = this.height;
+    const hitX = this._getHitZoneX();
+    const laneY = this._getLaneCenterY();
+    const laneH = this._getLaneHeight();
+
+    // Update effect animations
+    for (const key of Object.keys(this.drumFlash)) {
+      this.drumFlash[key] = Math.max(0, this.drumFlash[key] - dtSec * 6.5);
+    }
+    this.mascotBounce = Math.max(0, this.mascotBounce - dtSec * 4.5);
+
+    const isGogo = Boolean(state.isGogo);
+    const isFever = state.soul >= state.clearThreshold;
+
+    // 1. Background stage (Matsuri night sky -> fiery red/gold during Go-Go Time)
+    const bgGrad = ctx.createLinearGradient(0, 0, 0, H);
+    if (isGogo) {
+      bgGrad.addColorStop(0, '#450a0a');
+      bgGrad.addColorStop(0.55, '#7c2d12');
+      bgGrad.addColorStop(1, '#1c1917');
+    } else {
+      bgGrad.addColorStop(0, '#1e1b4b');
+      bgGrad.addColorStop(0.55, '#312e81');
+      bgGrad.addColorStop(1, '#18181b');
+    }
+    ctx.fillStyle = bgGrad;
+    ctx.fillRect(0, 0, W, H);
+
+    // Subtle decorative Matsuri lanterns along top banner
+    this._drawLanterns(ctx, W, state.songTimeMs, isGogo);
+
+    // 2. Animated Taiko mascot (top-left stage area)
+    this._drawMascot(ctx, 64, Math.max(66, laneY - laneH * 0.78), state.bpm || 130, state.songTimeMs, isGogo, isFever);
+
+    // 3. Soul Gauge (top-right stage area)
+    this._drawSoulGauge(ctx, W, state.soul, state.clearThreshold, state.songTimeMs);
+
+    // 4. Note Track / Lane
+    const laneTop = laneY - laneH / 2;
+    const laneGrad = ctx.createLinearGradient(0, laneTop, 0, laneTop + laneH);
+    laneGrad.addColorStop(0, isGogo ? '#431407' : '#1f2937');
+    laneGrad.addColorStop(0.5, isGogo ? '#5c1d0c' : '#111827');
+    laneGrad.addColorStop(1, isGogo ? '#2c0b04' : '#0f172a');
+    ctx.fillStyle = laneGrad;
+    ctx.fillRect(0, laneTop, W, laneH);
+
+    // Wooden gold borders
+    ctx.fillStyle = isGogo ? '#f59e0b' : '#b45309';
+    ctx.fillRect(0, laneTop - 5, W, 5);
+    ctx.fillRect(0, laneTop + laneH, W, 5);
+
+    // Measure beat guide lines
+    this._drawBeatLines(ctx, state, hitX, laneTop, laneH);
+
+    // Hit zone target circle
+    ctx.save();
+    ctx.beginPath();
+    ctx.arc(hitX, laneY, 32, 0, Math.PI * 2);
+    ctx.fillStyle = isGogo ? 'rgba(250, 204, 21, 0.22)' : 'rgba(255, 255, 255, 0.1)';
+    ctx.fill();
+    ctx.lineWidth = 4;
+    ctx.strokeStyle = isGogo ? '#fde047' : 'rgba(255, 255, 255, 0.55)';
+    ctx.stroke();
+
+    ctx.beginPath();
+    ctx.arc(hitX, laneY, 21, 0, Math.PI * 2);
+    ctx.lineWidth = 2;
+    ctx.strokeStyle = 'rgba(255, 255, 255, 0.35)';
+    ctx.stroke();
+    ctx.restore();
+
+    // 5. Scrolling Notes (draw right-to-left so earlier notes render on top)
+    this._drawNotes(ctx, state, hitX, laneY);
+
+    // 6. Left-side interactive mini Taiko drum indicator + Combo counter
+    this._drawMiniDrum(ctx, Math.min(58, hitX * 0.45), laneY, Math.min(44, laneH * 0.42), state.combo);
+
+    // 7. Hit rings, flying soul notes, judgement popups & Go-Go confetti
+    this._drawEffects(ctx, dtSec, isGogo, W, H);
+  }
+
+  _drawLanterns(ctx, W, songTimeMs, isGogo) {
+    const count = Math.max(4, Math.floor(W / 140));
+    const sway = Math.sin(songTimeMs / 450) * 4;
+    ctx.save();
+    // Rope
+    ctx.strokeStyle = 'rgba(251, 191, 36, 0.35)';
+    ctx.lineWidth = 2;
+    ctx.beginPath();
+    ctx.moveTo(0, 14);
+    ctx.quadraticCurveTo(W / 2, 26, W, 14);
+    ctx.stroke();
+
+    for (let i = 1; i < count; i++) {
+      const lx = (W / count) * i + sway * (i % 2 === 0 ? 1 : -1);
+      const ly = 24;
+      ctx.fillStyle = isGogo ? '#fb923c' : i % 2 === 0 ? '#dc2626' : '#f59e0b';
+      ctx.beginPath();
+      ctx.ellipse(lx, ly, 11, 14, 0, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.fillStyle = '#1f2937';
+      ctx.fillRect(lx - 5, ly - 15, 10, 3);
+      ctx.fillRect(lx - 5, ly + 12, 10, 3);
+    }
+    ctx.restore();
+  }
+
+  _drawMascot(ctx, x, y, bpm, songTimeMs, isGogo, isFever) {
+    const beatPhase = ((songTimeMs / 60000) * bpm) % 1;
+    const bob = Math.abs(Math.sin(beatPhase * Math.PI)) * -7 - this.mascotBounce * 6;
+    const cy = y + bob;
+
+    ctx.save();
+    // Outer drum body (cyan rim)
+    ctx.beginPath();
+    ctx.arc(x, cy, 28, 0, Math.PI * 2);
+    ctx.fillStyle = isGogo ? '#f59e0b' : '#38bdf8';
+    ctx.fill();
+    ctx.lineWidth = 3;
+    ctx.strokeStyle = '#ffffff';
+    ctx.stroke();
+
+    // Inner face (vermilion)
+    ctx.beginPath();
+    ctx.arc(x, cy, 21, 0, Math.PI * 2);
+    ctx.fillStyle = '#ef4444';
+    ctx.fill();
+
+    // Eyes
+    ctx.fillStyle = '#111827';
+    if (isFever || isGogo) {
+      // Happy > < eyes
+      ctx.strokeStyle = '#111827';
+      ctx.lineWidth = 2.5;
+      ctx.beginPath();
+      ctx.moveTo(x - 10, cy - 5);
+      ctx.lineTo(x - 6, cy - 2);
+      ctx.lineTo(x - 10, cy + 1);
+      ctx.moveTo(x + 10, cy - 5);
+      ctx.lineTo(x + 6, cy - 2);
+      ctx.lineTo(x + 10, cy + 1);
+      ctx.stroke();
+    } else {
+      ctx.beginPath();
+      ctx.arc(x - 7, cy - 3, 3, 0, Math.PI * 2);
+      ctx.arc(x + 7, cy - 3, 3, 0, Math.PI * 2);
+      ctx.fill();
+    }
+
+    // Smile
+    ctx.beginPath();
+    ctx.arc(x, cy + 3, 6, 0.1 * Math.PI, 0.9 * Math.PI);
+    ctx.strokeStyle = '#111827';
+    ctx.lineWidth = 2.2;
+    ctx.stroke();
+
+    // Go-Go crown / aura
+    if (isGogo) {
+      ctx.fillStyle = '#fde047';
+      ctx.font = 'bold 12px sans-serif';
+      ctx.textAlign = 'center';
+      ctx.fillText('GO-GO!', x, cy - 34);
+    }
+    ctx.restore();
+  }
+
+  _drawSoulGauge(ctx, W, soul, clearThreshold, songTimeMs) {
+    const barW = Math.min(340, Math.max(170, W * 0.36));
+    const barH = 22;
+    const x = W - barW - 58;
+    const y = 34;
+
+    ctx.save();
+    // Background frame
+    ctx.fillStyle = 'rgba(15, 23, 42, 0.85)';
+    ctx.fillRect(x - 3, y - 3, barW + 6, barH + 6);
+    ctx.strokeStyle = '#f59e0b';
+    ctx.lineWidth = 2;
+    ctx.strokeRect(x - 3, y - 3, barW + 6, barH + 6);
+
+    // Fill
+    const fillW = (Math.max(0, Math.min(100, soul)) / 100) * barW;
+    const cleared = soul >= clearThreshold;
+    const grad = ctx.createLinearGradient(x, y, x + barW, y);
+    if (cleared) {
+      const pulse = 0.5 + 0.5 * Math.sin(songTimeMs / 120);
+      grad.addColorStop(0, '#facc15');
+      grad.addColorStop(0.5, pulse > 0.5 ? '#fb923c' : '#fde047');
+      grad.addColorStop(1, '#ef4444');
+    } else {
+      grad.addColorStop(0, '#f59e0b');
+      grad.addColorStop(1, '#ef4444');
+    }
+    ctx.fillStyle = grad;
+    ctx.fillRect(x, y, fillW, barH);
+
+    // Clear threshold marker
+    const threshX = x + (clearThreshold / 100) * barW;
+    ctx.strokeStyle = '#ffffff';
+    ctx.lineWidth = 2;
+    ctx.beginPath();
+    ctx.moveTo(threshX, y - 4);
+    ctx.lineTo(threshX, y + barH + 4);
+    ctx.stroke();
+
+    // Label
+    ctx.fillStyle = '#fef3c7';
+    ctx.font = 'bold 11px sans-serif';
+    ctx.textAlign = 'left';
+    ctx.fillText(`魂槽 ${Math.round(soul)}%`, x, y - 8);
+    ctx.textAlign = 'right';
+    ctx.fillText(`过关线 ${clearThreshold}%`, x + barW, y - 8);
+
+    // Tamashii (魂) emblem circle
+    const orbX = x + barW + 26;
+    const orbY = y + barH / 2;
+    ctx.beginPath();
+    ctx.arc(orbX, orbY, 17, 0, Math.PI * 2);
+    ctx.fillStyle = cleared ? '#ef4444' : '#334155';
+    ctx.fill();
+    ctx.lineWidth = 2.5;
+    ctx.strokeStyle = cleared ? '#fde047' : '#64748b';
+    ctx.stroke();
+    ctx.fillStyle = cleared ? '#fef08a' : '#94a3b8';
+    ctx.font = 'bold 15px sans-serif';
+    ctx.textAlign = 'center';
+    ctx.textBaseline = 'middle';
+    ctx.fillText('魂', orbX, orbY + 1);
+    ctx.restore();
+  }
+
+  _drawBeatLines(ctx, state, hitX, laneTop, laneH) {
+    const bpm = state.bpm || 130;
+    const pxPerMs = this._getPixelsPerMs(bpm, state.scrollSpeed || 1);
+    const beatMs = 60000 / bpm;
+    const measureMs = beatMs * 4;
+    const offsetMs = state.offsetMs || 0;
+    const visibleMs = (this.width - hitX) / pxPerMs + 400;
+
+    const firstMeasure = Math.max(0, Math.floor((state.songTimeMs - offsetMs - 300) / measureMs));
+    const lastMeasure = Math.ceil((state.songTimeMs - offsetMs + visibleMs) / measureMs);
+
+    ctx.save();
+    ctx.strokeStyle = 'rgba(255, 255, 255, 0.14)';
+    ctx.lineWidth = 2;
+    for (let m = firstMeasure; m <= lastMeasure; m++) {
+      const mTime = offsetMs + m * measureMs;
+      const x = hitX + (mTime - state.songTimeMs) * pxPerMs;
+      if (x < hitX - 40 || x > this.width + 20) continue;
+      ctx.beginPath();
+      ctx.moveTo(x, laneTop);
+      ctx.lineTo(x, laneTop + laneH);
+      ctx.stroke();
+    }
+    ctx.restore();
+  }
+
+  _getPixelsPerMs(bpm, scrollSpeed) {
+    // Base speed scales naturally with BPM & viewport width
+    const trackLen = Math.max(300, this.width - this._getHitZoneX());
+    const beatsVisible = 3.2 / Math.max(0.5, Math.min(2.0, scrollSpeed));
+    const visibleMs = (60000 / Math.max(60, bpm)) * beatsVisible;
+    return trackLen / visibleMs;
+  }
+
+  _drawNotes(ctx, state, hitX, laneY) {
+    const notes = state.notes || [];
+    const songTimeMs = state.songTimeMs || 0;
+    const scrollSpeed = state.scrollSpeed || 1;
+    const baseBpm = state.bpm || 130;
+
+    // Collect visible notes and draw in reverse so earlier notes stay on top
+    const visible = [];
+    for (let i = 0; i < notes.length; i++) {
+      const n = notes[i];
+      if (n.judged && n.type !== NOTE_TYPES.DRUMROLL) continue;
+      if (n.type === NOTE_TYPES.DRUMROLL && songTimeMs > n.endTimeMs + 120) continue;
+
+      const pxPerMs = this._getPixelsPerMs(n.bpm || baseBpm, scrollSpeed * (n.scroll || 1));
+      const x = hitX + (n.timeMs - songTimeMs) * pxPerMs;
+      const endX = hitX + ((n.endTimeMs ?? n.timeMs) - songTimeMs) * pxPerMs;
+
+      if (endX < -70) continue;
+      if (x > this.width + 70) continue;
+      visible.push({ n, x, endX });
+    }
+
+    for (let i = visible.length - 1; i >= 0; i--) {
+      const { n, x, endX } = visible[i];
+      if (n.type === NOTE_TYPES.DRUMROLL) {
+        this._drawDrumroll(ctx, x, endX, laneY);
+      } else if (n.type === NOTE_TYPES.BALLOON) {
+        this._drawBalloon(ctx, x, endX, laneY, n, hitX);
+      } else {
+        this._drawStandardNote(ctx, x, laneY, n.type);
+      }
+    }
+  }
+
+  _drawStandardNote(ctx, x, y, type) {
+    const big = isBigNote(type);
+    const don = isDonNote(type);
+    const r = big ? 30 : 21;
+
+    ctx.save();
+    // Outer white ring
+    ctx.beginPath();
+    ctx.arc(x, y, r + 3.5, 0, Math.PI * 2);
+    ctx.fillStyle = big ? '#fde047' : '#ffffff';
+    ctx.fill();
+
+    // Inner dark stroke
+    ctx.beginPath();
+    ctx.arc(x, y, r + 1, 0, Math.PI * 2);
+    ctx.fillStyle = '#111827';
+    ctx.fill();
+
+    // Colored face
+    ctx.beginPath();
+    ctx.arc(x, y, r - 1.5, 0, Math.PI * 2);
+    ctx.fillStyle = don ? '#ef4444' : '#0ea5e9';
+    ctx.fill();
+
+    // Gloss highlight
+    ctx.beginPath();
+    ctx.arc(x - r * 0.25, y - r * 0.25, r * 0.25, 0, Math.PI * 2);
+    ctx.fillStyle = 'rgba(255,255,255,0.28)';
+    ctx.fill();
+
+    // Cute note label ("咚"/"咔")
+    ctx.fillStyle = '#ffffff';
+    ctx.font = `bold ${big ? 16 : 12}px sans-serif`;
+    ctx.textAlign = 'center';
+    ctx.textBaseline = 'middle';
+    ctx.fillText(don ? '咚' : '咔', x, y + 1);
+    ctx.restore();
+  }
+
+  _drawDrumroll(ctx, x, endX, y) {
+    const r = 20;
+    const width = Math.max(20, endX - x);
+    ctx.save();
+    // Capsule body
+    ctx.fillStyle = '#facc15';
+    ctx.strokeStyle = '#ffffff';
+    ctx.lineWidth = 3;
+    ctx.beginPath();
+    ctx.roundRect(x, y - r, width, r * 2, r);
+    ctx.fill();
+    ctx.stroke();
+
+    // Head circle
+    ctx.beginPath();
+    ctx.arc(x, y, r + 2, 0, Math.PI * 2);
+    ctx.fillStyle = '#eab308';
+    ctx.fill();
+    ctx.stroke();
+
+    ctx.fillStyle = '#422006';
+    ctx.font = 'bold 12px sans-serif';
+    ctx.textAlign = 'center';
+    ctx.textBaseline = 'middle';
+    ctx.fillText('连打', x + Math.min(width / 2, 34), y + 1);
+    ctx.restore();
+  }
+
+  _drawBalloon(ctx, x, endX, y, note, hitX) {
+    const drawX = Math.max(hitX, Math.min(x, endX));
+    const remaining = Math.max(0, note.requiredHits - note.hits);
+    ctx.save();
+    // Tail line
+    if (endX > drawX + 20) {
+      ctx.strokeStyle = 'rgba(251, 146, 60, 0.7)';
+      ctx.lineWidth = 4;
+      ctx.beginPath();
+      ctx.moveTo(drawX + 22, y);
+      ctx.lineTo(endX, y);
+      ctx.stroke();
+    }
+    // Balloon bulb
+    const scale = 1 + (note.hits / Math.max(1, note.requiredHits)) * 0.25;
+    ctx.beginPath();
+    ctx.ellipse(drawX, y, 26 * scale, 22 * scale, 0, 0, Math.PI * 2);
+    ctx.fillStyle = '#f97316';
+    ctx.fill();
+    ctx.lineWidth = 3;
+    ctx.strokeStyle = '#ffffff';
+    ctx.stroke();
+
+    ctx.fillStyle = '#ffffff';
+    ctx.font = 'bold 15px sans-serif';
+    ctx.textAlign = 'center';
+    ctx.textBaseline = 'middle';
+    ctx.fillText(`${remaining}`, drawX, y + 1);
+    ctx.restore();
+  }
+
+  _drawMiniDrum(ctx, cx, cy, r, combo) {
+    ctx.save();
+    // Rim base
+    ctx.beginPath();
+    ctx.arc(cx, cy, r, 0, Math.PI * 2);
+    ctx.fillStyle = '#334155';
+    ctx.fill();
+    ctx.lineWidth = 3;
+    ctx.strokeStyle = '#f8fafc';
+    ctx.stroke();
+
+    // Left Ka flash
+    if (this.drumFlash.leftKa > 0) {
+      ctx.beginPath();
+      ctx.arc(cx, cy, r - 2, Math.PI * 0.5, Math.PI * 1.5);
+      ctx.fillStyle = `rgba(14, 165, 233, ${this.drumFlash.leftKa})`;
+      ctx.fill();
+    }
+    // Right Ka flash
+    if (this.drumFlash.rightKa > 0) {
+      ctx.beginPath();
+      ctx.arc(cx, cy, r - 2, -Math.PI * 0.5, Math.PI * 0.5);
+      ctx.fillStyle = `rgba(14, 165, 233, ${this.drumFlash.rightKa})`;
+      ctx.fill();
+    }
+
+    // Inner drumhead
+    const ir = r * 0.72;
+    ctx.beginPath();
+    ctx.arc(cx, cy, ir, 0, Math.PI * 2);
+    ctx.fillStyle = '#fef3c7';
+    ctx.fill();
+
+    // Left Don flash
+    if (this.drumFlash.leftDon > 0) {
+      ctx.beginPath();
+      ctx.arc(cx, cy, ir, Math.PI * 0.5, Math.PI * 1.5);
+      ctx.fillStyle = `rgba(239, 68, 68, ${this.drumFlash.leftDon})`;
+      ctx.fill();
+    }
+    // Right Don flash
+    if (this.drumFlash.rightDon > 0) {
+      ctx.beginPath();
+      ctx.arc(cx, cy, ir, -Math.PI * 0.5, Math.PI * 0.5);
+      ctx.fillStyle = `rgba(239, 68, 68, ${this.drumFlash.rightDon})`;
+      ctx.fill();
+    }
+
+    // Combo text inside mini drum
+    if (combo >= 2) {
+      ctx.fillStyle = combo >= 50 ? '#dc2626' : '#1e293b';
+      ctx.font = `900 ${combo >= 100 ? 18 : 22}px sans-serif`;
+      ctx.textAlign = 'center';
+      ctx.textBaseline = 'middle';
+      ctx.fillText(String(combo), cx, cy - 3);
+      ctx.font = 'bold 9px sans-serif';
+      ctx.fillStyle = '#64748b';
+      ctx.fillText('COMBO', cx, cy + 14);
+    }
+    ctx.restore();
+  }
+
+  _drawEffects(ctx, dtSec, isGogo, W, H) {
+    // Hit shockwave rings
+    for (let i = this.hitRings.length - 1; i >= 0; i--) {
+      const ring = this.hitRings[i];
+      ring.radius += dtSec * 220;
+      ring.alpha -= dtSec * 3.8;
+      if (ring.alpha <= 0 || ring.radius >= ring.maxRadius) {
+        this.hitRings.splice(i, 1);
+        continue;
+      }
+      ctx.save();
+      ctx.beginPath();
+      ctx.arc(ring.x, ring.y, ring.radius, 0, Math.PI * 2);
+      ctx.strokeStyle = ring.color;
+      ctx.globalAlpha = Math.max(0, ring.alpha);
+      ctx.lineWidth = 4;
+      ctx.stroke();
+      ctx.restore();
+    }
+
+    // Flying notes curving up to Soul Gauge
+    for (let i = this.flyingNotes.length - 1; i >= 0; i--) {
+      const fn = this.flyingNotes[i];
+      fn.progress += dtSec * 2.6;
+      if (fn.progress >= 1) {
+        this.flyingNotes.splice(i, 1);
+        continue;
+      }
+      const t = fn.progress;
+      const x = fn.startX + (fn.targetX - fn.startX) * t;
+      const arc = Math.sin(t * Math.PI) * -95;
+      const y = fn.startY + (fn.targetY - fn.startY) * t + arc;
+      ctx.save();
+      ctx.globalAlpha = 1 - t * 0.6;
+      ctx.beginPath();
+      ctx.arc(x, y, fn.isBig ? 14 : 10, 0, Math.PI * 2);
+      ctx.fillStyle = fn.isDon ? '#ef4444' : '#0ea5e9';
+      ctx.fill();
+      ctx.lineWidth = 2;
+      ctx.strokeStyle = '#ffffff';
+      ctx.stroke();
+      ctx.restore();
+    }
+
+    // Judgement text popups
+    for (let i = this.judgementPopups.length - 1; i >= 0; i--) {
+      const p = this.judgementPopups[i];
+      p.age += dtSec;
+      p.y -= dtSec * 38;
+      p.scale = Math.max(1, p.scale - dtSec * 2.5);
+      p.alpha = Math.max(0, 1 - p.age / 0.55);
+      if (p.alpha <= 0) {
+        this.judgementPopups.splice(i, 1);
+        continue;
+      }
+      ctx.save();
+      ctx.globalAlpha = p.alpha;
+      ctx.translate(p.x, p.y);
+      ctx.scale(p.scale, p.scale);
+      ctx.font = '900 24px sans-serif';
+      ctx.textAlign = 'center';
+      ctx.textBaseline = 'middle';
+      ctx.lineWidth = 4;
+      ctx.strokeStyle = '#0f172a';
+      ctx.strokeText(p.label, 0, 0);
+      ctx.fillStyle = p.color;
+      ctx.fillText(p.label, 0, 0);
+      ctx.restore();
+    }
+
+    // Go-Go Time festive sparkles
+    if (isGogo && this.confetti.length < 24 && Math.random() < 0.35) {
+      this.confetti.push({
+        x: Math.random() * W,
+        y: -8,
+        vx: (Math.random() - 0.5) * 40,
+        vy: 50 + Math.random() * 70,
+        color: ['#fde047', '#fb923c', '#f43f5e', '#38bdf8'][Math.floor(Math.random() * 4)],
+        size: 4 + Math.random() * 4,
+      });
+    }
+    for (let i = this.confetti.length - 1; i >= 0; i--) {
+      const c = this.confetti[i];
+      c.x += c.vx * dtSec;
+      c.y += c.vy * dtSec;
+      if (c.y > H + 12) {
+        this.confetti.splice(i, 1);
+        continue;
+      }
+      ctx.save();
+      ctx.fillStyle = c.color;
+      ctx.fillRect(c.x, c.y, c.size, c.size);
+      ctx.restore();
+    }
+  }
+}
+
+
+  // ===== src/ui/app.js =====
+
+
+
+
+
+
+const STORAGE_SETTINGS_KEY = 'web_taiko_settings_v1';
+const STORAGE_SCORES_KEY = 'web_taiko_scores_v1';
+
+const SAMPLE_CUSTOM_TJA = `TITLE: 祭典入门练习曲
+BPM: 128
+OFFSET: 1400
+BALLOON: 6
+
+// 0=空 1=咚 2=咔 3=大咚 4=大咔 5..8=连打 7..8=气球
+10102010,
+10201000,
+11201120,
+30004000,
+#GOGOSTART
+12102120,
+50000008,
+70000008,
+30102010,
+#GOGOEND`;
+
+class TaikoApp {
+  constructor() {
+    this.audio = new TaikoAudioEngine();
+    this.settings = this._loadSettings();
+    this.highScores = this._loadScores();
+
+    this.selectedSongId = SONG_CATALOG[0].id;
+    this.selectedDifficulty = 'normal';
+    this.activeView = 'select'; // 'select' | 'play' | 'result' | 'editor'
+    this.customChart = null;
+
+    // Active play session state
+    this.engine = null;
+    this.renderer = null;
+    this.currentChartData = null;
+    this.rafId = null;
+    this.lastFrameTs = 0;
+    this.isPaused = false;
+    this.lastAutoRollMs = 0;
+    this.lastMilestoneCombo = 0;
+
+    // Key remapping & calibration state
+    this.listeningForKey = null;
+    this.calibrationTimer = null;
+    this.calibrationBeatMs = 500; // 120 BPM
+    this.calibrationStartTs = 0;
+    this.calibrationSamples = [];
+
+    this._bindDOM();
+    this._applySettingsToAudio();
+    this._renderSongList();
+    this._renderEditorPreview();
+    this._bindEvents();
+  }
+
+  _loadSettings() {
+    try {
+      const raw = localStorage.getItem(STORAGE_SETTINGS_KEY);
+      if (raw) {
+        const parsed = JSON.parse(raw);
+        return {
+          ...DEFAULT_SETTINGS,
+          ...parsed,
+          keyBindings: { ...DEFAULT_SETTINGS.keyBindings, ...(parsed.keyBindings || {}) },
+        };
+      }
+    } catch (_) {}
+    return {
+      ...DEFAULT_SETTINGS,
+      keyBindings: { ...DEFAULT_SETTINGS.keyBindings },
+    };
+  }
+
+  _saveSettings() {
+    try {
+      localStorage.setItem(STORAGE_SETTINGS_KEY, JSON.stringify(this.settings));
+    } catch (_) {}
+  }
+
+  _loadScores() {
+    try {
+      const raw = localStorage.getItem(STORAGE_SCORES_KEY);
+      if (raw) return JSON.parse(raw);
+    } catch (_) {}
+    return {};
+  }
+
+  _saveScore(key, summary) {
+    const prev = this.highScores[key];
+    if (!prev || summary.score > prev.score) {
+      this.highScores[key] = {
+        score: summary.score,
+        rank: summary.rank,
+        accuracy: summary.accuracy,
+        cleared: summary.cleared,
+        fullCombo: summary.fullCombo,
+      };
+      try {
+        localStorage.setItem(STORAGE_SCORES_KEY, JSON.stringify(this.highScores));
+      } catch (_) {}
+    }
+  }
+
+  _bindDOM() {
+    this.dom = {
+      views: {
+        select: document.getElementById('view-select'),
+        play: document.getElementById('view-play'),
+        result: document.getElementById('view-result'),
+        editor: document.getElementById('view-editor'),
+      },
+      navTabs: document.querySelectorAll('[data-nav]'),
+      songList: document.getElementById('song-list'),
+      diffBtns: document.querySelectorAll('[data-diff]'),
+      selectedTitle: document.getElementById('selected-song-title'),
+      selectedMeta: document.getElementById('selected-song-meta'),
+      startBtn: document.getElementById('btn-start-game'),
+      autoToggleBtn: document.getElementById('btn-toggle-auto'),
+      muteBtn: document.getElementById('btn-mute'),
+      settingsBtn: document.getElementById('btn-open-settings'),
+
+      // Play HUD
+      canvas: document.getElementById('taiko-canvas'),
+      hudSongTitle: document.getElementById('hud-song-title'),
+      hudScore: document.getElementById('hud-score'),
+      hudCombo: document.getElementById('hud-combo'),
+      hudAccuracy: document.getElementById('hud-accuracy'),
+      hudProgressFill: document.getElementById('hud-progress-fill'),
+      hudAutoBadge: document.getElementById('hud-auto-badge'),
+      pauseBtn: document.getElementById('btn-pause'),
+      restartBtn: document.getElementById('btn-restart'),
+      exitPlayBtn: document.getElementById('btn-exit-play'),
+      pauseOverlay: document.getElementById('pause-overlay'),
+      resumeBtn: document.getElementById('btn-resume'),
+      drumPads: document.querySelectorAll('[data-pad]'),
+
+      // Result view
+      resTitle: document.getElementById('res-song-title'),
+      resRank: document.getElementById('res-rank'),
+      resStamp: document.getElementById('res-stamp'),
+      resScore: document.getElementById('res-score'),
+      resAccuracy: document.getElementById('res-accuracy'),
+      resMaxCombo: document.getElementById('res-max-combo'),
+      resSoul: document.getElementById('res-soul'),
+      resGreat: document.getElementById('res-great'),
+      resGood: document.getElementById('res-good'),
+      resMiss: document.getElementById('res-miss'),
+      resMeanOffset: document.getElementById('res-mean-offset'),
+      resHistogram: document.getElementById('res-histogram'),
+      resRetryBtn: document.getElementById('btn-res-retry'),
+      resBackBtn: document.getElementById('btn-res-back'),
+
+      // Settings modal
+      settingsModal: document.getElementById('settings-modal'),
+      closeSettingsBtn: document.getElementById('btn-close-settings'),
+      offsetSlider: document.getElementById('setting-offset'),
+      offsetValue: document.getElementById('setting-offset-val'),
+      speedSlider: document.getElementById('setting-speed'),
+      speedValue: document.getElementById('setting-speed-val'),
+      bgmSlider: document.getElementById('setting-bgm'),
+      bgmValue: document.getElementById('setting-bgm-val'),
+      sfxSlider: document.getElementById('setting-sfx'),
+      sfxValue: document.getElementById('setting-sfx-val'),
+      keyBindBtns: document.querySelectorAll('[data-keybind]'),
+      resetSettingsBtn: document.getElementById('btn-reset-settings'),
+      calibrateBtn: document.getElementById('btn-calibrate'),
+      calibrateStatus: document.getElementById('calibrate-status'),
+
+      // Editor view
+      editorTextarea: document.getElementById('tja-editor-input'),
+      editorStats: document.getElementById('tja-editor-stats'),
+      editorError: document.getElementById('tja-editor-error'),
+      editorPlayBtn: document.getElementById('btn-editor-play'),
+      editorSampleBtn: document.getElementById('btn-editor-sample'),
+
+      toast: document.getElementById('toast'),
+    };
+
+    if (this.dom.editorTextarea) {
+      this.dom.editorTextarea.value = SAMPLE_CUSTOM_TJA;
+    }
+  }
+
+  _bindEvents() {
+    // Top navigation
+    this.dom.navTabs.forEach((btn) => {
+      btn.addEventListener('click', () => {
+        const target = btn.getAttribute('data-nav');
+        if (this.activeView === 'play') this._stopSession();
+        this._switchView(target);
+      });
+    });
+
+    // Difficulty selector
+    this.dom.diffBtns.forEach((btn) => {
+      btn.addEventListener('click', () => {
+        this.selectedDifficulty = btn.getAttribute('data-diff');
+        this._updateDiffButtons();
+        this._renderSongList();
+      });
+    });
+
+    this.dom.startBtn.addEventListener('click', () => this.startSelectedSong());
+
+    this.dom.autoToggleBtn.addEventListener('click', () => {
+      this.settings.autoPlay = !this.settings.autoPlay;
+      this._saveSettings();
+      this._syncToolbarUI();
+      this._showToast(this.settings.autoPlay ? '已开启自动演奏模式 (Auto-Play)' : '已关闭自动演奏模式');
+    });
+
+    this.dom.muteBtn.addEventListener('click', () => {
+      this.settings.muted = !this.settings.muted;
+      this._applySettingsToAudio();
+      this._saveSettings();
+      this._syncToolbarUI();
+    });
+
+    this.dom.settingsBtn.addEventListener('click', () => this._openSettings());
+    this.dom.closeSettingsBtn.addEventListener('click', () => this._closeSettings());
+    this.dom.settingsModal.addEventListener('click', (e) => {
+      if (e.target === this.dom.settingsModal) this._closeSettings();
+    });
+
+    // Settings sliders
+    this.dom.offsetSlider.addEventListener('input', (e) => {
+      this.settings.audioOffsetMs = Number(e.target.value);
+      this.dom.offsetValue.textContent = `${this.settings.audioOffsetMs >= 0 ? '+' : ''}${this.settings.audioOffsetMs} ms`;
+      this._saveSettings();
+    });
+    this.dom.speedSlider.addEventListener('input', (e) => {
+      this.settings.scrollSpeed = Number(e.target.value);
+      this.dom.speedValue.textContent = `${this.settings.scrollSpeed.toFixed(1)}x`;
+      this._saveSettings();
+    });
+    this.dom.bgmSlider.addEventListener('input', (e) => {
+      this.settings.bgmVolume = Number(e.target.value) / 100;
+      this.dom.bgmValue.textContent = `${e.target.value}%`;
+      this._applySettingsToAudio();
+      this._saveSettings();
+    });
+    this.dom.sfxSlider.addEventListener('input', (e) => {
+      this.settings.sfxVolume = Number(e.target.value) / 100;
+      this.dom.sfxValue.textContent = `${e.target.value}%`;
+      this._applySettingsToAudio();
+      this._saveSettings();
+    });
+
+    // Keybinding buttons
+    this.dom.keyBindBtns.forEach((btn) => {
+      btn.addEventListener('click', () => {
+        this.listeningForKey = btn.getAttribute('data-keybind');
+        this._syncSettingsUI();
+      });
+    });
+
+    this.dom.resetSettingsBtn.addEventListener('click', () => {
+      this.settings = {
+        ...DEFAULT_SETTINGS,
+        keyBindings: { ...DEFAULT_SETTINGS.keyBindings },
+      };
+      this._applySettingsToAudio();
+      this._saveSettings();
+      this._syncSettingsUI();
+      this._syncToolbarUI();
+      this._showToast('已恢复默认按键与音频设置');
+    });
+
+    this.dom.calibrateBtn.addEventListener('click', () => this._toggleCalibration());
+
+    // Play HUD controls
+    this.dom.pauseBtn.addEventListener('click', () => this.togglePause());
+    this.dom.resumeBtn.addEventListener('click', () => this.togglePause());
+    this.dom.restartBtn.addEventListener('click', () => this._restartCurrentSession());
+    this.dom.exitPlayBtn.addEventListener('click', () => {
+      this._stopSession();
+      this._switchView('select');
+    });
+
+    // Result buttons
+    this.dom.resRetryBtn.addEventListener('click', () => this._restartCurrentSession());
+    this.dom.resBackBtn.addEventListener('click', () => {
+      this._renderSongList();
+      this._switchView('select');
+    });
+
+    // On-screen touch/mouse drum pads
+    this.dom.drumPads.forEach((pad) => {
+      const zone = pad.getAttribute('data-pad');
+      const handleHit = (e) => {
+        e.preventDefault();
+        const inputType = zone === 'leftDon' || zone === 'rightDon' ? INPUT_TYPES.DON : INPUT_TYPES.KA;
+        this._handlePlayerInput(inputType, zone);
+        pad.classList.add('active');
+        setTimeout(() => pad.classList.remove('active'), 95);
+      };
+      pad.addEventListener('pointerdown', handleHit);
+    });
+
+    // Global keyboard handler
+    window.addEventListener('keydown', (e) => this._onKeyDown(e));
+    window.addEventListener('resize', () => {
+      if (this.renderer) this.renderer.resize();
+    });
+
+    // Editor events
+    this.dom.editorTextarea.addEventListener('input', () => this._renderEditorPreview());
+    this.dom.editorSampleBtn.addEventListener('click', () => {
+      this.dom.editorTextarea.value = SAMPLE_CUSTOM_TJA;
+      this._renderEditorPreview();
+    });
+    this.dom.editorPlayBtn.addEventListener('click', () => this._playCustomChart());
+
+    this._updateDiffButtons();
+    this._syncToolbarUI();
+  }
+
+  _onKeyDown(e) {
+    if (e.repeat) return;
+
+    // 1. Keybinding capture inside Settings modal
+    if (this.listeningForKey) {
+      e.preventDefault();
+      this.settings.keyBindings[this.listeningForKey] = e.code;
+      this.listeningForKey = null;
+      this._saveSettings();
+      this._syncSettingsUI();
+      this._syncDrumPadLabels();
+      return;
+    }
+
+    // 2. Audio offset tap calibration
+    if (this.calibrationTimer && (e.code === 'Space' || e.code === 'KeyF' || e.code === 'KeyJ')) {
+      e.preventDefault();
+      this._recordCalibrationTap();
+      return;
+    }
+
+    if (this.activeView !== 'play') return;
+
+    if (e.code === 'Escape') {
+      e.preventDefault();
+      this.togglePause();
+      return;
+    }
+
+    if (this.isPaused) return;
+
+    const kb = this.settings.keyBindings;
+    if (e.code === kb.leftKa) {
+      e.preventDefault();
+      this._handlePlayerInput(INPUT_TYPES.KA, 'leftKa');
+    } else if (e.code === kb.leftDon) {
+      e.preventDefault();
+      this._handlePlayerInput(INPUT_TYPES.DON, 'leftDon');
+    } else if (e.code === kb.rightDon) {
+      e.preventDefault();
+      this._handlePlayerInput(INPUT_TYPES.DON, 'rightDon');
+    } else if (e.code === kb.rightKa) {
+      e.preventDefault();
+      this._handlePlayerInput(INPUT_TYPES.KA, 'rightKa');
+    }
+  }
+
+  _handlePlayerInput(inputType, zone) {
+    if (this.activeView !== 'play' || this.isPaused || !this.engine) return;
+    if (this.settings.autoPlay) return;
+
+    if (inputType === INPUT_TYPES.DON) {
+      this.audio.playDon(false);
+    } else {
+      this.audio.playKa(false);
+    }
+
+    if (this.renderer) {
+      this.renderer.triggerDrumFlash(zone);
+    }
+
+    const songTimeMs = this.audio.getSongTimeMs() - this.settings.audioOffsetMs;
+    const ev = this.engine.processInput(inputType, songTimeMs);
+    this._onEngineEvent(ev);
+  }
+
+  _onEngineEvent(ev) {
+    if (!ev || !ev.matched) return;
+    if (this.renderer) {
+      this.renderer.triggerHitEffect(ev);
+    }
+    if (ev.kind === 'balloon_pop') {
+      this.audio.playBalloonPop();
+    }
+    if (ev.kind === 'judgement' && ev.combo > 0 && ev.combo % 50 === 0 && ev.combo !== this.lastMilestoneCombo) {
+      this.lastMilestoneCombo = ev.combo;
+      this.audio.playComboChime();
+    }
+  }
+
+  _switchView(viewName) {
+    this.activeView = viewName;
+    Object.entries(this.dom.views).forEach(([key, el]) => {
+      if (el) el.classList.toggle('hidden', key !== viewName);
+    });
+    this.dom.navTabs.forEach((btn) => {
+      btn.classList.toggle('active', btn.getAttribute('data-nav') === viewName);
+    });
+  }
+
+  _updateDiffButtons() {
+    this.dom.diffBtns.forEach((btn) => {
+      btn.classList.toggle('active', btn.getAttribute('data-diff') === this.selectedDifficulty);
+    });
+  }
+
+  _syncToolbarUI() {
+    this.dom.autoToggleBtn.classList.toggle('active', this.settings.autoPlay);
+    this.dom.autoToggleBtn.textContent = this.settings.autoPlay ? '自动演奏: 开' : '自动演奏: 关';
+    this.dom.muteBtn.textContent = this.settings.muted ? '🔇 静音' : '🔊 音效';
+    this._syncDrumPadLabels();
+  }
+
+  _syncDrumPadLabels() {
+    const kb = this.settings.keyBindings;
+    const formatKey = (code) => code.replace(/^Key/, '').replace(/^Digit/, '');
+    const map = {
+      leftKa: `${formatKey(kb.leftKa)} · 咔`,
+      leftDon: `${formatKey(kb.leftDon)} · 咚`,
+      rightDon: `${formatKey(kb.rightDon)} · 咚`,
+      rightKa: `${formatKey(kb.rightKa)} · 咔`,
+    };
+    this.dom.drumPads.forEach((pad) => {
+      const z = pad.getAttribute('data-pad');
+      const span = pad.querySelector('.pad-key');
+      if (span && map[z]) span.textContent = map[z];
+    });
+  }
+
+  _applySettingsToAudio() {
+    this.audio.setVolumes({
+      bgmVolume: this.settings.bgmVolume,
+      sfxVolume: this.settings.sfxVolume,
+      muted: this.settings.muted,
+    });
+  }
+
+  _renderSongList() {
+    const diffInfo = DIFFICULTIES[this.selectedDifficulty.toUpperCase()] || DIFFICULTIES.NORMAL;
+    this.dom.songList.innerHTML = '';
+
+    SONG_CATALOG.forEach((song) => {
+      const compiled = compileSongChart(song.id, this.selectedDifficulty);
+      const scoreKey = `${song.id}_${this.selectedDifficulty}`;
+      const best = this.highScores[scoreKey];
+
+      const card = document.createElement('button');
+      card.type = 'button';
+      card.className = `song-card ${song.id === this.selectedSongId ? 'selected' : ''}`;
+      card.style.setProperty('--song-accent', song.accent);
+
+      const starsStr = '★'.repeat(compiled.stars) + '☆'.repeat(Math.max(0, 10 - compiled.stars));
+      const bestHtml = best
+        ? `<span class="best-badge rank-${best.rank}">${best.rank} · ${best.score.toLocaleString()}</span>`
+        : '<span class="best-badge empty">未挑战</span>';
+
+      card.innerHTML = `
+        <div class="song-card-top">
+          <div>
+            <div class="song-title">${song.title}</div>
+            <div class="song-sub">${song.subtitle}</div>
+          </div>
+          ${bestHtml}
+        </div>
+        <div class="song-card-meta">
+          <span class="tag">${song.genre}</span>
+          <span class="tag">BPM ${song.bpm}</span>
+          <span class="tag">${compiled.stats.standardCount} 音符</span>
+        </div>
+        <div class="song-stars" style="color:${diffInfo.color}">${diffInfo.label} ${starsStr}</div>
+      `;
+
+      card.addEventListener('click', () => {
+        this.selectedSongId = song.id;
+        this._renderSongList();
+      });
+
+      this.dom.songList.appendChild(card);
+    });
+
+    const active = compileSongChart(this.selectedSongId, this.selectedDifficulty);
+    this.dom.selectedTitle.textContent = `${active.song.title} (${diffInfo.label} ★${active.stars})`;
+    this.dom.selectedMeta.textContent = `BPM ${active.song.bpm} · 音符 ${active.stats.standardCount} · 连打 ${active.stats.drumrollCount} · 气球 ${active.stats.balloonCount} · 过关线 ${diffInfo.clearThreshold}%`;
+  }
+
+  startSelectedSong() {
+    const compiled = compileSongChart(this.selectedSongId, this.selectedDifficulty);
+    this._startSession(compiled, `${compiled.song.id}_${this.selectedDifficulty}`);
+  }
+
+  _playCustomChart() {
+    try {
+      const parsed = parseRawTJAText(this.dom.editorTextarea.value);
+      const customSong = {
+        id: 'custom-chart',
+        title: parsed.title,
+        subtitle: 'Custom TJA-Lite Chart',
+        genre: '自定义谱面',
+        bpm: parsed.bpm,
+        offsetMs: parsed.offsetMs,
+        accent: '#a855f7',
+        bgm: SONG_CATALOG[0].bgm,
+      };
+      this._startSession(
+        {
+          song: customSong,
+          difficulty: 'normal',
+          stars: 5,
+          ...parsed,
+        },
+        null
+      );
+    } catch (err) {
+      this._showToast(err.message);
+    }
+  }
+
+  _startSession(chartData, scoreKey) {
+    this._stopSession();
+    this.currentChartData = { ...chartData, scoreKey };
+    this.engine = new TaikoGameEngine({
+      notes: chartData.notes,
+      difficulty: chartData.difficulty,
+      gogoRanges: chartData.gogoRanges,
+    });
+    this.isPaused = false;
+    this.lastAutoRollMs = 0;
+    this.lastMilestoneCombo = 0;
+
+    this._switchView('play');
+    this.dom.pauseOverlay.classList.add('hidden');
+    this.dom.hudSongTitle.textContent = `${chartData.song.title} · ${(DIFFICULTIES[chartData.difficulty.toUpperCase()] || DIFFICULTIES.NORMAL).label}`;
+    this.dom.hudAutoBadge.classList.toggle('hidden', !this.settings.autoPlay);
+
+    if (!this.renderer) {
+      this.renderer = new TaikoCanvasRenderer(this.dom.canvas);
+    } else {
+      this.renderer.resize();
+    }
+
+    this.audio.startSong(chartData.song, chartData.durationMs);
+    this.lastFrameTs = performance.now();
+    this.rafId = requestAnimationFrame((ts) => this._gameLoop(ts));
+  }
+
+  _restartCurrentSession() {
+    if (!this.currentChartData) return;
+    this._startSession(this.currentChartData, this.currentChartData.scoreKey);
+  }
+
+  _stopSession() {
+    if (this.rafId) {
+      cancelAnimationFrame(this.rafId);
+      this.rafId = null;
+    }
+    this.audio.stopSong();
+    this.isPaused = false;
+  }
+
+  togglePause() {
+    if (this.activeView !== 'play' || !this.engine) return;
+    this.isPaused = !this.isPaused;
+    this.dom.pauseOverlay.classList.toggle('hidden', !this.isPaused);
+    if (this.isPaused) {
+      this.audio.pauseSong();
+    } else {
+      this.audio.resumeSong();
+      this.lastFrameTs = performance.now();
+    }
+  }
+
+  _gameLoop(ts) {
+    const dtSec = Math.min(0.05, Math.max(0.001, (ts - this.lastFrameTs) / 1000));
+    this.lastFrameTs = ts;
+
+    if (this.activeView !== 'play' || !this.engine || !this.currentChartData) return;
+
+    const rawTimeMs = this.audio.getSongTimeMs();
+    const songTimeMs = rawTimeMs - this.settings.audioOffsetMs;
+
+    if (!this.isPaused) {
+      // Auto-Play mode
+      if (this.settings.autoPlay) {
+        const autoInputs = this.engine.getAutoPlayInputs(songTimeMs, this.lastAutoRollMs);
+        for (const act of autoInputs) {
+          if (act.isRoll) this.lastAutoRollMs = songTimeMs;
+          const big = isBigNote(act.note.type);
+          if (act.inputType === INPUT_TYPES.DON) {
+            this.audio.playDon(big);
+            this.renderer.triggerDrumFlash(Math.random() < 0.5 ? 'leftDon' : 'rightDon');
+          } else {
+            this.audio.playKa(big);
+            this.renderer.triggerDrumFlash(Math.random() < 0.5 ? 'leftKa' : 'rightKa');
+          }
+          const ev = this.engine.processInput(act.inputType, act.timeMs);
+          this._onEngineEvent(ev);
+        }
+      }
+
+      // Sweep missed notes
+      const missed = this.engine.update(songTimeMs);
+      for (const m of missed) {
+        this.renderer.triggerHitEffect(m);
+      }
+
+      // Update HUD
+      this.dom.hudScore.textContent = this.engine.score.toLocaleString();
+      this.dom.hudCombo.textContent = String(this.engine.combo);
+      this.dom.hudAccuracy.textContent = `${this.engine.getAccuracy().toFixed(1)}%`;
+      const pct = Math.min(100, Math.max(0, (rawTimeMs / this.currentChartData.durationMs) * 100));
+      this.dom.hudProgressFill.style.width = `${pct}%`;
+
+      // Check song completion
+      if (rawTimeMs >= this.currentChartData.durationMs) {
+        this._finishSession();
+        return;
+      }
+    }
+
+    // Render frame
+    this.renderer.render(
+      {
+        notes: this.engine.notes,
+        songTimeMs,
+        bpm: this.currentChartData.song.bpm,
+        offsetMs: this.currentChartData.song.offsetMs,
+        scrollSpeed: this.settings.scrollSpeed,
+        soul: this.engine.soul,
+        clearThreshold: this.engine.difficultyConfig.clearThreshold,
+        combo: this.engine.combo,
+        isGogo: this.engine.isGogoTime(songTimeMs),
+      },
+      dtSec
+    );
+
+    this.rafId = requestAnimationFrame((nextTs) => this._gameLoop(nextTs));
+  }
+
+  _finishSession() {
+    this._stopSession();
+    const summary = this.engine.getSummary();
+
+    if (this.currentChartData.scoreKey && !this.settings.autoPlay) {
+      this._saveScore(this.currentChartData.scoreKey, summary);
+    }
+
+    this.dom.resTitle.textContent = `${this.currentChartData.song.title}${this.settings.autoPlay ? ' (Auto-Play)' : ''}`;
+    this.dom.resRank.textContent = summary.rank;
+    this.dom.resRank.className = `result-rank rank-${summary.rank}`;
+    this.dom.resStamp.textContent = summary.fullCombo
+      ? 'FULL COMBO · 全连通关!'
+      : summary.cleared
+      ? 'CLEAR · 演奏成功'
+      : 'FAILED · 未达过关线';
+    this.dom.resStamp.className = `result-stamp ${summary.cleared ? 'cleared' : 'failed'}`;
+
+    this.dom.resScore.textContent = summary.score.toLocaleString();
+    this.dom.resAccuracy.textContent = `${summary.accuracy.toFixed(2)}%`;
+    this.dom.resMaxCombo.textContent = `${summary.maxCombo} / ${summary.standardTotal}`;
+    this.dom.resSoul.textContent = `${summary.soul}% (过关线 ${summary.clearThreshold}%)`;
+    this.dom.resGreat.textContent = String(summary.counts.great);
+    this.dom.resGood.textContent = String(summary.counts.good);
+    this.dom.resMiss.textContent = String(summary.counts.miss);
+    this.dom.resMeanOffset.textContent = `${summary.meanOffsetMs >= 0 ? '+' : ''}${summary.meanOffsetMs} ms`;
+
+    this._renderTimingHistogram(summary.timingDeltas);
+    this._switchView('result');
+  }
+
+  _renderTimingHistogram(deltas) {
+    const bins = [-75, -50, -25, 0, 25, 50, 75];
+    const counts = new Array(bins.length).fill(0);
+    for (const d of deltas) {
+      let bestIdx = 0;
+      let bestDist = Infinity;
+      for (let i = 0; i < bins.length; i++) {
+        const dist = Math.abs(d - bins[i]);
+        if (dist < bestDist) {
+          bestDist = dist;
+          bestIdx = i;
+        }
+      }
+      counts[bestIdx]++;
+    }
+    const maxCount = Math.max(1, ...counts);
+    this.dom.resHistogram.innerHTML = bins
+      .map((b, i) => {
+        const h = Math.round((counts[i] / maxCount) * 100);
+        const isCenter = b === 0;
+        const label = b === 0 ? '0' : `${b > 0 ? '+' : ''}${b}`;
+        return `
+          <div class="hist-col">
+            <div class="hist-bar-wrap">
+              <div class="hist-bar ${isCenter ? 'center' : ''}" style="height:${Math.max(4, h)}%" title="${label}ms: ${counts[i]}"></div>
+            </div>
+            <div class="hist-label">${label}</div>
+          </div>
+        `;
+      })
+      .join('');
+  }
+
+  _openSettings() {
+    this.listeningForKey = null;
+    this._syncSettingsUI();
+    this.dom.settingsModal.classList.remove('hidden');
+  }
+
+  _closeSettings() {
+    this._stopCalibration();
+    this.listeningForKey = null;
+    this.dom.settingsModal.classList.add('hidden');
+  }
+
+  _syncSettingsUI() {
+    this.dom.offsetSlider.value = String(this.settings.audioOffsetMs);
+    this.dom.offsetValue.textContent = `${this.settings.audioOffsetMs >= 0 ? '+' : ''}${this.settings.audioOffsetMs} ms`;
+    this.dom.speedSlider.value = String(this.settings.scrollSpeed);
+    this.dom.speedValue.textContent = `${this.settings.scrollSpeed.toFixed(1)}x`;
+    this.dom.bgmSlider.value = String(Math.round(this.settings.bgmVolume * 100));
+    this.dom.bgmValue.textContent = `${Math.round(this.settings.bgmVolume * 100)}%`;
+    this.dom.sfxSlider.value = String(Math.round(this.settings.sfxVolume * 100));
+    this.dom.sfxValue.textContent = `${Math.round(this.settings.sfxVolume * 100)}%`;
+
+    this.dom.keyBindBtns.forEach((btn) => {
+      const slot = btn.getAttribute('data-keybind');
+      if (this.listeningForKey === slot) {
+        btn.textContent = '请按键...';
+        btn.classList.add('listening');
+      } else {
+        btn.textContent = this.settings.keyBindings[slot].replace(/^Key/, '');
+        btn.classList.remove('listening');
+      }
+    });
+  }
+
+  _toggleCalibration() {
+    if (this.calibrationTimer) {
+      this._stopCalibration();
+      return;
+    }
+    this.audio.ensureContext();
+    this.calibrationSamples = [];
+    this.calibrationStartTs = performance.now();
+    let beatCount = 0;
+    this.dom.calibrateBtn.textContent = '停止校准';
+    this.dom.calibrateStatus.textContent = '跟随节拍按 Space / F / J 敲击 8 次...';
+
+    const tick = () => {
+      this.audio.playMetronomeTick(beatCount % 4 === 0);
+      beatCount++;
+    };
+    tick();
+    this.calibrationTimer = setInterval(tick, this.calibrationBeatMs);
+  }
+
+  _recordCalibrationTap() {
+    const elapsed = performance.now() - this.calibrationStartTs;
+    const remainder = elapsed % this.calibrationBeatMs;
+    const offset = remainder > this.calibrationBeatMs / 2 ? remainder - this.calibrationBeatMs : remainder;
+    this.calibrationSamples.push(offset);
+    this.audio.playDon(false);
+
+    if (this.calibrationSamples.length >= 8) {
+      const avg = Math.round(
+        this.calibrationSamples.reduce((a, b) => a + b, 0) / this.calibrationSamples.length
+      );
+      const clamped = Math.max(-150, Math.min(150, avg));
+      this.settings.audioOffsetMs = clamped;
+      this._saveSettings();
+      this._syncSettingsUI();
+      this._stopCalibration();
+      this.dom.calibrateStatus.textContent = `校准完成！已应用延迟补偿: ${clamped >= 0 ? '+' : ''}${clamped} ms`;
+    } else {
+      this.dom.calibrateStatus.textContent = `已采集 ${this.calibrationSamples.length} / 8 次敲击...`;
+    }
+  }
+
+  _stopCalibration() {
+    if (this.calibrationTimer) {
+      clearInterval(this.calibrationTimer);
+      this.calibrationTimer = null;
+    }
+    if (this.dom.calibrateBtn) {
+      this.dom.calibrateBtn.textContent = '开始节拍校准';
+    }
+  }
+
+  _renderEditorPreview() {
+    try {
+      const parsed = parseRawTJAText(this.dom.editorTextarea.value);
+      this.dom.editorError.classList.add('hidden');
+      this.dom.editorPlayBtn.disabled = false;
+      this.dom.editorStats.textContent = `解析成功 · 曲名「${parsed.title}」· BPM ${parsed.bpm} · 标准音符 ${parsed.stats.standardCount} · 连打 ${parsed.stats.drumrollCount} · 气球 ${parsed.stats.balloonCount} · 时长 ${(parsed.durationMs / 1000).toFixed(1)}s`;
+    } catch (err) {
+      this.dom.editorError.textContent = `语法提示: ${err.message}`;
+      this.dom.editorError.classList.remove('hidden');
+      this.dom.editorPlayBtn.disabled = true;
+      this.dom.editorStats.textContent = '请修正谱面语法后试玩';
+    }
+  }
+
+  _showToast(msg) {
+    if (!this.dom.toast) return;
+    this.dom.toast.textContent = msg;
+    this.dom.toast.classList.remove('hidden');
+    clearTimeout(this._toastTimer);
+    this._toastTimer = setTimeout(() => {
+      this.dom.toast.classList.add('hidden');
+    }, 2400);
+  }
+}
+
+window.addEventListener('DOMContentLoaded', () => {
+  window.__taikoApp = new TaikoApp();
+});
+
+})();
+  </script>
+</body>
+</html>

@@ -1,0 +1,3512 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
+  <title>拳皇 KOF Web Arcade · 网页格斗复刻版</title>
+  <script src="https://cdn.tailwindcss.com/3.4.17"></script>
+  <style>
+    body {
+      font-family: "Inter", system-ui, -apple-system, sans-serif;
+      background: radial-gradient(circle at top, #1f172e 0%, #09090b 75%);
+      color: #f8fafc;
+      user-select: none;
+      -webkit-user-select: none;
+      touch-action: manipulation;
+    }
+    .arcade-frame {
+      box-shadow: 0 0 0 2px rgba(250, 204, 21, 0.35), 0 24px 60px rgba(0, 0, 0, 0.75);
+    }
+  </style>
+</head>
+<body class="min-h-screen flex flex-col items-center justify-center p-2 sm:p-4">
+  <div class="w-full max-w-5xl flex flex-col gap-3">
+    <!-- Top Arcade Toolbar -->
+    <header class="flex flex-wrap items-center justify-between gap-2 bg-zinc-900/90 border border-zinc-800 rounded-xl px-3 py-2">
+      <div class="flex items-center gap-2.5">
+        <span class="px-2 py-0.5 rounded bg-gradient-to-r from-amber-400 to-rose-500 text-zinc-950 font-black text-xs tracking-wider">KOF '98 WEB</span>
+        <h1 class="text-sm sm:text-base font-extrabold tracking-tight text-white">拳皇网页格斗复刻版</h1>
+      </div>
+      <div class="flex flex-wrap items-center gap-1.5">
+        <button type="button" id="btnMenu" class="px-2.5 py-1 rounded-lg bg-zinc-800 hover:bg-zinc-700 text-xs font-bold text-zinc-100 transition cursor-pointer">选人/模式</button>
+        <button type="button" id="btnPause" class="px-2.5 py-1 rounded-lg bg-zinc-800 hover:bg-zinc-700 text-xs font-bold text-zinc-100 transition cursor-pointer">暂停</button>
+        <button type="button" id="btnRestart" class="px-2.5 py-1 rounded-lg bg-zinc-800 hover:bg-zinc-700 text-xs font-bold text-zinc-100 transition cursor-pointer">重开</button>
+        <button type="button" id="btnMoves" class="px-2.5 py-1 rounded-lg bg-amber-500/20 hover:bg-amber-500/30 border border-amber-400/40 text-xs font-bold text-amber-200 transition cursor-pointer">出招表</button>
+        <button type="button" id="btnHitbox" class="px-2.5 py-1 rounded-lg bg-zinc-800 hover:bg-zinc-700 text-xs font-bold text-sky-300 transition cursor-pointer">判定框: 关</button>
+        <button type="button" id="btnMute" class="px-2.5 py-1 rounded-lg bg-zinc-800 hover:bg-zinc-700 text-xs font-bold text-emerald-300 transition cursor-pointer">音效: 开</button>
+      </div>
+    </header>
+
+    <!-- Main Game Stage Canvas + Overlays -->
+    <main class="relative w-full aspect-video rounded-xl overflow-hidden arcade-frame bg-zinc-950">
+      <canvas id="gameCanvas" class="w-full h-full block"></canvas>
+
+      <!-- Character & Mode Select Overlay -->
+      <div id="menuOverlay" class="absolute inset-0 bg-zinc-950/90 backdrop-blur-sm p-3 sm:p-5 flex flex-col justify-between overflow-y-auto">
+        <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-2 border-b border-zinc-800 pb-2.5">
+          <div>
+            <div class="text-xs font-bold uppercase tracking-widest text-amber-400">THE KING OF FIGHTERS · WEB EDITION</div>
+            <h2 class="text-lg sm:text-2xl font-black text-white">选择模式、队伍与舞台</h2>
+          </div>
+          <div class="flex flex-wrap gap-2">
+            <select id="modeSelect" class="bg-zinc-900 border border-zinc-700 rounded-lg px-2.5 py-1.5 text-xs font-bold text-white">
+              <option value="team_3v3">3v3 经典组队战</option>
+              <option value="arcade_1v1">1v1 街机三局两胜</option>
+              <option value="vs_2p">本地 2P 双人对战</option>
+              <option value="training">训练模式 (无限气血)</option>
+            </select>
+            <select id="diffSelect" class="bg-zinc-900 border border-zinc-700 rounded-lg px-2.5 py-1.5 text-xs font-bold text-white">
+              <option value="easy">AI 难度：简单</option>
+              <option value="normal" selected>AI 难度：普通</option>
+              <option value="hard">AI 难度：困难</option>
+            </select>
+            <select id="stageSelect" class="bg-zinc-900 border border-zinc-700 rounded-lg px-2.5 py-1.5 text-xs font-bold text-white"></select>
+          </div>
+        </div>
+
+        <div id="rosterGrid" class="grid grid-cols-2 lg:grid-cols-4 gap-2.5 my-3"></div>
+
+        <div class="flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-3 border-t border-zinc-800 pt-2.5">
+          <div class="flex flex-col gap-1.5">
+            <div class="flex items-center gap-2 flex-wrap">
+              <span class="text-xs font-black text-amber-400">P1 阵容:</span>
+              <div id="p1TeamBadges" class="flex flex-wrap gap-1"></div>
+            </div>
+            <div class="flex items-center gap-2 flex-wrap">
+              <span class="text-xs font-black text-rose-400">P2 阵容:</span>
+              <div id="p2TeamBadges" class="flex flex-wrap gap-1"></div>
+            </div>
+          </div>
+          <button type="button" id="btnStartFight" class="px-6 py-2.5 rounded-xl bg-gradient-to-r from-amber-400 via-orange-500 to-rose-600 hover:brightness-110 text-zinc-950 font-black text-sm sm:text-base tracking-wide shadow-lg transition cursor-pointer">
+            开始格斗 · FIGHT!
+          </button>
+        </div>
+      </div>
+
+      <!-- Match Over Overlay -->
+      <div id="matchOverOverlay" class="hidden absolute inset-0 bg-zinc-950/80 backdrop-blur-sm flex flex-col items-center justify-center gap-4 p-4">
+        <div class="text-xs font-bold uppercase tracking-widest text-amber-400">MATCH RESULT</div>
+        <div id="matchOverTitle" class="text-2xl sm:text-4xl font-black text-white text-center"></div>
+        <div class="flex gap-3">
+          <button type="button" id="btnRematch" class="px-5 py-2 rounded-xl bg-amber-400 hover:bg-amber-300 text-zinc-950 font-black text-sm transition cursor-pointer">再来一局</button>
+          <button type="button" id="btnBackMenu" class="px-5 py-2 rounded-xl bg-zinc-800 hover:bg-zinc-700 text-white font-bold text-sm transition cursor-pointer">返回选人</button>
+        </div>
+      </div>
+
+      <!-- Move List Modal -->
+      <div id="moveListModal" class="hidden absolute inset-0 bg-zinc-950/92 backdrop-blur-sm p-4 flex flex-col justify-between overflow-y-auto z-20">
+        <div class="flex items-center justify-between border-b border-zinc-800 pb-2">
+          <div>
+            <h3 class="text-base font-black text-amber-300">全角色出招表（支持经典搓招与一键快捷必杀）</h3>
+            <p class="text-xs text-zinc-400">按住后方向防御（蹲防挡下段，站防挡跳攻）；轻重攻击命中后可取消接必杀/超必杀！</p>
+          </div>
+          <button type="button" id="btnCloseMoves" class="px-3 py-1 rounded-lg bg-zinc-800 hover:bg-zinc-700 text-xs font-bold text-white cursor-pointer">关闭</button>
+        </div>
+        <div id="moveListBody" class="grid grid-cols-1 sm:grid-cols-2 gap-2.5 my-3"></div>
+      </div>
+    </main>
+
+    <!-- Controls Bar & On-Screen Arcade Pad -->
+    <footer class="bg-zinc-900/90 border border-zinc-800 rounded-xl p-2.5 flex flex-col gap-2">
+      <div id="statusHint" class="text-[11px] sm:text-xs text-zinc-400 text-center">
+        P1：WASD 移动 · J/U 轻重拳 · K/I 轻重脚 · O 必杀 · L 超必杀 · Space 闪避翻滚（支持搓招 ↓↘→ / →↓↘ / ↓↙←）
+      </div>
+      <div class="flex flex-wrap items-center justify-between gap-2">
+        <!-- D-Pad -->
+        <div class="flex items-center gap-1.5">
+          <button type="button" data-pad="left" class="w-10 h-10 rounded-lg bg-zinc-800 hover:bg-zinc-700 border border-zinc-700 font-black text-sm">←</button>
+          <div class="flex flex-col gap-1">
+            <button type="button" data-pad="up" class="w-10 h-8 rounded-lg bg-zinc-800 hover:bg-zinc-700 border border-zinc-700 font-black text-xs">↑</button>
+            <button type="button" data-pad="down" class="w-10 h-8 rounded-lg bg-zinc-800 hover:bg-zinc-700 border border-zinc-700 font-black text-xs">↓</button>
+          </div>
+          <button type="button" data-pad="right" class="w-10 h-10 rounded-lg bg-zinc-800 hover:bg-zinc-700 border border-zinc-700 font-black text-sm">→</button>
+        </div>
+        <!-- Action Buttons -->
+        <div class="flex flex-wrap items-center gap-1.5">
+          <button type="button" data-pad="LP" class="px-3 h-10 rounded-lg bg-sky-600/80 hover:bg-sky-500 font-black text-xs">轻拳 J</button>
+          <button type="button" data-pad="HP" class="px-3 h-10 rounded-lg bg-blue-600/80 hover:bg-blue-500 font-black text-xs">重拳 U</button>
+          <button type="button" data-pad="LK" class="px-3 h-10 rounded-lg bg-emerald-600/80 hover:bg-emerald-500 font-black text-xs">轻脚 K</button>
+          <button type="button" data-pad="HK" class="px-3 h-10 rounded-lg bg-teal-600/80 hover:bg-teal-500 font-black text-xs">重脚 I</button>
+          <button type="button" data-pad="SP" class="px-3 h-10 rounded-lg bg-amber-500 hover:bg-amber-400 text-zinc-950 font-black text-xs">必杀 O</button>
+          <button type="button" data-pad="SUPER" class="px-3 h-10 rounded-lg bg-rose-600 hover:bg-rose-500 font-black text-xs">超必杀 L</button>
+          <button type="button" data-pad="ROLL" class="px-3 h-10 rounded-lg bg-purple-600 hover:bg-purple-500 font-black text-xs">翻滚</button>
+        </div>
+      </div>
+    </footer>
+  </div>
+
+  <script>
+(() => {
+'use strict';
+// ===== src/constants.js =====
+// KOF Web Arcade - Core Constants & Configuration
+const FIXED_FPS = 60;
+const FIXED_DT = 1 / FIXED_FPS;
+const STAGE_WIDTH = 960;
+const STAGE_HEIGHT = 540;
+const GROUND_Y = 468;
+const STAGE_LEFT = 52;
+const STAGE_RIGHT = STAGE_WIDTH - 52;
+const GRAVITY = 0.88;
+const JUMP_VEL_Y = -17.8;
+const SHORT_HOP_VEL_Y = -13.6;
+const ROUND_TIME_SECONDS = 99;
+const MAX_HP = 1000;
+const MAX_GUARD = 100;
+const MAX_POWER = 300; // 3 full stocks (100 each)
+const POWER_PER_STOCK = 100;
+const TEAM_WIN_HEAL = 260;
+const GAME_MODES = {
+  TEAM_3V3: 'team_3v3',
+  ARCADE_1V1: 'arcade_1v1',
+  VS_2P: 'vs_2p',
+  TRAINING: 'training'
+};
+const DIFFICULTY = {
+  EASY: 'easy',
+  NORMAL: 'normal',
+  HARD: 'hard'
+};
+const FIGHTER_STATES = {
+  IDLE: 'IDLE',
+  WALK_F: 'WALK_F',
+  WALK_B: 'WALK_B',
+  CROUCH: 'CROUCH',
+  JUMP: 'JUMP',
+  ROLL_F: 'ROLL_F',
+  ROLL_B: 'ROLL_B',
+  ATTACK: 'ATTACK',
+  HITSTUN: 'HITSTUN',
+  BLOCKSTUN: 'BLOCKSTUN',
+  KNOCKDOWN: 'KNOCKDOWN',
+  WAKEUP: 'WAKEUP',
+  GUARD_CRUSH: 'GUARD_CRUSH',
+  KO: 'KO',
+  VICTORY: 'VICTORY'
+};
+const HIT_LEVELS = {
+  HIGH: 'HIGH',       // Can be blocked standing or crouching (crouch whiffs some high? In KOF normals hit high/mid)
+  MID: 'MID',         // Must be blocked standing (overhead)
+  LOW: 'LOW'          // Must be blocked crouching
+};
+const MOTION_TYPES = {
+  SUPER_QCF2: '236236',
+  DP: '623',
+  QCF: '236',
+  QCB: '214'
+};
+const MATCH_PHASES = {
+  INTRO: 'INTRO',
+  FIGHT: 'FIGHT',
+  KO_SLOWMO: 'KO_SLOWMO',
+  ROUND_END: 'ROUND_END',
+  MATCH_OVER: 'MATCH_OVER'
+};
+const STAGES = [
+  {
+    id: 'tokyo_street',
+    name: '东京霓虹街头',
+    enName: 'TOKYO NEON STREET',
+    skyTop: '#0b1026',
+    skyBottom: '#2d1846',
+    accent: '#ff2e63',
+    floorTop: '#262436',
+    floorBottom: '#151320'
+  },
+  {
+    id: 'osaka_dojo',
+    name: '大阪落日道场',
+    enName: 'OSAKA SUNSET DOJO',
+    skyTop: '#2a1215',
+    skyBottom: '#b84b27',
+    accent: '#ffbe3b',
+    floorTop: '#5e3c24',
+    floorBottom: '#3a2314'
+  },
+  {
+    id: 'harbor_night',
+    name: '神户星夜港口',
+    enName: 'KOBE NIGHT HARBOR',
+    skyTop: '#071726',
+    skyBottom: '#133a5c',
+    accent: '#00e5ff',
+    floorTop: '#2d3748',
+    floorBottom: '#1a202c'
+  }
+];
+
+// ===== src/fighters.js =====
+// KOF Web Arcade - Fighter Roster & Frame Data Definitions
+
+function createBaseMoves(overrides = {}) {
+  return {
+    LP: {
+      id: 'LP',
+      name: '轻拳',
+      startup: 4,
+      active: 3,
+      recovery: 7,
+      damage: 45,
+      chip: 0,
+      guardDamage: 6,
+      hitstun: 13,
+      blockstun: 9,
+      hitstop: 5,
+      pushback: 6,
+      level: HIT_LEVELS.HIGH,
+      meterGain: 7,
+      cancelable: true,
+      hitbox: { x: 42, y: -112, w: 54, h: 24 },
+      ...overrides.LP
+    },
+    HP: {
+      id: 'HP',
+      name: '重拳',
+      startup: 8,
+      active: 5,
+      recovery: 15,
+      damage: 95,
+      chip: 0,
+      guardDamage: 14,
+      hitstun: 20,
+      blockstun: 14,
+      hitstop: 9,
+      pushback: 11,
+      level: HIT_LEVELS.HIGH,
+      meterGain: 13,
+      cancelable: true,
+      hitbox: { x: 44, y: -114, w: 66, h: 30 },
+      ...overrides.HP
+    },
+    LK: {
+      id: 'LK',
+      name: '轻脚',
+      startup: 5,
+      active: 4,
+      recovery: 9,
+      damage: 52,
+      chip: 0,
+      guardDamage: 7,
+      hitstun: 14,
+      blockstun: 10,
+      hitstop: 5,
+      pushback: 7,
+      level: HIT_LEVELS.HIGH,
+      meterGain: 8,
+      cancelable: true,
+      hitbox: { x: 44, y: -64, w: 62, h: 26 },
+      ...overrides.LK
+    },
+    HK: {
+      id: 'HK',
+      name: '重脚',
+      startup: 9,
+      active: 5,
+      recovery: 17,
+      damage: 108,
+      chip: 0,
+      guardDamage: 16,
+      hitstun: 22,
+      blockstun: 15,
+      hitstop: 10,
+      pushback: 13,
+      level: HIT_LEVELS.HIGH,
+      meterGain: 15,
+      cancelable: false,
+      knockdown: false,
+      hitbox: { x: 46, y: -86, w: 74, h: 34 },
+      ...overrides.HK
+    },
+    CLP: {
+      id: 'CLP',
+      name: '下轻拳',
+      startup: 4,
+      active: 3,
+      recovery: 7,
+      damage: 40,
+      chip: 0,
+      guardDamage: 5,
+      hitstun: 12,
+      blockstun: 9,
+      hitstop: 4,
+      pushback: 5,
+      level: HIT_LEVELS.HIGH,
+      meterGain: 6,
+      cancelable: true,
+      crouch: true,
+      hitbox: { x: 40, y: -66, w: 54, h: 22 },
+      ...overrides.CLP
+    },
+    CLK: {
+      id: 'CLK',
+      name: '下轻脚',
+      startup: 5,
+      active: 3,
+      recovery: 8,
+      damage: 44,
+      chip: 0,
+      guardDamage: 6,
+      hitstun: 13,
+      blockstun: 9,
+      hitstop: 5,
+      pushback: 5,
+      level: HIT_LEVELS.LOW,
+      meterGain: 7,
+      cancelable: true,
+      crouch: true,
+      hitbox: { x: 40, y: -24, w: 62, h: 22 },
+      ...overrides.CLK
+    },
+    CHK: {
+      id: 'CHK',
+      name: '扫腿',
+      startup: 8,
+      active: 5,
+      recovery: 19,
+      damage: 92,
+      chip: 0,
+      guardDamage: 14,
+      hitstun: 24,
+      blockstun: 14,
+      hitstop: 9,
+      pushback: 10,
+      level: HIT_LEVELS.LOW,
+      meterGain: 13,
+      cancelable: false,
+      knockdown: true,
+      crouch: true,
+      hitbox: { x: 42, y: -26, w: 76, h: 24 },
+      ...overrides.CHK
+    },
+    JP: {
+      id: 'JP',
+      name: '跳拳',
+      startup: 5,
+      active: 10,
+      recovery: 8,
+      damage: 78,
+      chip: 0,
+      guardDamage: 10,
+      hitstun: 17,
+      blockstun: 12,
+      hitstop: 7,
+      pushback: 7,
+      level: HIT_LEVELS.MID,
+      meterGain: 10,
+      cancelable: false,
+      air: true,
+      hitbox: { x: 28, y: -60, w: 58, h: 42 },
+      ...overrides.JP
+    },
+    JK: {
+      id: 'JK',
+      name: '跳踢',
+      startup: 6,
+      active: 11,
+      recovery: 8,
+      damage: 86,
+      chip: 0,
+      guardDamage: 12,
+      hitstun: 18,
+      blockstun: 13,
+      hitstop: 8,
+      pushback: 8,
+      level: HIT_LEVELS.MID,
+      meterGain: 11,
+      cancelable: false,
+      air: true,
+      hitbox: { x: 30, y: -54, w: 66, h: 40 },
+      ...overrides.JK
+    }
+  };
+}
+const FIGHTERS = {
+  kyo: {
+    id: 'kyo',
+    name: '草薙京',
+    enName: 'KYO KUSANAGI',
+    title: '苍炎宿敌 · 炎之主宰',
+    archetype: '均衡压制型',
+    walkSpeed: 5.2,
+    backSpeed: 4.1,
+    jumpSpeedX: 5.8,
+    maxHp: 1000,
+    colors: {
+      primary: '#1f2937',
+      secondary: '#f3f4f6',
+      accent: '#ef4444',
+      flame: '#ff6b2b',
+      flameCore: '#fff3a1',
+      skin: '#f4c59b',
+      hair: '#3d2417',
+      band: '#f8fafc'
+    },
+    moves: {
+      ...createBaseMoves(),
+      SP1: {
+        id: 'SP1',
+        name: '百十四式·荒咬',
+        commandLabel: '↓↘→ + 拳',
+        motion: MOTION_TYPES.QCF,
+        buttons: ['LP', 'HP'],
+        startup: 9,
+        active: 6,
+        recovery: 16,
+        damage: 118,
+        chip: 14,
+        guardDamage: 18,
+        hitstun: 24,
+        blockstun: 15,
+        hitstop: 10,
+        pushback: 12,
+        velX: 7.5,
+        level: HIT_LEVELS.HIGH,
+        meterGain: 18,
+        special: true,
+        flameFx: true,
+        hitbox: { x: 46, y: -116, w: 78, h: 48 }
+      },
+      SP2: {
+        id: 'SP2',
+        name: '百式·鬼烧',
+        commandLabel: '→↓↘ + 拳',
+        motion: MOTION_TYPES.DP,
+        buttons: ['LP', 'HP'],
+        startup: 5,
+        active: 11,
+        recovery: 22,
+        damage: 132,
+        chip: 16,
+        guardDamage: 20,
+        hitstun: 28,
+        blockstun: 15,
+        hitstop: 11,
+        pushback: 11,
+        velX: 4.2,
+        velY: -13.5,
+        invincibleFrames: 8,
+        knockdown: true,
+        level: HIT_LEVELS.HIGH,
+        meterGain: 20,
+        special: true,
+        flameFx: true,
+        hitbox: { x: 32, y: -154, w: 68, h: 114 }
+      },
+      SP3: {
+        id: 'SP3',
+        name: '二百十二式·琴月阳',
+        commandLabel: '↓↙← + 脚',
+        motion: MOTION_TYPES.QCB,
+        buttons: ['LK', 'HK'],
+        startup: 10,
+        active: 8,
+        recovery: 18,
+        damage: 128,
+        chip: 15,
+        guardDamage: 19,
+        hitstun: 26,
+        blockstun: 14,
+        hitstop: 11,
+        pushback: 14,
+        velX: 9.2,
+        knockdown: true,
+        level: HIT_LEVELS.HIGH,
+        meterGain: 19,
+        special: true,
+        flameFx: true,
+        hitbox: { x: 44, y: -102, w: 74, h: 52 }
+      },
+      SUPER: {
+        id: 'SUPER',
+        name: '里百八式·大蛇薙',
+        commandLabel: '↓↘→↓↘→ + 拳 (1气)',
+        motion: MOTION_TYPES.SUPER_QCF2,
+        buttons: ['LP', 'HP'],
+        startup: 8,
+        active: 14,
+        recovery: 22,
+        damage: 255,
+        chip: 34,
+        guardDamage: 32,
+        hitstun: 36,
+        blockstun: 18,
+        hitstop: 16,
+        pushback: 18,
+        velX: 6.5,
+        invincibleFrames: 12,
+        knockdown: true,
+        level: HIT_LEVELS.HIGH,
+        meterCost: 100,
+        meterGain: 0,
+        superMove: true,
+        flameFx: true,
+        hitbox: { x: 42, y: -148, w: 148, h: 110 }
+      }
+    }
+  },
+
+  iori: {
+    id: 'iori',
+    name: '八神庵',
+    enName: 'IORI YAGAMI',
+    title: '月之苍炎 · 狂气袭来',
+    archetype: '高速爆发型',
+    walkSpeed: 5.7,
+    backSpeed: 4.5,
+    jumpSpeedX: 6.2,
+    maxHp: 980,
+    colors: {
+      primary: '#18181b',
+      secondary: '#e4e4e7',
+      accent: '#dc2626',
+      flame: '#9333ea',
+      flameCore: '#e9d5ff',
+      skin: '#f5d0b5',
+      hair: '#dc2626',
+      band: '#18181b'
+    },
+    moves: {
+      ...createBaseMoves({
+        HP: { damage: 98, hitbox: { x: 44, y: -116, w: 70, h: 32 } }
+      }),
+      SP1: {
+        id: 'SP1',
+        name: '百八式·暗拂',
+        commandLabel: '↓↘→ + 拳',
+        motion: MOTION_TYPES.QCF,
+        buttons: ['LP', 'HP'],
+        startup: 11,
+        active: 4,
+        recovery: 19,
+        damage: 90,
+        chip: 12,
+        guardDamage: 14,
+        hitstun: 20,
+        blockstun: 13,
+        hitstop: 7,
+        pushback: 9,
+        level: HIT_LEVELS.HIGH,
+        meterGain: 15,
+        special: true,
+        flameFx: true,
+        projectile: {
+          speed: 9.2,
+          w: 58,
+          h: 34,
+          offsetY: -22,
+          color: '#a855f7',
+          core: '#f3e8ff',
+          groundWave: true
+        },
+        hitbox: { x: 44, y: -70, w: 50, h: 48 }
+      },
+      SP2: {
+        id: 'SP2',
+        name: '百式·鬼烧(苍炎)',
+        commandLabel: '→↓↘ + 拳',
+        motion: MOTION_TYPES.DP,
+        buttons: ['LP', 'HP'],
+        startup: 4,
+        active: 11,
+        recovery: 22,
+        damage: 136,
+        chip: 16,
+        guardDamage: 20,
+        hitstun: 28,
+        blockstun: 15,
+        hitstop: 11,
+        pushback: 11,
+        velX: 4.5,
+        velY: -13.8,
+        invincibleFrames: 9,
+        knockdown: true,
+        level: HIT_LEVELS.HIGH,
+        meterGain: 20,
+        special: true,
+        flameFx: true,
+        hitbox: { x: 32, y: -156, w: 70, h: 116 }
+      },
+      SP3: {
+        id: 'SP3',
+        name: '百二十七式·葵花',
+        commandLabel: '↓↙← + 拳',
+        motion: MOTION_TYPES.QCB,
+        buttons: ['LP', 'HP'],
+        startup: 8,
+        active: 6,
+        recovery: 15,
+        damage: 122,
+        chip: 15,
+        guardDamage: 18,
+        hitstun: 25,
+        blockstun: 14,
+        hitstop: 10,
+        pushback: 12,
+        velX: 8.6,
+        knockdown: true,
+        level: HIT_LEVELS.HIGH,
+        meterGain: 18,
+        special: true,
+        flameFx: true,
+        hitbox: { x: 46, y: -112, w: 78, h: 48 }
+      },
+      SUPER: {
+        id: 'SUPER',
+        name: '禁千二百十一式·八稚女',
+        commandLabel: '↓↘→↓↘→ + 拳 (1气)',
+        motion: MOTION_TYPES.SUPER_QCF2,
+        buttons: ['LP', 'HP'],
+        startup: 7,
+        active: 16,
+        recovery: 24,
+        damage: 270,
+        chip: 36,
+        guardDamage: 34,
+        hitstun: 38,
+        blockstun: 18,
+        hitstop: 16,
+        pushback: 16,
+        velX: 11.5,
+        invincibleFrames: 12,
+        knockdown: true,
+        level: HIT_LEVELS.HIGH,
+        meterCost: 100,
+        meterGain: 0,
+        superMove: true,
+        flameFx: true,
+        hitbox: { x: 40, y: -124, w: 118, h: 92 }
+      }
+    }
+  },
+
+  mai: {
+    id: 'mai',
+    name: '不知火舞',
+    enName: 'MAI SHIRANUI',
+    title: '不知火流 · 烈焰蝶舞',
+    archetype: '灵动牵制型',
+    walkSpeed: 6.0,
+    backSpeed: 4.8,
+    jumpSpeedX: 6.5,
+    maxHp: 940,
+    colors: {
+      primary: '#e11d48',
+      secondary: '#fff1f2',
+      accent: '#fb7185',
+      flame: '#f97316',
+      flameCore: '#fef08a',
+      skin: '#f9d2b8',
+      hair: '#451a03',
+      band: '#f43f5e'
+    },
+    moves: {
+      ...createBaseMoves({
+        LK: { startup: 4, damage: 50 },
+        HK: { startup: 8, damage: 100, hitbox: { x: 46, y: -92, w: 78, h: 34 } }
+      }),
+      SP1: {
+        id: 'SP1',
+        name: '花蝶扇',
+        commandLabel: '↓↘→ + 拳',
+        motion: MOTION_TYPES.QCF,
+        buttons: ['LP', 'HP'],
+        startup: 9,
+        active: 4,
+        recovery: 17,
+        damage: 85,
+        chip: 11,
+        guardDamage: 12,
+        hitstun: 18,
+        blockstun: 12,
+        hitstop: 6,
+        pushback: 8,
+        level: HIT_LEVELS.HIGH,
+        meterGain: 15,
+        special: true,
+        projectile: {
+          speed: 10.6,
+          w: 44,
+          h: 26,
+          offsetY: -96,
+          color: '#fb7185',
+          core: '#ffffff',
+          fanSpin: true
+        },
+        hitbox: { x: 40, y: -112, w: 46, h: 36 }
+      },
+      SP2: {
+        id: 'SP2',
+        name: '龙炎舞',
+        commandLabel: '↓↙← + 拳',
+        motion: MOTION_TYPES.QCB,
+        buttons: ['LP', 'HP'],
+        startup: 7,
+        active: 10,
+        recovery: 17,
+        damage: 124,
+        chip: 15,
+        guardDamage: 18,
+        hitstun: 25,
+        blockstun: 14,
+        hitstop: 10,
+        pushback: 13,
+        velX: 3.5,
+        knockdown: true,
+        level: HIT_LEVELS.HIGH,
+        meterGain: 18,
+        special: true,
+        flameFx: true,
+        hitbox: { x: 24, y: -124, w: 96, h: 78 }
+      },
+      SP3: {
+        id: 'SP3',
+        name: '必杀忍蜂',
+        commandLabel: '↓↙← + 脚',
+        motion: MOTION_TYPES.QCB,
+        buttons: ['LK', 'HK'],
+        startup: 8,
+        active: 10,
+        recovery: 18,
+        damage: 126,
+        chip: 15,
+        guardDamage: 18,
+        hitstun: 25,
+        blockstun: 14,
+        hitstop: 10,
+        pushback: 14,
+        velX: 10.8,
+        knockdown: true,
+        level: HIT_LEVELS.HIGH,
+        meterGain: 19,
+        special: true,
+        flameFx: true,
+        hitbox: { x: 42, y: -88, w: 80, h: 48 }
+      },
+      SUPER: {
+        id: 'SUPER',
+        name: '超必杀忍蜂',
+        commandLabel: '↓↘→↓↘→ + 脚 (1气)',
+        motion: MOTION_TYPES.SUPER_QCF2,
+        buttons: ['LK', 'HK', 'LP', 'HP'],
+        startup: 6,
+        active: 15,
+        recovery: 22,
+        damage: 250,
+        chip: 32,
+        guardDamage: 30,
+        hitstun: 36,
+        blockstun: 18,
+        hitstop: 15,
+        pushback: 18,
+        velX: 12.6,
+        invincibleFrames: 12,
+        knockdown: true,
+        level: HIT_LEVELS.HIGH,
+        meterCost: 100,
+        meterGain: 0,
+        superMove: true,
+        flameFx: true,
+        hitbox: { x: 38, y: -110, w: 124, h: 76 }
+      }
+    }
+  },
+
+  terry: {
+    id: 'terry',
+    name: '特瑞·博加德',
+    enName: 'TERRY BOGARD',
+    title: '南镇饿狼 · 传说之拳',
+    archetype: '力量重击型',
+    walkSpeed: 4.9,
+    backSpeed: 3.9,
+    jumpSpeedX: 5.5,
+    maxHp: 1060,
+    colors: {
+      primary: '#b91c1c',
+      secondary: '#ffffff',
+      accent: '#2563eb',
+      flame: '#38bdf8',
+      flameCore: '#e0f2fe',
+      skin: '#efc096',
+      hair: '#eab308',
+      band: '#dc2626'
+    },
+    moves: {
+      ...createBaseMoves({
+        HP: { damage: 105, guardDamage: 16 },
+        HK: { damage: 114, guardDamage: 18 }
+      }),
+      SP1: {
+        id: 'SP1',
+        name: '能量波 (Power Wave)',
+        commandLabel: '↓↘→ + 拳',
+        motion: MOTION_TYPES.QCF,
+        buttons: ['LP', 'HP'],
+        startup: 11,
+        active: 4,
+        recovery: 18,
+        damage: 94,
+        chip: 12,
+        guardDamage: 15,
+        hitstun: 21,
+        blockstun: 13,
+        hitstop: 7,
+        pushback: 10,
+        level: HIT_LEVELS.HIGH,
+        meterGain: 16,
+        special: true,
+        projectile: {
+          speed: 8.8,
+          w: 60,
+          h: 38,
+          offsetY: -24,
+          color: '#38bdf8',
+          core: '#ffffff',
+          groundWave: true
+        },
+        hitbox: { x: 44, y: -72, w: 52, h: 50 }
+      },
+      SP2: {
+        id: 'SP2',
+        name: '火焰冲拳 (Burn Knuckle)',
+        commandLabel: '↓↙← + 拳',
+        motion: MOTION_TYPES.QCB,
+        buttons: ['LP', 'HP'],
+        startup: 9,
+        active: 10,
+        recovery: 18,
+        damage: 138,
+        chip: 17,
+        guardDamage: 22,
+        hitstun: 26,
+        blockstun: 15,
+        hitstop: 12,
+        pushback: 15,
+        velX: 11.2,
+        knockdown: true,
+        level: HIT_LEVELS.HIGH,
+        meterGain: 20,
+        special: true,
+        flameFx: true,
+        hitbox: { x: 46, y: -116, w: 86, h: 42 }
+      },
+      SP3: {
+        id: 'SP3',
+        name: '倒跃踢 (Rising Tackle)',
+        commandLabel: '→↓↘ + 脚',
+        motion: MOTION_TYPES.DP,
+        buttons: ['LK', 'HK'],
+        startup: 5,
+        active: 12,
+        recovery: 23,
+        damage: 134,
+        chip: 16,
+        guardDamage: 20,
+        hitstun: 28,
+        blockstun: 15,
+        hitstop: 11,
+        pushback: 11,
+        velX: 3.8,
+        velY: -14.0,
+        invincibleFrames: 9,
+        knockdown: true,
+        level: HIT_LEVELS.HIGH,
+        meterGain: 20,
+        special: true,
+        flameFx: true,
+        hitbox: { x: 30, y: -158, w: 72, h: 118 }
+      },
+      SUPER: {
+        id: 'SUPER',
+        name: '能量喷泉 (Power Geyser)',
+        commandLabel: '↓↘→↓↘→ + 拳 (1气)',
+        motion: MOTION_TYPES.SUPER_QCF2,
+        buttons: ['LP', 'HP'],
+        startup: 8,
+        active: 15,
+        recovery: 24,
+        damage: 280,
+        chip: 38,
+        guardDamage: 36,
+        hitstun: 38,
+        blockstun: 19,
+        hitstop: 16,
+        pushback: 20,
+        velX: 2.0,
+        invincibleFrames: 12,
+        knockdown: true,
+        level: HIT_LEVELS.HIGH,
+        meterCost: 100,
+        meterGain: 0,
+        superMove: true,
+        flameFx: true,
+        hitbox: { x: 38, y: -198, w: 146, h: 190 }
+      }
+    }
+  }
+};
+const FIGHTER_LIST = Object.values(FIGHTERS);
+
+// ===== src/inputBuffer.js =====
+// KOF Web Arcade - Directional Input Buffer & Command Motion Recognizer
+
+/**
+ * Converts directional booleans + facing direction into classic numpad notation (1..9).
+ * 7 8 9
+ * 4 5 6   (6 = forward, 4 = backward, 2 = down, 8 = up)
+ * 1 2 3
+ */
+function getNumpadDirection(input, facing = 1) {
+  const forward = facing === 1 ? !!input.right : !!input.left;
+  const backward = facing === 1 ? !!input.left : !!input.right;
+  const up = !!input.up;
+  const down = !!input.down;
+
+  let x = 0;
+  if (forward && !backward) x = 1;
+  else if (backward && !forward) x = -1;
+
+  let y = 0;
+  if (up && !down) y = 1;
+  else if (down && !up) y = -1;
+
+  if (y === -1) {
+    if (x === -1) return 1;
+    if (x === 1) return 3;
+    return 2;
+  }
+  if (y === 1) {
+    if (x === -1) return 7;
+    if (x === 1) return 9;
+    return 8;
+  }
+  if (x === -1) return 4;
+  if (x === 1) return 6;
+  return 5;
+}
+class InputBuffer {
+  constructor(maxFrames = 24) {
+    this.maxFrames = maxFrames;
+    this.history = []; // Array of { dir, frame }
+  }
+
+  reset() {
+    this.history = [];
+  }
+
+  push(dir, frame) {
+    this.history.push({ dir, frame });
+    while (this.history.length > this.maxFrames) {
+      this.history.shift();
+    }
+  }
+
+  /**
+   * Matches a required numpad sequence within a frame window (e.g. [2, 3, 6]).
+   * Allows intermediate frames or repeated directions for forgiving arcade feel.
+   */
+  hasSequence(sequence, currentFrame, windowFrames = 18) {
+    if (!sequence || sequence.length === 0) return false;
+    const minFrame = currentFrame - windowFrames;
+    let seqIdx = 0;
+    for (let i = 0; i < this.history.length; i++) {
+      const entry = this.history[i];
+      if (entry.frame < minFrame) continue;
+      if (entry.dir === sequence[seqIdx]) {
+        seqIdx++;
+        if (seqIdx === sequence.length) return true;
+      }
+    }
+    return false;
+  }
+
+  /**
+   * Detects highest-priority KOF motion currently in the buffer.
+   * Priority: SUPER (236236) > DP (623) > QCF (236) > QCB (214).
+   */
+  detectMotion(currentFrame) {
+    // Super: 2 -> 6 -> 2 -> 6 (lenient diagonal skip allowed, or exact 236236)
+    if (
+      this.hasSequence([2, 3, 6, 2, 3, 6], currentFrame, 24) ||
+      this.hasSequence([2, 6, 2, 6], currentFrame, 22)
+    ) {
+      return MOTION_TYPES.SUPER_QCF2;
+    }
+    // Dragon Punch: 6 -> 2 -> 3 (or 6 -> 2 -> 6)
+    if (
+      this.hasSequence([6, 2, 3], currentFrame, 16) ||
+      this.hasSequence([6, 3, 2, 3], currentFrame, 16)
+    ) {
+      return MOTION_TYPES.DP;
+    }
+    // Quarter Circle Forward: 2 -> 3 -> 6 (or fast 2 -> 6)
+    if (
+      this.hasSequence([2, 3, 6], currentFrame, 15) ||
+      this.hasSequence([2, 6], currentFrame, 12)
+    ) {
+      return MOTION_TYPES.QCF;
+    }
+    // Quarter Circle Back: 2 -> 1 -> 4 (or fast 2 -> 4)
+    if (
+      this.hasSequence([2, 1, 4], currentFrame, 15) ||
+      this.hasSequence([2, 4], currentFrame, 12)
+    ) {
+      return MOTION_TYPES.QCB;
+    }
+    return null;
+  }
+}
+
+// ===== src/physics.js =====
+// KOF Web Arcade - AABB Collision, Pushbox & Stage Physics
+function rectsOverlap(a, b) {
+  if (!a || !b) return false;
+  return (
+    a.x < b.x + b.w &&
+    a.x + a.w > b.x &&
+    a.y < b.y + b.h &&
+    a.y + a.h > b.y
+  );
+}
+function getHurtbox(fighter) {
+  const crouching =
+    fighter.state === FIGHTER_STATES.CROUCH ||
+    (fighter.state === FIGHTER_STATES.ATTACK && fighter.currentMove?.crouch);
+  const w = 54;
+  const h = crouching ? 92 : 138;
+  return {
+    x: fighter.x - w / 2,
+    y: fighter.y - h,
+    w,
+    h
+  };
+}
+function getPushbox(fighter) {
+  const w = 48;
+  const h = 112;
+  return {
+    x: fighter.x - w / 2,
+    y: fighter.y - h,
+    w,
+    h
+  };
+}
+function getActiveHitbox(fighter) {
+  if (fighter.state !== FIGHTER_STATES.ATTACK || !fighter.currentMove) {
+    return null;
+  }
+  const m = fighter.currentMove;
+  const f = fighter.stateFrame;
+  if (f < m.startup || f >= m.startup + m.active) {
+    return null;
+  }
+  const hb = m.hitbox;
+  if (!hb) return null;
+  const x =
+    fighter.facing === 1
+      ? fighter.x + hb.x - hb.w * 0.25
+      : fighter.x - hb.x - hb.w * 0.75;
+  return {
+    x,
+    y: fighter.y + hb.y,
+    w: hb.w,
+    h: hb.h
+  };
+}
+function getProjectileBox(proj) {
+  return {
+    x: proj.x - proj.w / 2,
+    y: proj.y - proj.h / 2,
+    w: proj.w,
+    h: proj.h
+  };
+}
+function clampToStage(fighter) {
+  if (fighter.x < STAGE_LEFT) fighter.x = STAGE_LEFT;
+  if (fighter.x > STAGE_RIGHT) fighter.x = STAGE_RIGHT;
+  if (fighter.y > GROUND_Y) {
+    fighter.y = GROUND_Y;
+    fighter.vy = 0;
+  }
+}
+function resolvePushboxes(f1, f2) {
+  // Rolls pass through opponents cleanly (classic KOF emergency evasion)
+  const rolling1 =
+    f1.state === FIGHTER_STATES.ROLL_F || f1.state === FIGHTER_STATES.ROLL_B;
+  const rolling2 =
+    f2.state === FIGHTER_STATES.ROLL_F || f2.state === FIGHTER_STATES.ROLL_B;
+  if (rolling1 || rolling2) return;
+
+  const b1 = getPushbox(f1);
+  const b2 = getPushbox(f2);
+  if (!rectsOverlap(b1, b2)) return;
+
+  const center1 = b1.x + b1.w / 2;
+  const center2 = b2.x + b2.w / 2;
+  const overlapX = (b1.w + b2.w) / 2 - Math.abs(center1 - center2);
+  if (overlapX <= 0) return;
+
+  const push = overlapX / 2 + 0.5;
+  if (center1 <= center2) {
+    f1.x -= push;
+    f2.x += push;
+  } else {
+    f1.x += push;
+    f2.x -= push;
+  }
+  clampToStage(f1);
+  clampToStage(f2);
+}
+function updateAutoFacing(f1, f2) {
+  const canTurn = (f) =>
+    f.state === FIGHTER_STATES.IDLE ||
+    f.state === FIGHTER_STATES.WALK_F ||
+    f.state === FIGHTER_STATES.WALK_B ||
+    f.state === FIGHTER_STATES.CROUCH;
+
+  if (Math.abs(f1.x - f2.x) < 2) return;
+  if (canTurn(f1)) f1.facing = f1.x < f2.x ? 1 : -1;
+  if (canTurn(f2)) f2.facing = f2.x < f1.x ? 1 : -1;
+}
+
+// ===== src/ai.js =====
+// KOF Web Arcade - Multi-Difficulty Reactive Fighting AI
+
+const AI_PROFILES = {
+  [DIFFICULTY.EASY]: {
+    reactionRate: 0.04,
+    blockChance: 0.25,
+    specialChance: 0.14,
+    superChance: 0.18,
+    antiAirChance: 0.15,
+    aggression: 0.35
+  },
+  [DIFFICULTY.NORMAL]: {
+    reactionRate: 0.085,
+    blockChance: 0.55,
+    specialChance: 0.30,
+    superChance: 0.42,
+    antiAirChance: 0.42,
+    aggression: 0.58
+  },
+  [DIFFICULTY.HARD]: {
+    reactionRate: 0.15,
+    blockChance: 0.80,
+    specialChance: 0.48,
+    superChance: 0.68,
+    antiAirChance: 0.72,
+    aggression: 0.78
+  }
+};
+function createEmptyInput() {
+  return {
+    left: false,
+    right: false,
+    up: false,
+    down: false,
+    LP: false,
+    HP: false,
+    LK: false,
+    HK: false,
+    SP: false,
+    SUPER: false,
+    ROLL: false
+  };
+}
+class FighterAI {
+  constructor(difficulty = DIFFICULTY.NORMAL, rng = Math.random) {
+    this.difficulty = difficulty;
+    this.rng = rng;
+    this.intent = 'NEUTRAL';
+    this.intentTimer = 0;
+  }
+
+  setDifficulty(difficulty) {
+    if (AI_PROFILES[difficulty]) {
+      this.difficulty = difficulty;
+    }
+  }
+
+  computeInput(self, opponent, projectiles = []) {
+    const profile = AI_PROFILES[this.difficulty] || AI_PROFILES[DIFFICULTY.NORMAL];
+    const input = createEmptyInput();
+
+    if (
+      self.state === FIGHTER_STATES.KO ||
+      self.state === FIGHTER_STATES.VICTORY ||
+      self.state === FIGHTER_STATES.KNOCKDOWN
+    ) {
+      return input;
+    }
+
+    const dx = opponent.x - self.x;
+    const dist = Math.abs(dx);
+    const towardKey = dx >= 0 ? 'right' : 'left';
+    const awayKey = dx >= 0 ? 'left' : 'right';
+
+    // Check incoming enemy projectiles
+    const threatProj = projectiles.find(
+      (p) => p.ownerId !== self.playerId && Math.abs(p.x - self.x) < 165
+    );
+    if (threatProj) {
+      if (this.rng() < profile.blockChance * 0.65) {
+        input[awayKey] = true;
+        return input;
+      }
+      if (this.rng() < 0.18) {
+        input[towardKey] = true;
+        input.ROLL = true;
+        return input;
+      }
+      if (this.rng() < 0.14) {
+        input.up = true;
+        input[towardKey] = true;
+        return input;
+      }
+    }
+
+    // Defensive reaction if opponent is attacking nearby
+    if (opponent.state === FIGHTER_STATES.ATTACK && dist < 175) {
+      if (this.rng() < profile.blockChance) {
+        input[awayKey] = true;
+        if (opponent.currentMove?.crouch || opponent.currentMove?.level === 'LOW') {
+          input.down = true;
+        }
+        return input;
+      }
+    }
+
+    // Anti-air reaction if opponent jumps in close
+    if (opponent.state === FIGHTER_STATES.JUMP && dist < 130 && self.isGrounded()) {
+      if (this.rng() < profile.antiAirChance * 0.25) {
+        input.SP = true;
+        input.up = true;
+        return input;
+      }
+    }
+
+    // Combo cancel follow-up when self just landed a cancelable normal
+    if (
+      self.state === FIGHTER_STATES.ATTACK &&
+      self.hitConnected &&
+      self.currentMove?.cancelable
+    ) {
+      if (self.power >= POWER_PER_STOCK && this.rng() < profile.superChance) {
+        input.SUPER = true;
+        return input;
+      }
+      if (this.rng() < profile.specialChance) {
+        input.SP = true;
+        return input;
+      }
+    }
+
+    this.intentTimer--;
+    if (this.intentTimer <= 0) {
+      const r = this.rng();
+      if (dist > 250) {
+        this.intent = r < profile.aggression ? 'APPROACH' : 'ZONE';
+      } else if (dist > 110) {
+        if (r < profile.aggression * 0.65) this.intent = 'PRESSURE';
+        else if (r < 0.82) this.intent = 'FOOTSIES';
+        else this.intent = 'RETREAT';
+      } else {
+        if (r < profile.aggression * 0.8) this.intent = 'CLOSE_MIX';
+        else this.intent = 'RETREAT';
+      }
+      this.intentTimer = 14 + Math.floor(this.rng() * 20);
+    }
+
+    // Execute intent
+    if (this.intent === 'APPROACH') {
+      input[towardKey] = true;
+      if (dist > 220 && this.rng() < 0.025) {
+        input.up = true;
+      }
+    } else if (this.intent === 'ZONE') {
+      if (this.rng() < profile.reactionRate * 0.7) {
+        input.SP = true;
+      } else if (dist < 280) {
+        input[awayKey] = true;
+      }
+    } else if (this.intent === 'FOOTSIES') {
+      if (dist > 135) input[towardKey] = true;
+      if (this.rng() < profile.reactionRate) {
+        const roll = this.rng();
+        if (roll < 0.35) input.HK = true;
+        else if (roll < 0.65) input.HP = true;
+        else if (roll < 0.85) {
+          input.down = true;
+          input.HK = true;
+        } else {
+          input.SP = true;
+        }
+      }
+    } else if (this.intent === 'PRESSURE') {
+      input[towardKey] = true;
+      if (dist < 145 && this.rng() < profile.reactionRate * 1.4) {
+        const roll = this.rng();
+        if (self.power >= POWER_PER_STOCK && roll < profile.superChance * 0.35) {
+          input.SUPER = true;
+        } else if (roll < 0.32) {
+          input.LP = true;
+        } else if (roll < 0.56) {
+          input.down = true;
+          input.LK = true;
+        } else if (roll < 0.8) {
+          input.HP = true;
+        } else {
+          input.SP = true;
+        }
+      }
+    } else if (this.intent === 'CLOSE_MIX') {
+      if (this.rng() < profile.reactionRate * 1.7) {
+        const roll = this.rng();
+        if (self.power >= POWER_PER_STOCK && roll < profile.superChance * 0.4) {
+          input.SUPER = true;
+        } else if (roll < 0.28) {
+          input.LP = true;
+        } else if (roll < 0.52) {
+          input.down = true;
+          input.LK = true;
+        } else if (roll < 0.74) {
+          input.down = true;
+          input.HK = true;
+        } else if (roll < 0.9) {
+          input.SP = true;
+        } else {
+          input[towardKey] = true;
+          input.ROLL = true;
+        }
+      }
+    } else if (this.intent === 'RETREAT') {
+      input[awayKey] = true;
+    }
+
+    // Air attack if currently airborne and near opponent
+    if (!self.isGrounded() && dist < 130 && self.vy > -3 && this.rng() < 0.25) {
+      input.JK = false;
+      if (this.rng() < 0.5) input.HP = true;
+      else input.HK = true;
+    }
+
+    return input;
+  }
+}
+
+// ===== src/audio.js =====
+// KOF Web Arcade - Procedural Web Audio Retro Arcade Synthesizer
+class ArcadeAudio {
+  constructor() {
+    this.ctx = null;
+    this.muted = false;
+    this.bgmEnabled = true;
+    this.bgmTimer = null;
+    this.bgmStep = 0;
+  }
+
+  unlock() {
+    if (typeof window === 'undefined') return;
+    if (!this.ctx) {
+      const AudioCtx = window.AudioContext || window.webkitAudioContext;
+      if (AudioCtx) {
+        this.ctx = new AudioCtx();
+      }
+    }
+    if (this.ctx && this.ctx.state === 'suspended') {
+      this.ctx.resume().catch(() => {});
+    }
+  }
+
+  setMuted(muted) {
+    this.muted = !!muted;
+    if (this.muted) {
+      this.stopBgm();
+    } else if (this.bgmEnabled) {
+      this.startBgm();
+    }
+  }
+
+  toggleMute() {
+    this.setMuted(!this.muted);
+    return this.muted;
+  }
+
+  _playTone(freq, endFreq, duration, type = 'square', gainVal = 0.12) {
+    if (this.muted || !this.ctx) return;
+    try {
+      const now = this.ctx.currentTime;
+      const osc = this.ctx.createOscillator();
+      const gain = this.ctx.createGain();
+      osc.type = type;
+      osc.frequency.setValueAtTime(freq, now);
+      if (endFreq !== freq) {
+        osc.frequency.exponentialRampToValueAtTime(Math.max(20, endFreq), now + duration);
+      }
+      gain.gain.setValueAtTime(gainVal, now);
+      gain.gain.exponentialRampToValueAtTime(0.001, now + duration);
+      osc.connect(gain);
+      gain.connect(this.ctx.destination);
+      osc.start(now);
+      osc.stop(now + duration);
+    } catch (_) {
+      // Ignore audio scheduling errors in restricted environments
+    }
+  }
+
+  _playNoise(duration, gainVal = 0.14, highpass = 800) {
+    if (this.muted || !this.ctx) return;
+    try {
+      const bufferSize = Math.floor(this.ctx.sampleRate * duration);
+      const buffer = this.ctx.createBuffer(1, bufferSize, this.ctx.sampleRate);
+      const data = buffer.getChannelData(0);
+      for (let i = 0; i < bufferSize; i++) {
+        data[i] = (Math.random() * 2 - 1) * (1 - i / bufferSize);
+      }
+      const noise = this.ctx.createBufferSource();
+      noise.buffer = buffer;
+
+      const filter = this.ctx.createBiquadFilter();
+      filter.type = 'highpass';
+      filter.frequency.value = highpass;
+
+      const gain = this.ctx.createGain();
+      gain.gain.setValueAtTime(gainVal, this.ctx.currentTime);
+      gain.gain.exponentialRampToValueAtTime(0.001, this.ctx.currentTime + duration);
+
+      noise.connect(filter);
+      filter.connect(gain);
+      gain.connect(this.ctx.destination);
+      noise.start();
+    } catch (_) {}
+  }
+
+  playWhiff() {
+    this._playNoise(0.06, 0.06, 1400);
+  }
+
+  playHit(heavy = false) {
+    if (heavy) {
+      this._playTone(170, 42, 0.16, 'sawtooth', 0.22);
+      this._playNoise(0.14, 0.2, 420);
+    } else {
+      this._playTone(260, 85, 0.09, 'square', 0.14);
+      this._playNoise(0.08, 0.12, 900);
+    }
+  }
+
+  playBlock() {
+    this._playTone(620, 320, 0.08, 'triangle', 0.16);
+    this._playNoise(0.06, 0.1, 2200);
+  }
+
+  playGuardCrush() {
+    this._playTone(440, 90, 0.32, 'sawtooth', 0.24);
+    this._playNoise(0.28, 0.22, 600);
+  }
+
+  playSpecial() {
+    this._playTone(240, 740, 0.18, 'sawtooth', 0.15);
+    this._playNoise(0.16, 0.12, 1100);
+  }
+
+  playSuperFlash() {
+    this._playTone(520, 1480, 0.28, 'sawtooth', 0.2);
+    setTimeout(() => this._playTone(880, 1760, 0.24, 'square', 0.16), 80);
+  }
+
+  playKO() {
+    this._playTone(220, 35, 0.55, 'sawtooth', 0.28);
+    this._playNoise(0.45, 0.25, 250);
+  }
+
+  playRoundStart() {
+    this._playTone(440, 440, 0.12, 'square', 0.14);
+    setTimeout(() => this._playTone(660, 660, 0.16, 'square', 0.16), 140);
+  }
+
+  playSelect() {
+    this._playTone(580, 860, 0.07, 'square', 0.11);
+  }
+
+  startBgm() {
+    if (this.muted || !this.bgmEnabled || !this.ctx) return;
+    if (this.bgmTimer) return;
+    // Energetic KOF '97/'98-style driving rock-synth bassline & lead arpeggio
+    const bassNotes = [110, 110, 130.8, 146.8, 110, 110, 164.8, 146.8];
+    const leadNotes = [440, 0, 523.3, 587.3, 659.3, 587.3, 523.3, 392.0];
+    this.bgmTimer = setInterval(() => {
+      if (this.muted || !this.ctx || this.ctx.state !== 'running') return;
+      const idx = this.bgmStep % bassNotes.length;
+      this._playTone(bassNotes[idx], bassNotes[idx] * 0.98, 0.14, 'sawtooth', 0.045);
+      const lead = leadNotes[idx];
+      if (lead > 0 && this.bgmStep % 2 === 0) {
+        this._playTone(lead, lead, 0.11, 'square', 0.032);
+      }
+      this.bgmStep++;
+    }, 175);
+  }
+
+  stopBgm() {
+    if (this.bgmTimer) {
+      clearInterval(this.bgmTimer);
+      this.bgmTimer = null;
+    }
+  }
+}
+
+// ===== src/engine.js =====
+// KOF Web Arcade - Core 60FPS Deterministic Fighting Game Engine
+function getComboDamageScale(comboCount) {
+  if (comboCount <= 1) return 1.0;
+  if (comboCount === 2) return 0.85;
+  if (comboCount === 3) return 0.72;
+  if (comboCount === 4) return 0.62;
+  return 0.5;
+}
+class FighterInstance {
+  constructor(playerId, fighterId, startX, facing) {
+    this.playerId = playerId;
+    this.loadCharacter(fighterId, startX, facing);
+  }
+
+  loadCharacter(fighterId, startX, facing, keepPower = false, carryHp = null) {
+    const def = FIGHTERS[fighterId] || FIGHTERS.kyo;
+    this.fighterId = def.id;
+    this.def = def;
+    this.maxHp = def.maxHp;
+    this.hp = carryHp !== null ? Math.min(this.maxHp, Math.max(1, carryHp)) : this.maxHp;
+    this.displayHp = this.hp;
+    this.guard = MAX_GUARD;
+    this.power = keepPower ? this.power : 0;
+
+    this.x = startX;
+    this.y = GROUND_Y;
+    this.vx = 0;
+    this.vy = 0;
+    this.facing = facing;
+
+    this.state = FIGHTER_STATES.IDLE;
+    this.stateFrame = 0;
+    this.stunFrames = 0;
+    this.invincibleFrames = 0;
+
+    this.currentMove = null;
+    this.hitConnected = false;
+    this.projectileSpawned = false;
+    this.comboCount = 0;
+    this.comboTimer = 0;
+    this.lastMoveLabel = '';
+    this.lastMoveLabelTimer = 0;
+
+    this.inputBuffer = new InputBuffer(24);
+    this.prevButtons = {
+      LP: false,
+      HP: false,
+      LK: false,
+      HK: false,
+      SP: false,
+      SUPER: false,
+      ROLL: false
+    };
+  }
+
+  isGrounded() {
+    return this.y >= GROUND_Y - 0.5;
+  }
+
+  canAct() {
+    return (
+      this.state === FIGHTER_STATES.IDLE ||
+      this.state === FIGHTER_STATES.WALK_F ||
+      this.state === FIGHTER_STATES.WALK_B ||
+      this.state === FIGHTER_STATES.CROUCH
+    );
+  }
+
+  isInvincible() {
+    if (this.invincibleFrames > 0) return true;
+    if (this.state === FIGHTER_STATES.WAKEUP) return true;
+    if (
+      (this.state === FIGHTER_STATES.ROLL_F || this.state === FIGHTER_STATES.ROLL_B) &&
+      this.stateFrame < 18
+    ) {
+      return true;
+    }
+    return false;
+  }
+
+  addPower(amount) {
+    this.power = Math.max(0, Math.min(MAX_POWER, this.power + amount));
+  }
+
+  setState(nextState) {
+    this.state = nextState;
+    this.stateFrame = 0;
+    if (nextState !== FIGHTER_STATES.ATTACK) {
+      this.currentMove = null;
+      this.hitConnected = false;
+      this.projectileSpawned = false;
+    }
+  }
+}
+class MatchEngine {
+  constructor(options = {}) {
+    this.mode = options.mode || GAME_MODES.TEAM_3V3;
+    this.stageIndex = options.stageIndex || 0;
+    this.audio = options.audio || null;
+    this.p1Team = options.p1Team || ['kyo', 'iori', 'terry'];
+    this.p2Team = options.p2Team || ['iori', 'mai', 'kyo'];
+    this.p1TeamIdx = 0;
+    this.p2TeamIdx = 0;
+
+    this.p1Wins = 0;
+    this.p2Wins = 0;
+    this.roundNumber = 1;
+
+    this.frameCount = 0;
+    this.timerFrames = ROUND_TIME_SECONDS * FIXED_FPS;
+    this.phase = MATCH_PHASES.INTRO;
+    this.phaseTimer = 75;
+    this.hitstopFrames = 0;
+    this.superFlashFrames = 0;
+    this.superFlashOwner = null;
+    this.screenShake = 0;
+    this.announcement = 'ROUND 1';
+    this.winnerId = null;
+
+    this.projectiles = [];
+    this.effects = [];
+    this.floatingTexts = [];
+
+    this.trainingInfiniteHp = this.mode === GAME_MODES.TRAINING;
+    this.trainingInfinitePower = this.mode === GAME_MODES.TRAINING;
+
+    this.p1 = new FighterInstance(1, this.p1Team[0], 260, 1);
+    this.p2 = new FighterInstance(2, this.p2Team[0], 700, -1);
+  }
+
+  getTimeLeft() {
+    return Math.ceil(this.timerFrames / FIXED_FPS);
+  }
+
+  resetRound(carryWinner = null) {
+    this.projectiles = [];
+    this.effects = [];
+    this.floatingTexts = [];
+    this.timerFrames = ROUND_TIME_SECONDS * FIXED_FPS;
+    this.phase = MATCH_PHASES.INTRO;
+    this.phaseTimer = 75;
+    this.hitstopFrames = 0;
+    this.superFlashFrames = 0;
+    this.screenShake = 0;
+
+    const p1CarryHp =
+      this.mode === GAME_MODES.TEAM_3V3 && carryWinner === 1
+        ? Math.min(this.p1.maxHp, this.p1.hp + TEAM_WIN_HEAL)
+        : null;
+    const p2CarryHp =
+      this.mode === GAME_MODES.TEAM_3V3 && carryWinner === 2
+        ? Math.min(this.p2.maxHp, this.p2.hp + TEAM_WIN_HEAL)
+        : null;
+
+    this.p1.loadCharacter(this.p1Team[this.p1TeamIdx], 260, 1, true, p1CarryHp);
+    this.p2.loadCharacter(this.p2Team[this.p2TeamIdx], 700, -1, true, p2CarryHp);
+
+    this.announcement =
+      this.mode === GAME_MODES.TRAINING ? 'TRAINING' : `ROUND ${this.roundNumber}`;
+    if (this.audio) this.audio.playRoundStart();
+  }
+
+  _justPressed(fighter, input, key) {
+    return !!input[key] && !fighter.prevButtons[key];
+  }
+
+  _syncPrevButtons(fighter, input) {
+    for (const k of Object.keys(fighter.prevButtons)) {
+      fighter.prevButtons[k] = !!input[k];
+    }
+  }
+
+  _spawnEffect(type, x, y, color = '#ffbe3b', extra = {}) {
+    this.effects.push({
+      type,
+      x,
+      y,
+      color,
+      life: extra.life || 16,
+      maxLife: extra.life || 16,
+      radius: extra.radius || 28,
+      ...extra
+    });
+  }
+
+  _spawnText(text, x, y, color = '#fff') {
+    this.floatingTexts.push({
+      text,
+      x,
+      y,
+      color,
+      life: 40,
+      maxLife: 40
+    });
+  }
+
+  _tryStartMove(fighter, move) {
+    if (!move) return false;
+    if (move.meterCost && fighter.power < move.meterCost) return false;
+    if (move.meterCost) {
+      fighter.power -= move.meterCost;
+    }
+
+    fighter.setState(FIGHTER_STATES.ATTACK);
+    fighter.currentMove = move;
+    fighter.hitConnected = false;
+    fighter.projectileSpawned = false;
+    fighter.invincibleFrames = move.invincibleFrames || 0;
+
+    if (move.velX) {
+      fighter.vx = move.velX * fighter.facing;
+    } else if (fighter.isGrounded()) {
+      fighter.vx = 0;
+    }
+    if (move.velY) {
+      fighter.vy = move.velY;
+    }
+
+    if (move.superMove) {
+      this.superFlashFrames = 24;
+      this.superFlashOwner = fighter.playerId;
+      fighter.lastMoveLabel = move.name;
+      fighter.lastMoveLabelTimer = 70;
+      this._spawnEffect('super_burst', fighter.x, fighter.y - 84, fighter.def.colors.flame, {
+        life: 24,
+        radius: 90
+      });
+      if (this.audio) this.audio.playSuperFlash();
+    } else if (move.special) {
+      fighter.lastMoveLabel = move.name;
+      fighter.lastMoveLabelTimer = 50;
+      if (this.audio) this.audio.playSpecial();
+    } else {
+      if (this.audio) this.audio.playWhiff();
+    }
+    return true;
+  }
+
+  _selectMoveFromInput(fighter, input) {
+    const moves = fighter.def.moves;
+    const jpLP = this._justPressed(fighter, input, 'LP');
+    const jpHP = this._justPressed(fighter, input, 'HP');
+    const jpLK = this._justPressed(fighter, input, 'LK');
+    const jpHK = this._justPressed(fighter, input, 'HK');
+    const jpSP = this._justPressed(fighter, input, 'SP');
+    const jpSUPER = this._justPressed(fighter, input, 'SUPER');
+
+    const anyPunch = jpLP || jpHP;
+    const anyKick = jpLK || jpHK;
+
+    // 1. Direct Super shortcut button (for web/mobile accessibility)
+    if (jpSUPER && fighter.isGrounded() && fighter.power >= POWER_PER_STOCK) {
+      return moves.SUPER;
+    }
+
+    // 2. Classic KOF command motion recognition from input buffer
+    if (fighter.isGrounded() && (anyPunch || anyKick)) {
+      const motion = fighter.inputBuffer.detectMotion(this.frameCount);
+      if (motion === MOTION_TYPES.SUPER_QCF2 && fighter.power >= POWER_PER_STOCK) {
+        return moves.SUPER;
+      }
+      if (motion) {
+        for (const key of ['SP2', 'SP1', 'SP3']) {
+          const sp = moves[key];
+          if (!sp || sp.motion !== motion) continue;
+          const btnMatch =
+            (jpLP && sp.buttons.includes('LP')) ||
+            (jpHP && sp.buttons.includes('HP')) ||
+            (jpLK && sp.buttons.includes('LK')) ||
+            (jpHK && sp.buttons.includes('HK'));
+          if (btnMatch) return sp;
+        }
+      }
+    }
+
+    // 3. Special shortcut button (direction chooses SP1 / SP2 / SP3)
+    if (jpSP && fighter.isGrounded()) {
+      const dir = getNumpadDirection(input, fighter.facing);
+      if (dir === 8 || dir === 9 || dir === 7) return moves.SP2;
+      if (dir === 4 || dir === 1) return moves.SP3;
+      return moves.SP1;
+    }
+
+    // 4. Air normals
+    if (!fighter.isGrounded()) {
+      if (anyPunch) return moves.JP;
+      if (anyKick) return moves.JK;
+      return null;
+    }
+
+    // 5. Crouching normals
+    if (input.down) {
+      if (jpLP || jpHP) return moves.CLP;
+      if (jpHK) return moves.CHK;
+      if (jpLK) return moves.CLK;
+      return null;
+    }
+
+    // 6. Standing normals
+    if (jpHP) return moves.HP;
+    if (jpLP) return moves.LP;
+    if (jpHK) return moves.HK;
+    if (jpLK) return moves.LK;
+
+    return null;
+  }
+
+  _updateFighter(fighter, opponent, input) {
+    // Record directional input into numpad ring buffer
+    const dir = getNumpadDirection(input, fighter.facing);
+    fighter.inputBuffer.push(dir, this.frameCount);
+
+    // Smooth delayed red damage bar
+    if (fighter.displayHp > fighter.hp) {
+      fighter.displayHp = Math.max(fighter.hp, fighter.displayHp - 5.5);
+    } else {
+      fighter.displayHp = fighter.hp;
+    }
+
+    // Passive guard regeneration when not blocking/crushed
+    if (
+      fighter.state !== FIGHTER_STATES.BLOCKSTUN &&
+      fighter.state !== FIGHTER_STATES.GUARD_CRUSH &&
+      fighter.guard < MAX_GUARD
+    ) {
+      fighter.guard = Math.min(MAX_GUARD, fighter.guard + 0.14);
+    }
+
+    if (fighter.invincibleFrames > 0) fighter.invincibleFrames--;
+    if (fighter.lastMoveLabelTimer > 0) fighter.lastMoveLabelTimer--;
+    if (fighter.comboTimer > 0) {
+      fighter.comboTimer--;
+      if (fighter.comboTimer === 0) fighter.comboCount = 0;
+    }
+
+    fighter.stateFrame++;
+
+    // Handle KO / Victory
+    if (fighter.state === FIGHTER_STATES.KO || fighter.state === FIGHTER_STATES.VICTORY) {
+      fighter.vx *= 0.85;
+      fighter.x += fighter.vx;
+      if (!fighter.isGrounded() || fighter.vy < 0) {
+        fighter.vy += GRAVITY;
+        fighter.y += fighter.vy;
+      }
+      clampToStage(fighter);
+      this._syncPrevButtons(fighter, input);
+      return;
+    }
+
+    // Handle Hitstun / Blockstun / Guard Crush
+    if (
+      fighter.state === FIGHTER_STATES.HITSTUN ||
+      fighter.state === FIGHTER_STATES.BLOCKSTUN ||
+      fighter.state === FIGHTER_STATES.GUARD_CRUSH
+    ) {
+      fighter.stunFrames--;
+      fighter.vx *= 0.82;
+      fighter.x += fighter.vx;
+      if (!fighter.isGrounded() || fighter.vy < 0) {
+        fighter.vy += GRAVITY;
+        fighter.y += fighter.vy;
+      }
+      clampToStage(fighter);
+      if (fighter.stunFrames <= 0) {
+        fighter.setState(fighter.isGrounded() ? FIGHTER_STATES.IDLE : FIGHTER_STATES.JUMP);
+      }
+      this._syncPrevButtons(fighter, input);
+      return;
+    }
+
+    // Handle Knockdown & Wakeup
+    if (fighter.state === FIGHTER_STATES.KNOCKDOWN) {
+      fighter.vx *= 0.88;
+      fighter.x += fighter.vx;
+      if (!fighter.isGrounded() || fighter.vy < 0) {
+        fighter.vy += GRAVITY;
+        fighter.y += fighter.vy;
+      }
+      clampToStage(fighter);
+      if (fighter.isGrounded() && fighter.stateFrame >= 36) {
+        fighter.setState(FIGHTER_STATES.WAKEUP);
+        fighter.invincibleFrames = 14;
+      }
+      this._syncPrevButtons(fighter, input);
+      return;
+    }
+
+    if (fighter.state === FIGHTER_STATES.WAKEUP) {
+      fighter.vx = 0;
+      if (fighter.stateFrame >= 12) {
+        fighter.setState(FIGHTER_STATES.IDLE);
+      }
+      this._syncPrevButtons(fighter, input);
+      return;
+    }
+
+    // Handle Emergency Evasion Roll (KOF signature mechanic)
+    if (
+      fighter.state === FIGHTER_STATES.ROLL_F ||
+      fighter.state === FIGHTER_STATES.ROLL_B
+    ) {
+      const rollDir = fighter.state === FIGHTER_STATES.ROLL_F ? fighter.facing : -fighter.facing;
+      fighter.vx = fighter.stateFrame < 19 ? rollDir * 8.4 : 0;
+      fighter.x += fighter.vx;
+      clampToStage(fighter);
+      if (fighter.stateFrame >= 24) {
+        fighter.setState(FIGHTER_STATES.IDLE);
+      }
+      this._syncPrevButtons(fighter, input);
+      return;
+    }
+
+    // Handle active Attack state (including Special/Super Cancel window!)
+    if (fighter.state === FIGHTER_STATES.ATTACK && fighter.currentMove) {
+      const m = fighter.currentMove;
+
+      // Special / Super Cancel on hit
+      if (fighter.hitConnected && m.cancelable && fighter.isGrounded()) {
+        const cancelMove = this._selectMoveFromInput(fighter, input);
+        if (cancelMove && (cancelMove.special || cancelMove.superMove)) {
+          this._tryStartMove(fighter, cancelMove);
+          this._syncPrevButtons(fighter, input);
+          return;
+        }
+      }
+
+      // Spawn projectile on first active frame
+      if (m.projectile && !fighter.projectileSpawned && fighter.stateFrame >= m.startup) {
+        fighter.projectileSpawned = true;
+        this.projectiles.push({
+          ownerId: fighter.playerId,
+          x: fighter.x + fighter.facing * 56,
+          y: fighter.y + m.projectile.offsetY,
+          vx: m.projectile.speed * fighter.facing,
+          w: m.projectile.w,
+          h: m.projectile.h,
+          move: m,
+          color: m.projectile.color,
+          core: m.projectile.core,
+          groundWave: !!m.projectile.groundWave,
+          fanSpin: !!m.projectile.fanSpin,
+          life: 110
+        });
+      }
+
+      // Apply attack physics
+      fighter.x += fighter.vx;
+      if (fighter.isGrounded()) {
+        fighter.vx *= 0.86;
+      }
+      if (!fighter.isGrounded() || fighter.vy < 0) {
+        fighter.vy += GRAVITY;
+        fighter.y += fighter.vy;
+      }
+      clampToStage(fighter);
+
+      // Landing cancels air normal
+      if (m.air && fighter.isGrounded() && fighter.stateFrame > 2) {
+        fighter.setState(FIGHTER_STATES.IDLE);
+        fighter.vx = 0;
+        this._syncPrevButtons(fighter, input);
+        return;
+      }
+
+      const totalFrames = m.startup + m.active + m.recovery;
+      if (fighter.stateFrame >= totalFrames) {
+        fighter.setState(fighter.isGrounded() ? FIGHTER_STATES.IDLE : FIGHTER_STATES.JUMP);
+        fighter.vx = 0;
+      }
+      this._syncPrevButtons(fighter, input);
+      return;
+    }
+
+    // Airborne neutral state
+    if (fighter.state === FIGHTER_STATES.JUMP) {
+      const airMove = this._selectMoveFromInput(fighter, input);
+      if (airMove) {
+        this._tryStartMove(fighter, airMove);
+        this._syncPrevButtons(fighter, input);
+        return;
+      }
+
+      fighter.x += fighter.vx;
+      fighter.vy += GRAVITY;
+      fighter.y += fighter.vy;
+      clampToStage(fighter);
+
+      if (fighter.isGrounded()) {
+        fighter.setState(FIGHTER_STATES.IDLE);
+        fighter.vx = 0;
+      }
+      this._syncPrevButtons(fighter, input);
+      return;
+    }
+
+    // Grounded actionable states (IDLE, WALK_F, WALK_B, CROUCH)
+    if (this.phase === MATCH_PHASES.FIGHT && fighter.canAct()) {
+      // 1. Check Roll (Shift / ROLL button or LP+LK simultaneously)
+      const jpRoll =
+        this._justPressed(fighter, input, 'ROLL') ||
+        (this._justPressed(fighter, input, 'LP') && input.LK) ||
+        (this._justPressed(fighter, input, 'LK') && input.LP);
+      if (jpRoll) {
+        const backward = fighter.facing === 1 ? input.left : input.right;
+        fighter.setState(backward ? FIGHTER_STATES.ROLL_B : FIGHTER_STATES.ROLL_F);
+        fighter.invincibleFrames = 18;
+        this._syncPrevButtons(fighter, input);
+        return;
+      }
+
+      // 2. Check Attacks (Super > Special > Normals)
+      const move = this._selectMoveFromInput(fighter, input);
+      if (move) {
+        this._tryStartMove(fighter, move);
+        this._syncPrevButtons(fighter, input);
+        return;
+      }
+
+      // 3. Check Jump / Short Hop
+      if (input.up) {
+        fighter.setState(FIGHTER_STATES.JUMP);
+        fighter.vy = input.down ? SHORT_HOP_VEL_Y : JUMP_VEL_Y;
+        const forward = fighter.facing === 1 ? input.right : input.left;
+        const backward = fighter.facing === 1 ? input.left : input.right;
+        fighter.vx = forward
+          ? fighter.def.jumpSpeedX * fighter.facing
+          : backward
+          ? -fighter.def.jumpSpeedX * 0.85 * fighter.facing
+          : 0;
+        this._syncPrevButtons(fighter, input);
+        return;
+      }
+
+      // 4. Crouch / Walk / Idle
+      if (input.down) {
+        fighter.state = FIGHTER_STATES.CROUCH;
+        fighter.vx = 0;
+      } else {
+        const forward = fighter.facing === 1 ? input.right : input.left;
+        const backward = fighter.facing === 1 ? input.left : input.right;
+        if (forward && !backward) {
+          fighter.state = FIGHTER_STATES.WALK_F;
+          fighter.vx = fighter.def.walkSpeed * fighter.facing;
+        } else if (backward && !forward) {
+          fighter.state = FIGHTER_STATES.WALK_B;
+          fighter.vx = -fighter.def.backSpeed * fighter.facing;
+        } else {
+          fighter.state = FIGHTER_STATES.IDLE;
+          fighter.vx = 0;
+        }
+      }
+
+      fighter.x += fighter.vx;
+      clampToStage(fighter);
+    }
+
+    this._syncPrevButtons(fighter, input);
+  }
+
+  _canBlock(defender, defenderInput, move) {
+    if (!defender.isGrounded()) return false;
+    if (
+      !defender.canAct() &&
+      defender.state !== FIGHTER_STATES.BLOCKSTUN
+    ) {
+      return false;
+    }
+    const holdingBack =
+      defender.facing === 1 ? !!defenderInput.left : !!defenderInput.right;
+    if (!holdingBack) return false;
+
+    const crouching = !!defenderInput.down;
+    if (move.level === HIT_LEVELS.LOW && !crouching) return false;
+    if (move.level === HIT_LEVELS.MID && crouching) return false;
+    return true;
+  }
+
+  _applyHit(attacker, defender, defenderInput, move, impactX, impactY) {
+    if (defender.isInvincible()) return false;
+
+    const blocked = this._canBlock(defender, defenderInput, move);
+
+    if (blocked) {
+      const chipDmg = move.chip || 0;
+      if (chipDmg > 0) {
+        defender.hp = Math.max(0, defender.hp - chipDmg);
+      }
+      defender.guard = Math.max(0, defender.guard - (move.guardDamage || 10));
+      attacker.addPower(Math.ceil((move.meterGain || 6) * 0.5));
+      defender.addPower(5);
+
+      this.hitstopFrames = Math.max(this.hitstopFrames, Math.max(3, (move.hitstop || 6) - 2));
+      defender.vx = (move.pushback || 8) * 0.7 * attacker.facing;
+
+      if (defender.guard <= 0) {
+        // KOF Guard Crush!
+        defender.guard = MAX_GUARD;
+        defender.setState(FIGHTER_STATES.GUARD_CRUSH);
+        defender.stunFrames = 38;
+        this.screenShake = 10;
+        this._spawnEffect('guard_crush', impactX, impactY, '#ef4444', { life: 22, radius: 52 });
+        this._spawnText('GUARD CRUSH!', defender.x, defender.y - 155, '#f87171');
+        if (this.audio) this.audio.playGuardCrush();
+      } else {
+        defender.setState(FIGHTER_STATES.BLOCKSTUN);
+        defender.stunFrames = move.blockstun || 11;
+        this._spawnEffect('block', impactX, impactY, '#38bdf8', { life: 12, radius: 26 });
+        if (this.audio) this.audio.playBlock();
+      }
+      return true;
+    }
+
+    // Clean Hit!
+    attacker.comboCount++;
+    attacker.comboTimer = 55;
+    const scale = getComboDamageScale(attacker.comboCount);
+    const finalDamage = Math.max(1, Math.round((move.damage || 50) * scale));
+
+    defender.hp = Math.max(0, defender.hp - finalDamage);
+    attacker.addPower(move.meterGain || 10);
+    defender.addPower(Math.ceil((move.meterGain || 10) * 0.65));
+
+    this.hitstopFrames = Math.max(this.hitstopFrames, move.hitstop || 7);
+    this.screenShake = move.superMove ? 14 : move.special ? 8 : move.damage >= 90 ? 5 : 2;
+
+    if (defender.hp <= 0) {
+      defender.setState(FIGHTER_STATES.KO);
+      defender.vx = 9.5 * attacker.facing;
+      defender.vy = -10.5;
+      this._triggerKO(attacker.playerId);
+    } else if (move.knockdown || !defender.isGrounded()) {
+      defender.setState(FIGHTER_STATES.KNOCKDOWN);
+      defender.vx = (move.pushback || 10) * 0.72 * attacker.facing;
+      defender.vy = -9.5;
+    } else {
+      defender.setState(FIGHTER_STATES.HITSTUN);
+      defender.stunFrames = move.hitstun || 16;
+      defender.vx = (move.pushback || 8) * attacker.facing;
+    }
+
+    const heavy = move.superMove || move.special || move.damage >= 90;
+    this._spawnEffect(
+      move.flameFx ? 'flame_hit' : 'hit',
+      impactX,
+      impactY,
+      move.flameFx ? attacker.def.colors.flame : '#fbbf24',
+      { life: heavy ? 18 : 12, radius: heavy ? 44 : 26 }
+    );
+    if (attacker.comboCount >= 2) {
+      this._spawnText(`${attacker.comboCount} HITS!`, defender.x, defender.y - 160, '#fde047');
+    }
+    if (this.audio) this.audio.playHit(heavy);
+    return true;
+  }
+
+  _checkCombatCollisions(input1, input2) {
+    // 1. Melee hitbox checks
+    const pairs = [
+      [this.p1, this.p2, input2],
+      [this.p2, this.p1, input1]
+    ];
+    for (const [atk, def, defInput] of pairs) {
+      if (atk.hitConnected || !atk.currentMove) continue;
+      // Projectile moves deal damage via projectile unless opponent is point-blank
+      const hb = getActiveHitbox(atk);
+      const hurt = getHurtbox(def);
+      if (hb && rectsOverlap(hb, hurt)) {
+        atk.hitConnected = true;
+        const ix = (Math.max(hb.x, hurt.x) + Math.min(hb.x + hb.w, hurt.x + hurt.w)) / 2;
+        const iy = (Math.max(hb.y, hurt.y) + Math.min(hb.y + hb.h, hurt.y + hurt.h)) / 2;
+        this._applyHit(atk, def, defInput, atk.currentMove, ix, iy);
+      }
+    }
+
+    // 2. Projectile updates & clash/hit detection
+    for (let i = this.projectiles.length - 1; i >= 0; i--) {
+      const p = this.projectiles[i];
+      p.x += p.vx;
+      p.life--;
+      if (p.life <= 0 || p.x < STAGE_LEFT - 80 || p.x > STAGE_RIGHT + 80) {
+        this.projectiles.splice(i, 1);
+        continue;
+      }
+
+      // Projectile vs Projectile clash
+      let clashed = false;
+      for (let j = i - 1; j >= 0; j--) {
+        const other = this.projectiles[j];
+        if (other.ownerId === p.ownerId) continue;
+        if (rectsOverlap(getProjectileBox(p), getProjectileBox(other))) {
+          this._spawnEffect('block', (p.x + other.x) / 2, (p.y + other.y) / 2, '#f8fafc', {
+            life: 16,
+            radius: 36
+          });
+          this.projectiles.splice(i, 1);
+          this.projectiles.splice(j, 1);
+          i--;
+          clashed = true;
+          break;
+        }
+      }
+      if (clashed) continue;
+
+      // Projectile vs Opponent hurtbox
+      const atk = p.ownerId === 1 ? this.p1 : this.p2;
+      const def = p.ownerId === 1 ? this.p2 : this.p1;
+      const defInput = p.ownerId === 1 ? input2 : input1;
+      if (rectsOverlap(getProjectileBox(p), getHurtbox(def))) {
+        const connected = this._applyHit(atk, def, defInput, p.move, p.x, p.y);
+        if (connected) {
+          this.projectiles.splice(i, 1);
+        }
+      }
+    }
+  }
+
+  _triggerKO(winnerPlayerId) {
+    if (this.phase !== MATCH_PHASES.FIGHT) return;
+    if (this.mode === GAME_MODES.TRAINING) {
+      this.p1.hp = this.p1.maxHp;
+      this.p2.hp = this.p2.maxHp;
+      this.p1.setState(FIGHTER_STATES.IDLE);
+      this.p2.setState(FIGHTER_STATES.IDLE);
+      return;
+    }
+    this.phase = MATCH_PHASES.KO_SLOWMO;
+    this.phaseTimer = 64;
+    this.announcement = 'K.O.!';
+    this.winnerId = winnerPlayerId;
+    if (this.audio) this.audio.playKO();
+  }
+
+  _resolveRoundEnd() {
+    const winner = this.winnerId;
+    if (winner === 1) this.p1Wins++;
+    else if (winner === 2) this.p2Wins++;
+
+    if (this.mode === GAME_MODES.TEAM_3V3) {
+      if (winner === 1) {
+        this.p2TeamIdx++;
+        if (this.p2TeamIdx >= this.p2Team.length) {
+          this.phase = MATCH_PHASES.MATCH_OVER;
+          this.announcement = 'PLAYER 1 TEAM WINS!';
+          return;
+        }
+      } else if (winner === 2) {
+        this.p1TeamIdx++;
+        if (this.p1TeamIdx >= this.p1Team.length) {
+          this.phase = MATCH_PHASES.MATCH_OVER;
+          this.announcement = 'PLAYER 2 TEAM WINS!';
+          return;
+        }
+      } else {
+        // Double KO / Draw
+        this.p1TeamIdx++;
+        this.p2TeamIdx++;
+        if (this.p1TeamIdx >= this.p1Team.length || this.p2TeamIdx >= this.p2Team.length) {
+          this.phase = MATCH_PHASES.MATCH_OVER;
+          this.announcement = 'DRAW GAME';
+          return;
+        }
+      }
+      this.roundNumber++;
+      this.resetRound(winner);
+      return;
+    }
+
+    // 1v1 Best of 3 (first to 2 wins)
+    if (this.p1Wins >= 2) {
+      this.phase = MATCH_PHASES.MATCH_OVER;
+      this.announcement = `${this.p1.def.name} WINS!`;
+      return;
+    }
+    if (this.p2Wins >= 2) {
+      this.phase = MATCH_PHASES.MATCH_OVER;
+      this.announcement = `${this.p2.def.name} WINS!`;
+      return;
+    }
+    this.roundNumber++;
+    this.resetRound(null);
+  }
+
+  step(input1 = createEmptyInput(), input2 = createEmptyInput()) {
+    this.frameCount++;
+
+    // Decay screen shake & visual effects
+    if (this.screenShake > 0) this.screenShake = Math.max(0, this.screenShake - 0.8);
+    for (let i = this.effects.length - 1; i >= 0; i--) {
+      this.effects[i].life--;
+      if (this.effects[i].life <= 0) this.effects.splice(i, 1);
+    }
+    for (let i = this.floatingTexts.length - 1; i >= 0; i--) {
+      this.floatingTexts[i].life--;
+      this.floatingTexts[i].y -= 0.7;
+      if (this.floatingTexts[i].life <= 0) this.floatingTexts.splice(i, 1);
+    }
+
+    // Super flash freeze
+    if (this.superFlashFrames > 0) {
+      this.superFlashFrames--;
+      return;
+    }
+
+    // Hitstop impact freeze
+    if (this.hitstopFrames > 0) {
+      this.hitstopFrames--;
+      return;
+    }
+
+    // Phase state machine
+    if (this.phase === MATCH_PHASES.INTRO) {
+      this.phaseTimer--;
+      if (this.phaseTimer === 28) {
+        this.announcement = this.mode === GAME_MODES.TRAINING ? 'PRACTICE' : 'GO!';
+      }
+      if (this.phaseTimer <= 0) {
+        this.phase = MATCH_PHASES.FIGHT;
+        this.announcement = '';
+      }
+      return;
+    }
+
+    if (this.phase === MATCH_PHASES.KO_SLOWMO) {
+      this.phaseTimer--;
+      // Slow-motion update every 3rd frame
+      if (this.phaseTimer % 3 === 0) {
+        this._updateFighter(this.p1, this.p2, createEmptyInput());
+        this._updateFighter(this.p2, this.p1, createEmptyInput());
+      }
+      if (this.phaseTimer <= 0) {
+        this.phase = MATCH_PHASES.ROUND_END;
+        this.phaseTimer = 70;
+        if (this.winnerId === 1) {
+          this.p1.setState(FIGHTER_STATES.VICTORY);
+          this.announcement = `${this.p1.def.name} WIN`;
+        } else if (this.winnerId === 2) {
+          this.p2.setState(FIGHTER_STATES.VICTORY);
+          this.announcement = `${this.p2.def.name} WIN`;
+        } else {
+          this.announcement = 'DRAW';
+        }
+      }
+      return;
+    }
+
+    if (this.phase === MATCH_PHASES.ROUND_END) {
+      this.phaseTimer--;
+      if (this.phaseTimer <= 0) {
+        this._resolveRoundEnd();
+      }
+      return;
+    }
+
+    if (this.phase === MATCH_PHASES.MATCH_OVER) {
+      return;
+    }
+
+    // Active FIGHT phase
+    if (this.mode !== GAME_MODES.TRAINING) {
+      if (this.timerFrames > 0) {
+        this.timerFrames--;
+        if (this.timerFrames === 0) {
+          // Timeout resolution
+          const r1 = this.p1.hp / this.p1.maxHp;
+          const r2 = this.p2.hp / this.p2.maxHp;
+          this.winnerId = r1 > r2 ? 1 : r2 > r1 ? 2 : 0;
+          this.phase = MATCH_PHASES.ROUND_END;
+          this.phaseTimer = 80;
+          this.announcement = 'TIME OVER';
+          return;
+        }
+      }
+    } else {
+      // Training mode auto-refill
+      if (this.trainingInfiniteHp && this.p2.state === FIGHTER_STATES.IDLE && this.p2.hp < this.p2.maxHp) {
+        this.p2.hp = Math.min(this.p2.maxHp, this.p2.hp + 12);
+      }
+      if (this.trainingInfiniteHp && this.p1.state === FIGHTER_STATES.IDLE && this.p1.hp < this.p1.maxHp) {
+        this.p1.hp = Math.min(this.p1.maxHp, this.p1.hp + 12);
+      }
+      if (this.trainingInfinitePower) {
+        this.p1.power = MAX_POWER;
+        this.p2.power = MAX_POWER;
+      }
+    }
+
+    // Update fighters, pushboxes, auto-facing, and combat collisions
+    this._updateFighter(this.p1, this.p2, input1);
+    this._updateFighter(this.p2, this.p1, input2);
+    resolvePushboxes(this.p1, this.p2);
+    updateAutoFacing(this.p1, this.p2);
+    this._checkCombatCollisions(input1, input2);
+  }
+}
+
+// ===== src/renderer.js =====
+// KOF Web Arcade - HTML5 Canvas 2D Arcade Renderer
+class ArcadeRenderer {
+  constructor(canvas) {
+    this.canvas = canvas;
+    this.ctx = canvas.getContext('2d');
+    this.showHitboxes = false;
+  }
+
+  render(engine) {
+    const ctx = this.ctx;
+    ctx.save();
+
+    // Screen shake offset
+    if (engine.screenShake > 0.2) {
+      const sx = (Math.random() - 0.5) * engine.screenShake * 1.4;
+      const sy = (Math.random() - 0.5) * engine.screenShake * 1.1;
+      ctx.translate(sx, sy);
+    }
+
+    // 1. Background stage
+    this._drawStage(ctx, engine);
+
+    // 2. Super Flash dramatic dark vignette & speedlines
+    if (engine.superFlashFrames > 0) {
+      ctx.fillStyle = 'rgba(5, 5, 18, 0.72)';
+      ctx.fillRect(0, 0, STAGE_WIDTH, STAGE_HEIGHT);
+      const owner = engine.superFlashOwner === 1 ? engine.p1 : engine.p2;
+      this._drawSpeedlines(ctx, owner.x, owner.y - 80, owner.def.colors.flame);
+    }
+
+    // 3. Ground shadows
+    this._drawShadow(ctx, engine.p1);
+    this._drawShadow(ctx, engine.p2);
+
+    // 4. Fighters (attacker drawn on top)
+    const p1Attacking = engine.p1.state === FIGHTER_STATES.ATTACK;
+    if (p1Attacking) {
+      this._drawFighter(ctx, engine.p2, engine.frameCount);
+      this._drawFighter(ctx, engine.p1, engine.frameCount);
+    } else {
+      this._drawFighter(ctx, engine.p1, engine.frameCount);
+      this._drawFighter(ctx, engine.p2, engine.frameCount);
+    }
+
+    // 5. Projectiles
+    for (const p of engine.projectiles) {
+      this._drawProjectile(ctx, p, engine.frameCount);
+    }
+
+    // 6. Hit / Guard / Super VFX
+    for (const fx of engine.effects) {
+      this._drawEffect(ctx, fx);
+    }
+
+    // 7. Debug Hitboxes / Hurtboxes / Pushboxes
+    if (this.showHitboxes) {
+      this._drawDebugBoxes(ctx, engine);
+    }
+
+    // 8. Floating Combat Text
+    for (const ft of engine.floatingTexts) {
+      ctx.save();
+      ctx.globalAlpha = Math.min(1, ft.life / 12);
+      ctx.font = '900 22px "Inter", system-ui, sans-serif';
+      ctx.textAlign = 'center';
+      ctx.lineWidth = 4;
+      ctx.strokeStyle = '#09090b';
+      ctx.strokeText(ft.text, ft.x, ft.y);
+      ctx.fillStyle = ft.color;
+      ctx.fillText(ft.text, ft.x, ft.y);
+      ctx.restore();
+    }
+
+    ctx.restore();
+
+    // 9. Arcade HUD (unaffected by screen shake)
+    this._drawHUD(ctx, engine);
+
+    // 10. Center round/KO announcement banner
+    if (engine.announcement) {
+      this._drawAnnouncement(ctx, engine.announcement, engine.phase);
+    }
+  }
+
+  _drawStage(ctx, engine) {
+    const stage = STAGES[engine.stageIndex % STAGES.length];
+    const t = engine.frameCount;
+
+    // Sky gradient
+    const sky = ctx.createLinearGradient(0, 0, 0, GROUND_Y);
+    sky.addColorStop(0, stage.skyTop);
+    sky.addColorStop(1, stage.skyBottom);
+    ctx.fillStyle = sky;
+    ctx.fillRect(0, 0, STAGE_WIDTH, GROUND_Y);
+
+    if (stage.id === 'tokyo_street') {
+      // Distant skyline buildings
+      ctx.fillStyle = '#15122b';
+      const buildings = [
+        [20, 140, 90, 260], [125, 100, 110, 300], [255, 165, 85, 235],
+        [360, 115, 120, 285], [500, 150, 100, 250], [620, 95, 130, 305],
+        [770, 130, 95, 270], [875, 160, 80, 240]
+      ];
+      for (const [bx, by, bw, bh] of buildings) {
+        ctx.fillRect(bx, by, bw, bh);
+        // Lit windows
+        ctx.fillStyle = 'rgba(255, 210, 120, 0.22)';
+        for (let wy = by + 16; wy < GROUND_Y - 50; wy += 24) {
+          for (let wx = bx + 12; wx < bx + bw - 14; wx += 20) {
+            if ((wx + wy) % 3 !== 0) ctx.fillRect(wx, wy, 10, 12);
+          }
+        }
+        ctx.fillStyle = '#15122b';
+      }
+      // Animated neon billboards
+      const pulse = 0.75 + 0.25 * Math.sin(t * 0.08);
+      ctx.save();
+      ctx.globalAlpha = pulse;
+      ctx.strokeStyle = '#ff2e63';
+      ctx.lineWidth = 3;
+      ctx.strokeRect(140, 175, 140, 44);
+      ctx.fillStyle = '#ff2e63';
+      ctx.font = 'bold 20px "Inter", sans-serif';
+      ctx.textAlign = 'center';
+      ctx.fillText('拳皇 98', 210, 205);
+
+      ctx.strokeStyle = '#00e5ff';
+      ctx.strokeRect(665, 160, 155, 44);
+      ctx.fillStyle = '#00e5ff';
+      ctx.fillText('ARCADE KOF', 742, 189);
+      ctx.restore();
+    } else if (stage.id === 'osaka_dojo') {
+      // Sunset sun disc
+      const sunGrad = ctx.createRadialGradient(480, 240, 20, 480, 240, 160);
+      sunGrad.addColorStop(0, '#fde047');
+      sunGrad.addColorStop(0.55, '#f97316');
+      sunGrad.addColorStop(1, 'rgba(249, 115, 22, 0)');
+      ctx.fillStyle = sunGrad;
+      ctx.beginPath();
+      ctx.arc(480, 240, 160, 0, Math.PI * 2);
+      ctx.fill();
+
+      // Dojo shoji pillars
+      ctx.fillStyle = '#3b1f14';
+      for (let x = 60; x < STAGE_WIDTH; x += 180) {
+        ctx.fillRect(x, 80, 18, GROUND_Y - 80);
+      }
+      ctx.fillRect(0, 80, STAGE_WIDTH, 22);
+      // Hanging lantern
+      const sway = Math.sin(t * 0.04) * 5;
+      ctx.fillStyle = '#ef4444';
+      ctx.beginPath();
+      ctx.ellipse(480 + sway, 138, 22, 30, 0, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.fillStyle = '#fef08a';
+      ctx.font = 'bold 18px sans-serif';
+      ctx.textAlign = 'center';
+      ctx.fillText('武', 480 + sway, 145);
+    } else {
+      // Night harbor moon & ocean
+      ctx.fillStyle = '#e0f2fe';
+      ctx.beginPath();
+      ctx.arc(760, 125, 36, 0, Math.PI * 2);
+      ctx.fill();
+      // Water horizon
+      ctx.fillStyle = '#0c243d';
+      ctx.fillRect(0, 320, STAGE_WIDTH, GROUND_Y - 320);
+      ctx.fillStyle = 'rgba(125, 211, 252, 0.25)';
+      for (let i = 0; i < 12; i++) {
+        const rx = 700 + Math.sin(t * 0.05 + i) * 18;
+        ctx.fillRect(rx, 330 + i * 11, 110 - i * 4, 3);
+      }
+      // Cargo cranes
+      ctx.strokeStyle = '#334155';
+      ctx.lineWidth = 4;
+      ctx.beginPath();
+      ctx.moveTo(140, 320);
+      ctx.lineTo(175, 160);
+      ctx.lineTo(310, 180);
+      ctx.stroke();
+    }
+
+    // Floor with perspective grid lines
+    const floorGrad = ctx.createLinearGradient(0, GROUND_Y - 12, 0, STAGE_HEIGHT);
+    floorGrad.addColorStop(0, stage.floorTop);
+    floorGrad.addColorStop(1, stage.floorBottom);
+    ctx.fillStyle = floorGrad;
+    ctx.fillRect(0, GROUND_Y - 12, STAGE_WIDTH, STAGE_HEIGHT - GROUND_Y + 12);
+
+    ctx.strokeStyle = 'rgba(255, 255, 255, 0.12)';
+    ctx.lineWidth = 2;
+    ctx.beginPath();
+    ctx.moveTo(0, GROUND_Y - 12);
+    ctx.lineTo(STAGE_WIDTH, GROUND_Y - 12);
+    ctx.stroke();
+
+    ctx.strokeStyle = 'rgba(255, 255, 255, 0.07)';
+    for (let i = -5; i <= 5; i++) {
+      ctx.beginPath();
+      ctx.moveTo(STAGE_WIDTH / 2 + i * 75, GROUND_Y - 12);
+      ctx.lineTo(STAGE_WIDTH / 2 + i * 135, STAGE_HEIGHT);
+      ctx.stroke();
+    }
+  }
+
+  _drawSpeedlines(ctx, cx, cy, color) {
+    ctx.save();
+    ctx.strokeStyle = color;
+    ctx.lineWidth = 2.5;
+    for (let i = 0; i < 24; i++) {
+      const ang = (Math.PI * 2 * i) / 24;
+      ctx.beginPath();
+      ctx.moveTo(cx + Math.cos(ang) * 55, cy + Math.sin(ang) * 55);
+      ctx.lineTo(cx + Math.cos(ang) * 600, cy + Math.sin(ang) * 600);
+      ctx.stroke();
+    }
+    ctx.restore();
+  }
+
+  _drawShadow(ctx, fighter) {
+    const heightRatio = Math.max(0.35, 1 - (GROUND_Y - fighter.y) / 280);
+    ctx.save();
+    ctx.fillStyle = 'rgba(0, 0, 0, 0.45)';
+    ctx.beginPath();
+    ctx.ellipse(fighter.x, GROUND_Y + 2, 34 * heightRatio, 9 * heightRatio, 0, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.restore();
+  }
+
+  _drawFighter(ctx, f, frameCount) {
+    const c = f.def.colors;
+    const isHit = f.state === FIGHTER_STATES.HITSTUN || f.state === FIGHTER_STATES.GUARD_CRUSH;
+    const isCrouch =
+      f.state === FIGHTER_STATES.CROUCH ||
+      (f.state === FIGHTER_STATES.ATTACK && f.currentMove?.crouch);
+    const isRoll = f.state === FIGHTER_STATES.ROLL_F || f.state === FIGHTER_STATES.ROLL_B;
+    const isDown = f.state === FIGHTER_STATES.KNOCKDOWN || f.state === FIGHTER_STATES.KO;
+
+    // Roll afterimage trails
+    if (isRoll) {
+      ctx.save();
+      ctx.globalAlpha = 0.25;
+      this._drawBody(ctx, f, f.x - f.vx * 2.2, f.y, frameCount, c, isCrouch, isRoll, isDown, isHit);
+      ctx.restore();
+    }
+
+    ctx.save();
+    // Invincibility blink
+    if (f.invincibleFrames > 0 && frameCount % 4 < 2 && !isRoll) {
+      ctx.globalAlpha = 0.72;
+    }
+    this._drawBody(ctx, f, f.x, f.y, frameCount, c, isCrouch, isRoll, isDown, isHit);
+    ctx.restore();
+
+    // Move name callout above fighter
+    if (f.lastMoveLabelTimer > 0 && f.lastMoveLabel) {
+      ctx.save();
+      ctx.globalAlpha = Math.min(1, f.lastMoveLabelTimer / 15);
+      ctx.font = '800 15px "Inter", sans-serif';
+      ctx.textAlign = 'center';
+      ctx.fillStyle = '#09090b';
+      ctx.fillText(f.lastMoveLabel, f.x + 1, f.y - 163);
+      ctx.fillStyle = c.flameCore || '#fde047';
+      ctx.fillText(f.lastMoveLabel, f.x, f.y - 164);
+      ctx.restore();
+    }
+  }
+
+  _drawBody(ctx, f, drawX, drawY, frameCount, c, isCrouch, isRoll, isDown, isHit) {
+    ctx.save();
+    ctx.translate(drawX, drawY);
+    ctx.scale(f.facing, 1);
+
+    if (isDown) {
+      ctx.translate(0, -18);
+      ctx.rotate(-Math.PI / 2);
+    } else if (isRoll) {
+      ctx.translate(0, -45);
+      ctx.rotate((f.stateFrame * 0.42) * (f.state === FIGHTER_STATES.ROLL_F ? 1 : -1));
+      ctx.translate(0, 45);
+    }
+
+    const bob =
+      f.state === FIGHTER_STATES.IDLE
+        ? Math.sin(frameCount * 0.14) * 3.5
+        : f.state === FIGHTER_STATES.WALK_F || f.state === FIGHTER_STATES.WALK_B
+        ? Math.abs(Math.sin(frameCount * 0.24)) * 5
+        : 0;
+
+    const crouchOffset = isCrouch ? 34 : 0;
+    const stride =
+      f.state === FIGHTER_STATES.WALK_F || f.state === FIGHTER_STATES.WALK_B
+        ? Math.sin(frameCount * 0.25) * 18
+        : 0;
+
+    const isAtk = f.state === FIGHTER_STATES.ATTACK && f.currentMove;
+    const isKick =
+      isAtk && ['LK', 'HK', 'CLK', 'CHK', 'JK', 'SP3'].includes(f.currentMove.id);
+    const isPunch = isAtk && !isKick;
+    const atkExtend = isAtk
+      ? f.stateFrame >= f.currentMove.startup &&
+        f.stateFrame < f.currentMove.startup + f.currentMove.active
+        ? 1
+        : 0.45
+      : 0;
+
+    const hipY = -58 + crouchOffset - bob;
+    const shoulderY = -108 + crouchOffset - bob;
+    const headY = -128 + crouchOffset - bob;
+
+    // Back leg
+    ctx.strokeStyle = c.primary;
+    ctx.lineWidth = 14;
+    ctx.lineCap = 'round';
+    ctx.beginPath();
+    ctx.moveTo(-8, hipY);
+    ctx.lineTo(-16 - stride * 0.6, -24 + crouchOffset * 0.4);
+    ctx.lineTo(-18 - stride, -4);
+    ctx.stroke();
+
+    // Front leg (extends during kicks!)
+    ctx.strokeStyle = f.fighterId === 'terry' ? c.accent : c.primary;
+    ctx.beginPath();
+    ctx.moveTo(8, hipY);
+    if (isKick) {
+      const kickY = f.currentMove.crouch ? -14 : -78;
+      ctx.lineTo(24 + atkExtend * 32, (hipY + kickY) / 2);
+      ctx.lineTo(28 + atkExtend * 58, kickY);
+    } else {
+      ctx.lineTo(14 + stride * 0.6, -24 + crouchOffset * 0.4);
+      ctx.lineTo(18 + stride, -4);
+    }
+    ctx.stroke();
+
+    // Torso jacket / outfit
+    ctx.fillStyle = isHit && frameCount % 4 < 2 ? '#ffffff' : c.primary;
+    ctx.beginPath();
+    ctx.roundRect(-20, shoulderY, 40, 56 - crouchOffset * 0.2, 8);
+    ctx.fill();
+
+    // Inner shirt / accent stripe
+    ctx.fillStyle = c.secondary;
+    ctx.fillRect(-7, shoulderY + 4, 14, 42 - crouchOffset * 0.2);
+
+    // Belt / waist sash
+    ctx.fillStyle = c.accent;
+    ctx.fillRect(-20, hipY - 6, 40, 9);
+
+    // Back arm
+    ctx.strokeStyle = c.skin;
+    ctx.lineWidth = 11;
+    ctx.beginPath();
+    ctx.moveTo(-14, shoulderY + 10);
+    if (f.state === FIGHTER_STATES.BLOCKSTUN) {
+      ctx.lineTo(12, shoulderY + 6);
+    } else {
+      ctx.lineTo(-22, shoulderY + 28);
+      ctx.lineTo(-6, shoulderY + 22);
+    }
+    ctx.stroke();
+
+    // Head
+    ctx.fillStyle = c.skin;
+    ctx.beginPath();
+    ctx.arc(2, headY, 15, 0, Math.PI * 2);
+    ctx.fill();
+
+    // Hair / Hat per character
+    ctx.fillStyle = c.hair;
+    if (f.fighterId === 'terry') {
+      // Blond hair + iconic red cap
+      ctx.beginPath();
+      ctx.arc(-6, headY + 2, 11, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.fillStyle = c.band;
+      ctx.beginPath();
+      ctx.arc(2, headY - 5, 16, Math.PI, 0);
+      ctx.fill();
+      ctx.fillRect(0, headY - 8, 25, 5); // Cap visor
+    } else if (f.fighterId === 'iori') {
+      // Spiky red bangs
+      ctx.beginPath();
+      ctx.moveTo(-14, headY - 4);
+      ctx.lineTo(0, headY - 22);
+      ctx.lineTo(18, headY - 8);
+      ctx.lineTo(16, headY + 4);
+      ctx.lineTo(4, headY - 6);
+      ctx.closePath();
+      ctx.fill();
+    } else if (f.fighterId === 'mai') {
+      // Dark hair + flowing ponytail
+      ctx.beginPath();
+      ctx.arc(0, headY - 4, 16, Math.PI * 0.85, Math.PI * 2.1);
+      ctx.fill();
+      ctx.strokeStyle = c.hair;
+      ctx.lineWidth = 8;
+      ctx.beginPath();
+      ctx.moveTo(-12, headY - 8);
+      ctx.quadraticCurveTo(-32, headY - 2 + Math.sin(frameCount * 0.2) * 6, -38, headY + 24);
+      ctx.stroke();
+    } else {
+      // Kyo spiky hair + white headband with fluttering tails
+      ctx.beginPath();
+      ctx.arc(1, headY - 5, 16, Math.PI, 0);
+      ctx.fill();
+      ctx.fillStyle = c.band;
+      ctx.fillRect(-14, headY - 10, 31, 6);
+      ctx.strokeStyle = c.band;
+      ctx.lineWidth = 4;
+      ctx.beginPath();
+      ctx.moveTo(-14, headY - 7);
+      ctx.lineTo(-30, headY - 2 + Math.sin(frameCount * 0.25) * 6);
+      ctx.stroke();
+    }
+
+    // Eye
+    ctx.fillStyle = '#09090b';
+    ctx.fillRect(9, headY - 3, 4, 3);
+
+    // Front attacking arm
+    ctx.strokeStyle = c.skin;
+    ctx.lineWidth = 12;
+    ctx.beginPath();
+    ctx.moveTo(12, shoulderY + 10);
+    if (f.state === FIGHTER_STATES.BLOCKSTUN) {
+      ctx.lineTo(22, shoulderY + 2);
+      ctx.lineTo(18, shoulderY - 14);
+    } else if (isPunch) {
+      const punchY =
+        f.currentMove.id === 'SP2' ? shoulderY - 48 * atkExtend : shoulderY + 10;
+      const punchX = 24 + atkExtend * (f.currentMove.superMove ? 66 : 48);
+      ctx.lineTo(punchX, punchY);
+    } else if (f.state === FIGHTER_STATES.VICTORY) {
+      ctx.lineTo(22, shoulderY - 34);
+    } else {
+      ctx.lineTo(24, shoulderY + 24);
+      ctx.lineTo(30, shoulderY + 12);
+    }
+    ctx.stroke();
+
+    // Flame aura on Special / Super attacks!
+    if (isAtk && f.currentMove.flameFx && atkExtend > 0.5) {
+      const fxX = isKick ? 74 : 68;
+      const fxY =
+        f.currentMove.id === 'SP2'
+          ? shoulderY - 42
+          : f.currentMove.superMove
+          ? shoulderY - 10
+          : shoulderY + 8;
+      const r = f.currentMove.superMove ? 56 : 30;
+      const grad = ctx.createRadialGradient(fxX, fxY, 4, fxX, fxY, r);
+      grad.addColorStop(0, c.flameCore || '#ffffff');
+      grad.addColorStop(0.5, c.flame);
+      grad.addColorStop(1, 'rgba(255, 100, 0, 0)');
+      ctx.fillStyle = grad;
+      ctx.beginPath();
+      ctx.arc(fxX, fxY, r, 0, Math.PI * 2);
+      ctx.fill();
+    }
+
+    ctx.restore();
+  }
+
+  _drawProjectile(ctx, p, frameCount) {
+    ctx.save();
+    ctx.translate(p.x, p.y);
+    if (p.fanSpin) {
+      ctx.rotate(frameCount * 0.45);
+      ctx.fillStyle = p.color;
+      ctx.beginPath();
+      ctx.moveTo(0, 0);
+      ctx.arc(0, 0, 22, -0.7, 0.7);
+      ctx.closePath();
+      ctx.fill();
+      ctx.fillStyle = p.core;
+      ctx.beginPath();
+      ctx.arc(0, 0, 7, 0, Math.PI * 2);
+      ctx.fill();
+    } else {
+      const grad = ctx.createRadialGradient(0, 0, 4, 0, 0, p.w * 0.75);
+      grad.addColorStop(0, p.core);
+      grad.addColorStop(0.5, p.color);
+      grad.addColorStop(1, 'rgba(0,0,0,0)');
+      ctx.fillStyle = grad;
+      ctx.beginPath();
+      ctx.ellipse(0, 0, p.w * 0.68, p.h * 0.7, 0, 0, Math.PI * 2);
+      ctx.fill();
+    }
+    ctx.restore();
+  }
+
+  _drawEffect(ctx, fx) {
+    const progress = 1 - fx.life / fx.maxLife;
+    ctx.save();
+    ctx.globalAlpha = Math.max(0, 1 - progress);
+    const r = fx.radius * (0.45 + progress * 0.9);
+    if (fx.type === 'block') {
+      ctx.strokeStyle = fx.color;
+      ctx.lineWidth = 4;
+      ctx.beginPath();
+      ctx.arc(fx.x, fx.y, r, 0, Math.PI * 2);
+      ctx.stroke();
+    } else {
+      const grad = ctx.createRadialGradient(fx.x, fx.y, 2, fx.x, fx.y, r);
+      grad.addColorStop(0, '#ffffff');
+      grad.addColorStop(0.45, fx.color);
+      grad.addColorStop(1, 'rgba(255, 80, 0, 0)');
+      ctx.fillStyle = grad;
+      ctx.beginPath();
+      ctx.arc(fx.x, fx.y, r, 0, Math.PI * 2);
+      ctx.fill();
+    }
+    ctx.restore();
+  }
+
+  _drawDebugBoxes(ctx, engine) {
+    const drawBox = (box, color) => {
+      if (!box) return;
+      ctx.save();
+      ctx.strokeStyle = color;
+      ctx.fillStyle = color.replace('1)', '0.18)');
+      ctx.lineWidth = 2;
+      ctx.fillRect(box.x, box.y, box.w, box.h);
+      ctx.strokeRect(box.x, box.y, box.w, box.h);
+      ctx.restore();
+    };
+    for (const f of [engine.p1, engine.p2]) {
+      drawBox(getPushbox(f), 'rgba(56, 189, 248, 1)');
+      drawBox(getHurtbox(f), 'rgba(34, 197, 94, 1)');
+      drawBox(getActiveHitbox(f), 'rgba(239, 68, 68, 1)');
+    }
+    for (const p of engine.projectiles) {
+      drawBox(getProjectileBox(p), 'rgba(249, 115, 22, 1)');
+    }
+  }
+
+  _drawHUD(ctx, engine) {
+    const barW = 365;
+    const barH = 22;
+    const topY = 26;
+
+    // P1 HP Bar (fills right-to-left from center)
+    const p1X = 48;
+    ctx.fillStyle = '#18181b';
+    ctx.fillRect(p1X - 2, topY - 2, barW + 4, barH + 4);
+    const p1DispW = (engine.p1.displayHp / engine.p1.maxHp) * barW;
+    const p1HpW = (engine.p1.hp / engine.p1.maxHp) * barW;
+    ctx.fillStyle = '#dc2626';
+    ctx.fillRect(p1X + (barW - p1DispW), topY, p1DispW, barH);
+    const p1Grad = ctx.createLinearGradient(p1X, topY, p1X, topY + barH);
+    p1Grad.addColorStop(0, '#fde047');
+    p1Grad.addColorStop(1, '#22c55e');
+    ctx.fillStyle = p1Grad;
+    ctx.fillRect(p1X + (barW - p1HpW), topY, p1HpW, barH);
+
+    // P2 HP Bar (fills left-to-right from center)
+    const p2X = STAGE_WIDTH - 48 - barW;
+    ctx.fillStyle = '#18181b';
+    ctx.fillRect(p2X - 2, topY - 2, barW + 4, barH + 4);
+    const p2DispW = (engine.p2.displayHp / engine.p2.maxHp) * barW;
+    const p2HpW = (engine.p2.hp / engine.p2.maxHp) * barW;
+    ctx.fillStyle = '#dc2626';
+    ctx.fillRect(p2X, topY, p2DispW, barH);
+    const p2Grad = ctx.createLinearGradient(p2X, topY, p2X, topY + barH);
+    p2Grad.addColorStop(0, '#fde047');
+    p2Grad.addColorStop(1, '#22c55e');
+    ctx.fillStyle = p2Grad;
+    ctx.fillRect(p2X, topY, p2HpW, barH);
+
+    // Guard gauges
+    const guardW = 140;
+    ctx.fillStyle = 'rgba(0,0,0,0.55)';
+    ctx.fillRect(p1X + barW - guardW, topY + barH + 5, guardW, 6);
+    ctx.fillStyle = '#38bdf8';
+    ctx.fillRect(
+      p1X + barW - (engine.p1.guard / MAX_GUARD) * guardW,
+      topY + barH + 5,
+      (engine.p1.guard / MAX_GUARD) * guardW,
+      6
+    );
+
+    ctx.fillStyle = 'rgba(0,0,0,0.55)';
+    ctx.fillRect(p2X, topY + barH + 5, guardW, 6);
+    ctx.fillStyle = '#38bdf8';
+    ctx.fillRect(p2X, topY + barH + 5, (engine.p2.guard / MAX_GUARD) * guardW, 6);
+
+    // Fighter names
+    ctx.font = '900 16px "Inter", sans-serif';
+    ctx.fillStyle = '#f8fafc';
+    ctx.textAlign = 'left';
+    ctx.fillText(engine.p1.def.name, p1X, topY + barH + 22);
+    ctx.textAlign = 'right';
+    ctx.fillText(engine.p2.def.name, p2X + barW, topY + barH + 22);
+
+    // Team / Win indicators
+    if (engine.mode === GAME_MODES.TEAM_3V3) {
+      for (let i = 0; i < engine.p1Team.length; i++) {
+        ctx.fillStyle =
+          i < engine.p1TeamIdx
+            ? '#3f3f46'
+            : i === engine.p1TeamIdx
+            ? '#facc15'
+            : '#22c55e';
+        ctx.beginPath();
+        ctx.arc(p1X + 12 + i * 20, topY - 11, 6, 0, Math.PI * 2);
+        ctx.fill();
+      }
+      for (let i = 0; i < engine.p2Team.length; i++) {
+        ctx.fillStyle =
+          i < engine.p2TeamIdx
+            ? '#3f3f46'
+            : i === engine.p2TeamIdx
+            ? '#facc15'
+            : '#22c55e';
+        ctx.beginPath();
+        ctx.arc(p2X + barW - 12 - i * 20, topY - 11, 6, 0, Math.PI * 2);
+        ctx.fill();
+      }
+    } else if (engine.mode !== GAME_MODES.TRAINING) {
+      for (let i = 0; i < 2; i++) {
+        ctx.fillStyle = i < engine.p1Wins ? '#facc15' : '#3f3f46';
+        ctx.beginPath();
+        ctx.arc(p1X + 12 + i * 20, topY - 11, 6, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.fillStyle = i < engine.p2Wins ? '#facc15' : '#3f3f46';
+        ctx.beginPath();
+        ctx.arc(p2X + barW - 12 - i * 20, topY - 11, 6, 0, Math.PI * 2);
+        ctx.fill();
+      }
+    }
+
+    // Center Arcade Timer
+    ctx.fillStyle = '#09090b';
+    ctx.strokeStyle = '#facc15';
+    ctx.lineWidth = 2.5;
+    ctx.beginPath();
+    ctx.roundRect(STAGE_WIDTH / 2 - 34, 14, 68, 46, 8);
+    ctx.fill();
+    ctx.stroke();
+
+    ctx.fillStyle = '#fde047';
+    ctx.font = '900 28px "Inter", monospace';
+    ctx.textAlign = 'center';
+    const timeStr =
+      engine.mode === GAME_MODES.TRAINING
+        ? '∞'
+        : String(Math.max(0, engine.getTimeLeft())).padStart(2, '0');
+    ctx.fillText(timeStr, STAGE_WIDTH / 2, 47);
+
+    // Bottom Power Gauges (KOF MAX Stocks)
+    this._drawPowerGauge(ctx, 48, STAGE_HEIGHT - 34, engine.p1, true);
+    this._drawPowerGauge(ctx, STAGE_WIDTH - 48 - 220, STAGE_HEIGHT - 34, engine.p2, false);
+  }
+
+  _drawPowerGauge(ctx, x, y, fighter, isP1) {
+    const w = 220;
+    const h = 14;
+    const stocks = Math.floor(fighter.power / POWER_PER_STOCK);
+    const partial = (fighter.power % POWER_PER_STOCK) / POWER_PER_STOCK;
+
+    ctx.fillStyle = 'rgba(9, 9, 11, 0.85)';
+    ctx.fillRect(x - 2, y - 2, w + 4, h + 4);
+
+    const fillW = stocks >= 3 ? w : partial * w;
+    const grad = ctx.createLinearGradient(x, y, x + w, y);
+    grad.addColorStop(0, '#06b6d4');
+    grad.addColorStop(1, '#a855f7');
+    ctx.fillStyle = grad;
+    if (isP1) {
+      ctx.fillRect(x, y, fillW, h);
+    } else {
+      ctx.fillRect(x + (w - fillW), y, fillW, h);
+    }
+
+    // Stock badge
+    ctx.font = '900 13px "Inter", sans-serif';
+    ctx.fillStyle = stocks > 0 ? '#fde047' : '#94a3b8';
+    ctx.textAlign = isP1 ? 'left' : 'right';
+    ctx.fillText(`MAX ×${stocks}`, isP1 ? x : x + w, y - 6);
+  }
+
+  _drawAnnouncement(ctx, text, phase) {
+    ctx.save();
+    ctx.fillStyle = 'rgba(9, 9, 11, 0.52)';
+    ctx.fillRect(0, STAGE_HEIGHT / 2 - 52, STAGE_WIDTH, 104);
+
+    ctx.font = '900 54px "Inter", system-ui, sans-serif';
+    ctx.textAlign = 'center';
+    ctx.lineWidth = 8;
+    ctx.strokeStyle = '#09090b';
+    ctx.strokeText(text, STAGE_WIDTH / 2, STAGE_HEIGHT / 2 + 18);
+
+    const grad = ctx.createLinearGradient(0, STAGE_HEIGHT / 2 - 30, 0, STAGE_HEIGHT / 2 + 25);
+    grad.addColorStop(0, '#fef08a');
+    grad.addColorStop(1, phase === MATCH_PHASES.KO_SLOWMO ? '#ef4444' : '#f97316');
+    ctx.fillStyle = grad;
+    ctx.fillText(text, STAGE_WIDTH / 2, STAGE_HEIGHT / 2 + 18);
+    ctx.restore();
+  }
+}
+
+// ===== src/main.js =====
+// KOF Web Arcade - Browser Entry Point, Input Manager & UI Controller
+
+
+
+
+
+
+function initKofApp() {
+  const canvas = document.getElementById('gameCanvas');
+  if (!canvas) return;
+  canvas.width = STAGE_WIDTH;
+  canvas.height = STAGE_HEIGHT;
+
+  const audio = new ArcadeAudio();
+  const renderer = new ArcadeRenderer(canvas);
+  const ai = new FighterAI(DIFFICULTY.NORMAL);
+
+  const state = {
+    mode: GAME_MODES.TEAM_3V3,
+    difficulty: DIFFICULTY.NORMAL,
+    stageIndex: 0,
+    p1Team: ['kyo', 'iori', 'terry'],
+    p2Team: ['iori', 'mai', 'kyo'],
+    paused: false,
+    inMenu: true,
+    engine: null,
+    rafId: null,
+    lastTime: 0,
+    accumulator: 0
+  };
+
+  // Keyboard & Touch input states
+  const keys = new Set();
+  const touchInputP1 = createEmptyInput();
+
+  const P1_KEYMAP = {
+    KeyA: 'left',
+    KeyD: 'right',
+    KeyW: 'up',
+    KeyS: 'down',
+    KeyJ: 'LP',
+    KeyU: 'HP',
+    KeyK: 'LK',
+    KeyI: 'HK',
+    KeyO: 'SP',
+    KeyL: 'SUPER',
+    ShiftLeft: 'ROLL',
+    Space: 'ROLL'
+  };
+
+  const P2_KEYMAP = {
+    ArrowLeft: 'left',
+    ArrowRight: 'right',
+    ArrowUp: 'up',
+    ArrowDown: 'down',
+    Numpad1: 'LP',
+    Numpad4: 'HP',
+    Numpad2: 'LK',
+    Numpad5: 'HK',
+    Numpad3: 'SP',
+    Numpad6: 'SUPER',
+    Numpad0: 'ROLL'
+  };
+
+  function readInput(keymap, touchFallback = null) {
+    const inp = createEmptyInput();
+    for (const [code, action] of Object.entries(keymap)) {
+      if (keys.has(code)) inp[action] = true;
+    }
+    if (touchFallback) {
+      for (const k of Object.keys(inp)) {
+        if (touchFallback[k]) inp[k] = true;
+      }
+    }
+    return inp;
+  }
+
+  window.addEventListener('keydown', (e) => {
+    audio.unlock();
+    if (P1_KEYMAP[e.code] || P2_KEYMAP[e.code]) {
+      e.preventDefault();
+    }
+    keys.add(e.code);
+    if (e.code === 'Escape' && !state.inMenu) {
+      togglePause();
+    }
+  });
+
+  window.addEventListener('keyup', (e) => {
+    keys.delete(e.code);
+  });
+
+  // DOM References
+  const menuOverlay = document.getElementById('menuOverlay');
+  const matchOverOverlay = document.getElementById('matchOverOverlay');
+  const matchOverTitle = document.getElementById('matchOverTitle');
+  const moveListModal = document.getElementById('moveListModal');
+  const moveListBody = document.getElementById('moveListBody');
+  const rosterGrid = document.getElementById('rosterGrid');
+  const p1TeamBadges = document.getElementById('p1TeamBadges');
+  const p2TeamBadges = document.getElementById('p2TeamBadges');
+  const modeSelect = document.getElementById('modeSelect');
+  const diffSelect = document.getElementById('diffSelect');
+  const stageSelect = document.getElementById('stageSelect');
+  const btnPause = document.getElementById('btnPause');
+  const btnMute = document.getElementById('btnMute');
+  const btnHitbox = document.getElementById('btnHitbox');
+  const statusHint = document.getElementById('statusHint');
+
+  function renderTeamBadges() {
+    const maxSlots = state.mode === GAME_MODES.TEAM_3V3 ? 3 : 1;
+    p1TeamBadges.innerHTML = state.p1Team
+      .slice(0, maxSlots)
+      .map(
+        (id, idx) =>
+          `<span class="inline-flex items-center gap-1 px-2.5 py-1 rounded bg-amber-500/20 border border-amber-400/50 text-amber-200 text-xs font-bold">${idx + 1}. ${FIGHTERS[id].name}</span>`
+      )
+      .join('');
+    p2TeamBadges.innerHTML = state.p2Team
+      .slice(0, maxSlots)
+      .map(
+        (id, idx) =>
+          `<span class="inline-flex items-center gap-1 px-2.5 py-1 rounded bg-rose-500/20 border border-rose-400/50 text-rose-200 text-xs font-bold">${idx + 1}. ${FIGHTERS[id].name}</span>`
+      )
+      .join('');
+  }
+
+  function renderRoster() {
+    rosterGrid.innerHTML = FIGHTER_LIST.map((f) => {
+      const inP1 = state.p1Team[0] === f.id;
+      return `
+        <div class="rounded-xl border ${inP1 ? 'border-amber-400 bg-zinc-800/90' : 'border-zinc-700 bg-zinc-900/80'} p-3 flex flex-col justify-between gap-2 transition hover:border-amber-300">
+          <div>
+            <div class="flex items-center justify-between gap-2">
+              <span class="font-extrabold text-sm text-white">${f.name}</span>
+              <span class="text-[11px] px-1.5 py-0.5 rounded font-semibold" style="background:${f.colors.flame}33;color:${f.colors.flameCore};border:1px solid ${f.colors.flame}66">${f.archetype}</span>
+            </div>
+            <div class="text-[11px] text-zinc-400 mt-0.5">${f.title} · HP ${f.maxHp}</div>
+          </div>
+          <div class="flex gap-1.5 mt-1">
+            <button type="button" data-pick-p1="${f.id}" class="flex-1 py-1 rounded bg-amber-500 hover:bg-amber-400 text-zinc-950 font-bold text-xs transition cursor-pointer">选为 P1</button>
+            <button type="button" data-pick-p2="${f.id}" class="flex-1 py-1 rounded bg-rose-600 hover:bg-rose-500 text-white font-bold text-xs transition cursor-pointer">选为 P2</button>
+          </div>
+        </div>
+      `;
+    }).join('');
+
+    rosterGrid.querySelectorAll('[data-pick-p1]').forEach((btn) => {
+      btn.addEventListener('click', () => {
+        audio.unlock();
+        audio.playSelect();
+        const id = btn.getAttribute('data-pick-p1');
+        state.p1Team = [id, ...state.p1Team.filter((x) => x !== id)].slice(0, 3);
+        while (state.p1Team.length < 3) state.p1Team.push(id);
+        renderTeamBadges();
+        renderRoster();
+      });
+    });
+
+    rosterGrid.querySelectorAll('[data-pick-p2]').forEach((btn) => {
+      btn.addEventListener('click', () => {
+        audio.unlock();
+        audio.playSelect();
+        const id = btn.getAttribute('data-pick-p2');
+        state.p2Team = [id, ...state.p2Team.filter((x) => x !== id)].slice(0, 3);
+        while (state.p2Team.length < 3) state.p2Team.push(id);
+        renderTeamBadges();
+        renderRoster();
+      });
+    });
+  }
+
+  function renderMoveList() {
+    moveListBody.innerHTML = FIGHTER_LIST.map((f) => {
+      const m = f.moves;
+      return `
+        <div class="rounded-lg border border-zinc-700 bg-zinc-900/90 p-3">
+          <div class="font-extrabold text-amber-300 text-sm mb-1.5">${f.name} (${f.enName})</div>
+          <ul class="space-y-1 text-xs text-zinc-200">
+            <li><span class="font-bold text-white">${m.SP1.name}</span>：${m.SP1.commandLabel}（快捷 <kbd class="px-1 bg-zinc-800 rounded">O</kbd>）</li>
+            <li><span class="font-bold text-white">${m.SP2.name}</span>：${m.SP2.commandLabel}（快捷 <kbd class="px-1 bg-zinc-800 rounded">W+O</kbd>）</li>
+            <li><span class="font-bold text-white">${m.SP3.name}</span>：${m.SP3.commandLabel}（快捷 <kbd class="px-1 bg-zinc-800 rounded">后+O</kbd>）</li>
+            <li><span class="font-bold text-rose-400">${m.SUPER.name}</span>：${m.SUPER.commandLabel}（快捷 <kbd class="px-1 bg-zinc-800 rounded">L</kbd>）</li>
+          </ul>
+        </div>
+      `;
+    }).join('');
+  }
+
+  function startMatch() {
+    audio.unlock();
+    audio.playRoundStart();
+    audio.startBgm();
+    ai.setDifficulty(state.difficulty);
+
+    const teamSize = state.mode === GAME_MODES.TEAM_3V3 ? 3 : 1;
+    state.engine = new MatchEngine({
+      mode: state.mode,
+      stageIndex: state.stageIndex,
+      p1Team: state.p1Team.slice(0, teamSize),
+      p2Team: state.p2Team.slice(0, teamSize),
+      audio
+    });
+    state.inMenu = false;
+    state.paused = false;
+    btnPause.textContent = '暂停';
+    menuOverlay.classList.add('hidden');
+    matchOverOverlay.classList.add('hidden');
+    statusHint.textContent =
+      state.mode === GAME_MODES.VS_2P
+        ? '双人模式：P1 WASD+J/U/K/I/O/L/Space · P2 方向键+小键盘1-6/0'
+        : 'P1：WASD 移动 · J/U 轻重拳 · K/I 轻重脚 · O 必杀 · L 超必杀 · Space 闪避翻滚';
+  }
+
+  function togglePause() {
+    if (state.inMenu || !state.engine) return;
+    state.paused = !state.paused;
+    btnPause.textContent = state.paused ? '继续' : '暂停';
+  }
+
+  function gameLoop(now) {
+    state.rafId = requestAnimationFrame(gameLoop);
+    if (!state.lastTime) state.lastTime = now;
+    const dt = Math.min(0.1, (now - state.lastTime) / 1000);
+    state.lastTime = now;
+
+    if (!state.engine) return;
+
+    if (!state.inMenu && !state.paused) {
+      state.accumulator += dt;
+      while (state.accumulator >= FIXED_DT) {
+        const p1Input = readInput(P1_KEYMAP, touchInputP1);
+        let p2Input;
+        if (state.mode === GAME_MODES.VS_2P) {
+          p2Input = readInput(P2_KEYMAP);
+        } else if (state.mode === GAME_MODES.TRAINING) {
+          p2Input = createEmptyInput();
+        } else {
+          p2Input = ai.computeInput(state.engine.p2, state.engine.p1, state.engine.projectiles);
+        }
+        state.engine.step(p1Input, p2Input);
+        state.accumulator -= FIXED_DT;
+      }
+
+      if (
+        state.engine.phase === MATCH_PHASES.MATCH_OVER &&
+        matchOverOverlay.classList.contains('hidden')
+      ) {
+        matchOverTitle.textContent = state.engine.announcement;
+        matchOverOverlay.classList.remove('hidden');
+      }
+    }
+
+    renderer.render(state.engine);
+  }
+
+  // Bind UI controls
+  STAGES.forEach((s, idx) => {
+    const opt = document.createElement('option');
+    opt.value = String(idx);
+    opt.textContent = `${s.name} (${s.enName})`;
+    stageSelect.appendChild(opt);
+  });
+
+  modeSelect.addEventListener('change', () => {
+    state.mode = modeSelect.value;
+    renderTeamBadges();
+  });
+  diffSelect.addEventListener('change', () => {
+    state.difficulty = diffSelect.value;
+    ai.setDifficulty(state.difficulty);
+  });
+  stageSelect.addEventListener('change', () => {
+    state.stageIndex = Number(stageSelect.value) || 0;
+  });
+
+  document.getElementById('btnStartFight').addEventListener('click', startMatch);
+  document.getElementById('btnRematch').addEventListener('click', startMatch);
+  document.getElementById('btnBackMenu').addEventListener('click', () => {
+    state.inMenu = true;
+    matchOverOverlay.classList.add('hidden');
+    menuOverlay.classList.remove('hidden');
+  });
+  document.getElementById('btnMenu').addEventListener('click', () => {
+    state.inMenu = true;
+    state.paused = false;
+    matchOverOverlay.classList.add('hidden');
+    menuOverlay.classList.remove('hidden');
+  });
+  document.getElementById('btnRestart').addEventListener('click', () => {
+    if (!state.inMenu) startMatch();
+  });
+  btnPause.addEventListener('click', togglePause);
+  btnMute.addEventListener('click', () => {
+    audio.unlock();
+    const muted = audio.toggleMute();
+    btnMute.textContent = muted ? '音效: 关' : '音效: 开';
+  });
+  btnHitbox.addEventListener('click', () => {
+    renderer.showHitboxes = !renderer.showHitboxes;
+    btnHitbox.textContent = renderer.showHitboxes ? '判定框: 开' : '判定框: 关';
+  });
+
+  document.getElementById('btnMoves').addEventListener('click', () => {
+    moveListModal.classList.remove('hidden');
+  });
+  document.getElementById('btnCloseMoves').addEventListener('click', () => {
+    moveListModal.classList.add('hidden');
+  });
+
+  // Bind on-screen arcade touch/pointer buttons
+  document.querySelectorAll('[data-pad]').forEach((btn) => {
+    const action = btn.getAttribute('data-pad');
+    const press = (e) => {
+      e.preventDefault();
+      audio.unlock();
+      touchInputP1[action] = true;
+      btn.classList.add('scale-95', 'brightness-125');
+    };
+    const release = (e) => {
+      e.preventDefault();
+      touchInputP1[action] = false;
+      btn.classList.remove('scale-95', 'brightness-125');
+    };
+    btn.addEventListener('pointerdown', press);
+    btn.addEventListener('pointerup', release);
+    btn.addEventListener('pointerleave', release);
+    btn.addEventListener('pointercancel', release);
+  });
+
+  // Initial attract-mode background engine preview
+  state.engine = new MatchEngine({
+    mode: state.mode,
+    stageIndex: state.stageIndex,
+    p1Team: state.p1Team,
+    p2Team: state.p2Team,
+    audio: null
+  });
+
+  renderTeamBadges();
+  renderRoster();
+  renderMoveList();
+
+  if (state.rafId) cancelAnimationFrame(state.rafId);
+  state.rafId = requestAnimationFrame(gameLoop);
+}
+
+if (typeof window !== 'undefined') {
+  window.addEventListener('load', initKofApp);
+}
+
+})();
+</script>
+</body>
+</html>

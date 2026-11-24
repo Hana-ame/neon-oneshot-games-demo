@@ -1,0 +1,3845 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
+  <title>RimWeb · 边缘世界网页版</title>
+  <style>
+:root {
+  --bg-dark: #0f1419;
+  --panel-bg: rgba(18, 25, 34, 0.92);
+  --panel-border: rgba(148, 163, 184, 0.24);
+  --accent: #38bdf8;
+  --accent-warm: #f59e0b;
+  --danger: #ef4444;
+  --good: #22c55e;
+  --text-main: #f1f5f9;
+  --text-muted: #94a3b8;
+}
+
+* {
+  box-sizing: border-box;
+  user-select: none;
+}
+
+html, body {
+  margin: 0;
+  padding: 0;
+  width: 100%;
+  height: 100%;
+  overflow: hidden;
+  background: var(--bg-dark);
+  color: var(--text-main);
+  font-family: 'Inter', system-ui, -apple-system, 'PingFang SC', 'Microsoft YaHei', sans-serif;
+  font-size: 13px;
+}
+
+#app {
+  position: relative;
+  width: 100%;
+  height: 100%;
+}
+
+#game-canvas {
+  display: block;
+  width: 100%;
+  height: 100%;
+  cursor: crosshair;
+  touch-action: none;
+}
+
+.hud-panel {
+  background: var(--panel-bg);
+  border: 1px solid var(--panel-border);
+  border-radius: 8px;
+  backdrop-filter: blur(8px);
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.45);
+}
+
+/* Top Bar: Colonist Portraits + Clock/Speed */
+#top-bar {
+  position: absolute;
+  top: 10px;
+  left: 10px;
+  right: 10px;
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: 10px;
+  pointer-events: none;
+  z-index: 20;
+}
+
+#colonist-bar {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  pointer-events: auto;
+}
+
+.colonist-chip {
+  display: flex;
+  flex-direction: column;
+  width: 78px;
+  padding: 5px 6px;
+  cursor: pointer;
+  transition: transform 0.12s, border-color 0.12s;
+}
+
+.colonist-chip:hover {
+  transform: translateY(-1px);
+  border-color: var(--accent);
+}
+
+.colonist-chip.selected {
+  border-color: var(--accent);
+  box-shadow: 0 0 0 1px var(--accent);
+}
+
+.colonist-chip.drafted {
+  border-color: var(--accent-warm);
+}
+
+.chip-top {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  margin-bottom: 3px;
+}
+
+.pawn-dot {
+  width: 12px;
+  height: 12px;
+  border-radius: 50%;
+  border: 1px solid rgba(255,255,255,0.4);
+  flex-shrink: 0;
+}
+
+.chip-name {
+  font-weight: 600;
+  font-size: 11px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.mini-bar {
+  height: 4px;
+  background: #1e293b;
+  border-radius: 2px;
+  overflow: hidden;
+  margin-top: 2px;
+}
+
+.mini-bar-fill {
+  height: 100%;
+  transition: width 0.2s;
+}
+
+.chip-status {
+  font-size: 10px;
+  color: var(--text-muted);
+  margin-top: 2px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+/* Top-Right Status & Speed */
+#status-cluster {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 6px;
+  pointer-events: auto;
+}
+
+#clock-panel {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 6px 10px;
+  flex-wrap: wrap;
+}
+
+.clock-meta {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  line-height: 1.25;
+}
+
+.clock-time {
+  font-weight: 700;
+  font-size: 13px;
+  color: #f8fafc;
+}
+
+.clock-sub {
+  font-size: 11px;
+  color: var(--text-muted);
+}
+
+.speed-btns {
+  display: flex;
+  gap: 4px;
+}
+
+.btn {
+  background: rgba(30, 41, 59, 0.9);
+  color: var(--text-main);
+  border: 1px solid rgba(148, 163, 184, 0.28);
+  border-radius: 6px;
+  padding: 5px 9px;
+  font-size: 12px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: background 0.12s, border-color 0.12s;
+}
+
+.btn:hover {
+  background: rgba(51, 65, 85, 0.95);
+  border-color: var(--accent);
+}
+
+.btn.active {
+  background: rgba(56, 189, 248, 0.24);
+  border-color: var(--accent);
+  color: #e0f2fe;
+}
+
+.btn-warn {
+  border-color: rgba(245, 158, 11, 0.55);
+  color: #fde68a;
+}
+
+.btn-danger {
+  border-color: rgba(239, 68, 68, 0.6);
+  color: #fecaca;
+}
+
+/* Left Resource Panel */
+#resource-panel {
+  position: absolute;
+  top: 86px;
+  left: 10px;
+  width: 146px;
+  padding: 8px 10px;
+  z-index: 15;
+}
+
+.panel-title {
+  font-size: 11px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: var(--text-muted);
+  margin-bottom: 6px;
+  display: flex;
+  justify-content: space-between;
+}
+
+.res-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 2px 0;
+  font-size: 12px;
+}
+
+.res-val {
+  font-variant-numeric: tabular-nums;
+  font-weight: 600;
+}
+
+.power-row {
+  margin-top: 6px;
+  padding-top: 6px;
+  border-top: 1px solid var(--panel-border);
+  font-size: 11px;
+  display: flex;
+  justify-content: space-between;
+}
+
+/* Right Alerts Stack */
+#alerts-panel {
+  position: absolute;
+  top: 90px;
+  right: 10px;
+  width: 240px;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  z-index: 15;
+  pointer-events: none;
+}
+
+.alert-card {
+  pointer-events: auto;
+  padding: 8px 10px;
+  border-left: 3px solid var(--accent);
+  cursor: pointer;
+}
+
+.alert-card.good { border-left-color: var(--good); }
+.alert-card.danger { border-left-color: var(--danger); background: rgba(69, 10, 10, 0.9); }
+
+.alert-title {
+  font-weight: 700;
+  font-size: 12px;
+  margin-bottom: 2px;
+}
+
+.alert-msg {
+  font-size: 11px;
+  color: #cbd5e1;
+  line-height: 1.35;
+}
+
+/* Bottom-Left Inspector */
+#inspector-panel {
+  position: absolute;
+  bottom: 74px;
+  left: 10px;
+  width: 270px;
+  padding: 10px 12px;
+  z-index: 15;
+  display: none;
+}
+
+#inspector-panel.visible {
+  display: block;
+}
+
+.insp-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 6px;
+}
+
+.insp-name {
+  font-weight: 700;
+  font-size: 14px;
+}
+
+.insp-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 4px 10px;
+  font-size: 11px;
+  margin-top: 6px;
+}
+
+.thought-tags {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px;
+  margin-top: 6px;
+}
+
+.thought-tag {
+  font-size: 10px;
+  padding: 2px 6px;
+  border-radius: 4px;
+  background: rgba(30, 41, 59, 0.9);
+}
+
+.thought-tag.pos { color: #86efac; }
+.thought-tag.neg { color: #fca5a5; }
+
+/* Bottom-Right Event Log */
+#log-panel {
+  position: absolute;
+  bottom: 74px;
+  right: 10px;
+  width: 260px;
+  max-height: 130px;
+  padding: 8px 10px;
+  overflow-y: auto;
+  z-index: 15;
+  font-size: 11px;
+}
+
+.log-item {
+  padding: 2px 0;
+  border-bottom: 1px solid rgba(148, 163, 184, 0.08);
+  color: #cbd5e1;
+}
+
+.log-item.good { color: #86efac; }
+.log-item.danger { color: #fca5a5; font-weight: 600; }
+
+/* Bottom Main Command Dock */
+#bottom-dock {
+  position: absolute;
+  bottom: 10px;
+  left: 10px;
+  right: 10px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 6px;
+  pointer-events: none;
+  z-index: 25;
+}
+
+#sub-toolbar {
+  pointer-events: auto;
+  display: none;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 6px;
+  padding: 6px 10px;
+  max-width: 96vw;
+}
+
+#sub-toolbar.visible {
+  display: flex;
+}
+
+#main-toolbar {
+  pointer-events: auto;
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 6px;
+  padding: 6px 10px;
+  max-width: 96vw;
+}
+
+.tool-hint {
+  font-size: 10px;
+  color: var(--text-muted);
+  display: block;
+}
+
+/* Modal Dialog (Work Priorities / Tech / Save) */
+#modal-backdrop {
+  position: absolute;
+  inset: 0;
+  background: rgba(2, 6, 23, 0.65);
+  display: none;
+  align-items: center;
+  justify-content: center;
+  z-index: 40;
+  padding: 16px;
+}
+
+#modal-backdrop.visible {
+  display: flex;
+}
+
+#modal-box {
+  width: min(640px, 95vw);
+  max-height: 82vh;
+  overflow-y: auto;
+  padding: 16px 18px;
+}
+
+.modal-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 12px;
+  padding-bottom: 8px;
+  border-bottom: 1px solid var(--panel-border);
+}
+
+.modal-title {
+  font-size: 16px;
+  font-weight: 700;
+}
+
+table.work-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 12px;
+}
+
+table.work-table th, table.work-table td {
+  padding: 7px 6px;
+  text-align: center;
+  border-bottom: 1px solid rgba(148, 163, 184, 0.14);
+}
+
+table.work-table td:first-child {
+  text-align: left;
+  font-weight: 600;
+}
+
+.prio-btn {
+  width: 30px;
+  height: 26px;
+  border-radius: 5px;
+  border: 1px solid rgba(148, 163, 184, 0.3);
+  background: #1e293b;
+  color: #f8fafc;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.prio-btn.p1 { background: #15803d; border-color: #22c55e; }
+.prio-btn.p2 { background: #1d4ed8; border-color: #60a5fa; }
+.prio-btn.p3 { background: #854d0e; border-color: #facc15; }
+.prio-btn.p4 { background: #475569; }
+.prio-btn.p0 { background: #0f172a; color: #64748b; }
+
+.tech-card {
+  padding: 10px 12px;
+  border-radius: 6px;
+  border: 1px solid var(--panel-border);
+  background: rgba(30, 41, 59, 0.55);
+  margin-bottom: 8px;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 10px;
+}
+
+.tech-card.done { border-color: var(--good); }
+.tech-card.active { border-color: var(--accent); }
+
+@media (max-width: 720px) {
+  #log-panel { display: none; }
+  #resource-panel { width: 122px; font-size: 11px; }
+  #inspector-panel { width: 230px; }
+}
+
+  </style>
+</head>
+<body>
+  <div id="app">
+    <canvas id="game-canvas"></canvas>
+
+    <!-- Top Colonist Bar & Clock/Speed Controls -->
+    <div id="top-bar">
+      <div id="colonist-bar"></div>
+      <div id="status-cluster">
+        <div id="clock-panel" class="hud-panel">
+          <div class="clock-meta">
+            <span id="clock-time" class="clock-time">第 1 天 · 08:00</span>
+            <span id="clock-sub" class="clock-sub">晴朗 · 18°C</span>
+          </div>
+          <div class="speed-btns">
+            <button id="btn-pause" class="btn" title="暂停/继续 (Space)">⏸</button>
+            <button id="btn-s1" class="btn active" title="1倍速 (1)">1×</button>
+            <button id="btn-s2" class="btn" title="2倍速 (2)">2×</button>
+            <button id="btn-s3" class="btn" title="3倍速 (3)">3×</button>
+            <button id="btn-mute" class="btn" title="音效开关">🔊</button>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Left Resource Panel -->
+    <div id="resource-panel" class="hud-panel">
+      <div class="panel-title"><span>殖民地物资</span><span id="pop-count">4人</span></div>
+      <div id="resource-list"></div>
+      <div id="power-status" class="power-row">
+        <span>⚡ 电力</span>
+        <span id="power-val">0W</span>
+      </div>
+    </div>
+
+    <!-- Right Alerts Stack -->
+    <div id="alerts-panel"></div>
+
+    <!-- Bottom-Left Inspector -->
+    <div id="inspector-panel" class="hud-panel"></div>
+
+    <!-- Bottom-Right Event Log -->
+    <div id="log-panel" class="hud-panel">
+      <div class="panel-title"><span>事件日志</span></div>
+      <div id="log-list"></div>
+    </div>
+
+    <!-- Bottom Command Dock -->
+    <div id="bottom-dock">
+      <div id="sub-toolbar" class="hud-panel"></div>
+      <div id="main-toolbar" class="hud-panel">
+        <button class="btn active" data-menu="select">🖱 选择</button>
+        <button class="btn" data-menu="orders">🪓 指令</button>
+        <button class="btn" data-menu="zones">🌾 区域</button>
+        <button class="btn" data-menu="build">🏗 建造</button>
+        <button class="btn" id="btn-open-work">📋 工作优先级</button>
+        <button class="btn" id="btn-open-tech">🔬 科技树</button>
+        <button class="btn" id="btn-open-story">🎲 叙事者</button>
+        <button class="btn" id="btn-open-save">💾 存档</button>
+        <button class="btn" id="btn-open-help">❓ 指南</button>
+      </div>
+    </div>
+
+    <!-- Modal Overlay -->
+    <div id="modal-backdrop">
+      <div id="modal-box" class="hud-panel">
+        <div class="modal-header">
+          <span id="modal-title" class="modal-title">面板</span>
+          <button id="modal-close" class="btn">关闭</button>
+        </div>
+        <div id="modal-body"></div>
+      </div>
+    </div>
+  </div>
+
+  <script>
+(function() {
+  "use strict";
+
+// ===== src/constants.js =====
+/**
+ * Core game definitions, terrain properties, buildings, jobs, traits, and balance constants.
+ */
+const MAP_WIDTH = 56;
+const MAP_HEIGHT = 42;
+const TILE_SIZE = 32;
+const TERRAIN = {
+  GRASS: 'grass',
+  FERTILE: 'fertile',
+  DIRT: 'dirt',
+  SAND: 'sand',
+  WATER_SHALLOW: 'water_shallow',
+  WATER_DEEP: 'water_deep',
+  ROCK_FLOOR: 'rock_floor',
+};
+const TERRAIN_INFO = {
+  [TERRAIN.GRASS]: { name: '草地', color: '#4d6b3c', altColor: '#486537', moveCost: 1.0, walkable: true, fertile: 1.0 },
+  [TERRAIN.FERTILE]: { name: '肥沃土壤', color: '#3c562c', altColor: '#375028', moveCost: 1.05, walkable: true, fertile: 1.5 },
+  [TERRAIN.DIRT]: { name: '泥土', color: '#6e5c45', altColor: '#675640', moveCost: 1.0, walkable: true, fertile: 0.7 },
+  [TERRAIN.SAND]: { name: '沙地', color: '#9c8c62', altColor: '#94845b', moveCost: 1.25, walkable: true, fertile: 0.2 },
+  [TERRAIN.WATER_SHALLOW]: { name: '浅水', color: '#396882', altColor: '#346078', moveCost: 2.2, walkable: true, fertile: 0 },
+  [TERRAIN.WATER_DEEP]: { name: '深水', color: '#24475e', altColor: '#204056', moveCost: Infinity, walkable: false, fertile: 0 },
+  [TERRAIN.ROCK_FLOOR]: { name: '岩石地面', color: '#5b5e63', altColor: '#54575c', moveCost: 0.9, walkable: true, fertile: 0 },
+};
+const NATURAL_OBJECTS = {
+  TREE: 'tree',
+  BERRY_BUSH: 'berry_bush',
+  ROCK_WALL: 'rock_wall',
+  STEEL_ORE: 'steel_ore',
+  GOLD_ORE: 'gold_ore',
+};
+const NATURAL_INFO = {
+  [NATURAL_OBJECTS.TREE]: { name: '橡树', walkable: true, moveCost: 1.2, work: 60, yield: { wood: 25 }, order: 'chop' },
+  [NATURAL_OBJECTS.BERRY_BUSH]: { name: '浆果丛', walkable: true, moveCost: 1.1, work: 35, yield: { rawFood: 14 }, order: 'harvest' },
+  [NATURAL_OBJECTS.ROCK_WALL]: { name: '花岗岩山体', walkable: false, moveCost: Infinity, work: 110, yield: { stone: 20 }, order: 'mine' },
+  [NATURAL_OBJECTS.STEEL_ORE]: { name: '压实钢铁矿', walkable: false, moveCost: Infinity, work: 100, yield: { steel: 30 }, order: 'mine' },
+  [NATURAL_OBJECTS.GOLD_ORE]: { name: '金矿脉', walkable: false, moveCost: Infinity, work: 130, yield: { silver: 55 }, order: 'mine' },
+};
+const BUILDINGS = {
+  WOOD_WALL: 'wood_wall',
+  STONE_WALL: 'stone_wall',
+  DOOR: 'door',
+  BED: 'bed',
+  CAMPFIRE: 'campfire',
+  TORCH: 'torch',
+  SOLAR: 'solar',
+  TURRET: 'turret',
+  SANDBAG: 'sandbag',
+  RESEARCH_BENCH: 'research_bench',
+};
+const BUILDING_INFO = {
+  [BUILDINGS.WOOD_WALL]: {
+    name: '木墙',
+    category: 'structure',
+    cost: { wood: 10 },
+    work: 45,
+    maxHp: 140,
+    walkable: false,
+    cover: 0.75,
+    power: 0,
+    color: '#8c6239',
+    desc: '基础防御与隔断墙体，造价低廉。',
+  },
+  [BUILDINGS.STONE_WALL]: {
+    name: '石墙',
+    category: 'structure',
+    cost: { stone: 12 },
+    work: 75,
+    maxHp: 320,
+    walkable: false,
+    cover: 0.85,
+    power: 0,
+    color: '#7f848c',
+    desc: '坚固耐打的石质防线，适合抵御袭击。',
+  },
+  [BUILDINGS.DOOR]: {
+    name: '木门',
+    category: 'structure',
+    cost: { wood: 15 },
+    work: 50,
+    maxHp: 120,
+    walkable: true,
+    moveCost: 1.15,
+    power: 0,
+    color: '#a87948',
+    desc: '允许殖民者自由通行的出入口。',
+  },
+  [BUILDINGS.BED]: {
+    name: '木床',
+    category: 'furniture',
+    cost: { wood: 25 },
+    work: 70,
+    maxHp: 100,
+    walkable: true,
+    moveCost: 1.3,
+    power: 0,
+    color: '#4e79a7',
+    desc: '提升休息恢复速度并增加舒适心情。',
+  },
+  [BUILDINGS.CAMPFIRE]: {
+    name: '篝火灶台',
+    category: 'production',
+    cost: { wood: 20 },
+    work: 50,
+    maxHp: 80,
+    walkable: true,
+    moveCost: 1.4,
+    power: 0,
+    lightRadius: 4.5,
+    color: '#e07a38',
+    desc: '将生食烹制成简单餐食，同时在夜间照明。',
+  },
+  [BUILDINGS.TORCH]: {
+    name: '火把',
+    category: 'furniture',
+    cost: { wood: 10 },
+    work: 25,
+    maxHp: 60,
+    walkable: true,
+    moveCost: 1.0,
+    power: 0,
+    lightRadius: 5.5,
+    color: '#f2b749',
+    desc: '驱散黑暗，提升夜间作业效率与安全感。',
+  },
+  [BUILDINGS.SOLAR]: {
+    name: '太阳能板',
+    category: 'power',
+    cost: { steel: 30 },
+    work: 100,
+    maxHp: 150,
+    walkable: false,
+    power: 1200,
+    color: '#2c5c8f',
+    desc: '白天产生 1200W 电力，为炮塔等设备供能。',
+  },
+  [BUILDINGS.TURRET]: {
+    name: '自动机枪塔',
+    category: 'defense',
+    cost: { steel: 40 },
+    work: 110,
+    maxHp: 180,
+    walkable: true,
+    moveCost: 1.3,
+    power: -400,
+    range: 8.5,
+    damage: 14,
+    cooldown: 0.75,
+    color: '#9aa5b1',
+    desc: '需 400W 电力，自动瞄准并射击 8.5 格内敌人。',
+  },
+  [BUILDINGS.SANDBAG]: {
+    name: '沙袋掩体',
+    category: 'defense',
+    cost: { steel: 5, wood: 5 },
+    work: 35,
+    maxHp: 160,
+    walkable: true,
+    moveCost: 1.6,
+    cover: 0.55,
+    power: 0,
+    color: '#b8a074',
+    desc: '减缓敌人移动并为守卫提供远程掩护。',
+  },
+  [BUILDINGS.RESEARCH_BENCH]: {
+    name: '研究台',
+    category: 'production',
+    cost: { wood: 35, steel: 15 },
+    work: 95,
+    maxHp: 120,
+    walkable: true,
+    moveCost: 1.4,
+    power: 0,
+    color: '#6b5b95',
+    desc: '殖民者在此推进科技研究，解锁全局增益。',
+  },
+};
+const RESOURCE_INFO = {
+  wood: { name: '木材', color: '#c48b52', icon: '🪵' },
+  steel: { name: '钢铁', color: '#9fb1c1', icon: '⚙️' },
+  stone: { name: '石材', color: '#a8acb0', icon: '🪨' },
+  rawFood: { name: '生食', color: '#d66853', icon: '🫐' },
+  meals: { name: '餐食', color: '#e6b84c', icon: '🍲' },
+  medicine: { name: '草药', color: '#58b368', icon: '🌿' },
+  silver: { name: '白银', color: '#d9e2ec', icon: '🪙' },
+};
+const ZONES = {
+  STOCKPILE: 'stockpile',
+  GROWING: 'growing',
+};
+const JOB_TYPES = {
+  IDLE: 'idle',
+  CHOP: 'chop',
+  MINE: 'mine',
+  HARVEST: 'harvest',
+  BUILD: 'build',
+  SOW: 'sow',
+  COOK: 'cook',
+  RESEARCH: 'research',
+  EAT: 'eat',
+  SLEEP: 'sleep',
+  RELAX: 'relax',
+  FIGHT: 'fight',
+  MOVE_DRAFTED: 'move_drafted',
+  TEND: 'tend',
+};
+const WORK_CATEGORIES = [
+  { id: 'medical', label: '医疗' },
+  { id: 'cook', label: '烹饪' },
+  { id: 'build', label: '建造' },
+  { id: 'plant', label: '种植' },
+  { id: 'mine', label: '采矿' },
+  { id: 'research', label: '研究' },
+];
+const TRAITS = [
+  { id: 'industrious', name: '勤奋', workSpeed: 1.25, moodMod: 0, desc: '全局工作速度 +25%' },
+  { id: 'optimist', name: '乐观', workSpeed: 1.0, moodMod: 10, desc: '基础心情 +10' },
+  { id: 'nimble', name: '敏捷', workSpeed: 1.0, moveSpeed: 1.2, moodMod: 0, desc: '移动速度 +20%' },
+  { id: 'iron_stomach', name: '铁胃', workSpeed: 1.0, hungerRate: 0.78, moodMod: 0, desc: '饥饿消耗 -22%' },
+  { id: 'sharpshooter', name: '神射手', workSpeed: 1.0, combatBonus: 1.3, moodMod: 2, desc: '战斗伤害 +30%' },
+  { id: 'night_owl', name: '夜猫子', workSpeed: 1.1, moodMod: 4, desc: '工作效率 +10%，心情 +4' },
+];
+const TECH_TREE = [
+  { id: 'agriculture', name: '高效农耕', cost: 120, desc: '作物生长速度 +35%，收获量 +25%' },
+  { id: 'fortification', name: '强化工事', cost: 160, desc: '所有建筑建造速度 +30%，炮塔伤害 +25%' },
+  { id: 'medicine_adv', name: '野战急救', cost: 180, desc: '殖民者自然回血 +50%，治疗效率翻倍' },
+  { id: 'solar_grid', name: '高能光伏', cost: 220, desc: '太阳能发电效率 +40%，夜间保留 35% 储能供电' },
+];
+const WEATHER_TYPES = {
+  CLEAR: { id: 'clear', name: '晴朗', moveMult: 1.0, solarMult: 1.0, tempOffset: 0 },
+  RAIN: { id: 'rain', name: '小雨', moveMult: 0.92, solarMult: 0.65, tempOffset: -4 },
+  HEATWAVE: { id: 'heatwave', name: '热浪', moveMult: 0.95, solarMult: 1.2, tempOffset: 12 },
+  COLDSNAP: { id: 'coldsnap', name: '寒潮', moveMult: 0.9, solarMult: 0.85, tempOffset: -11 },
+};
+const DAY_LENGTH_SECONDS = 90; // 90 real seconds = 1 in-game day at 1x speed
+
+
+// ===== src/mapGen.js =====
+/**
+ * Deterministic seeded PRNG and procedural terrain/resource map generator.
+ */
+function createRng(seed = 1337) {
+  let s = (seed >>> 0) || 1;
+  return () => {
+    s = (s + 0x6d2b79f5) | 0;
+    let t = Math.imul(s ^ (s >>> 15), 1 | s);
+    t = (t + Math.imul(t ^ (t >>> 7), 61 | t)) ^ t;
+    return ((t ^ (t >>> 14)) >>> 0) / 4294967296;
+  };
+}
+
+/**
+ * Simple 2D value noise with smoothstep interpolation for organic biomes.
+ */
+function createNoise2D(rng, gridSize = 16) {
+  const table = new Float32Array(gridSize * gridSize);
+  for (let i = 0; i < table.length; i++) table[i] = rng();
+
+  const sample = (gx, gy) => {
+    const x = ((gx % gridSize) + gridSize) % gridSize;
+    const y = ((gy % gridSize) + gridSize) % gridSize;
+    return table[y * gridSize + x];
+  };
+
+  return (x, y) => {
+    const x0 = Math.floor(x);
+    const y0 = Math.floor(y);
+    const fx = x - x0;
+    const fy = y - y0;
+    const ux = fx * fx * (3 - 2 * fx);
+    const uy = fy * fy * (3 - 2 * fy);
+
+    const a = sample(x0, y0);
+    const b = sample(x0 + 1, y0);
+    const c = sample(x0, y0 + 1);
+    const d = sample(x0 + 1, y0 + 1);
+
+    return a + (b - a) * ux + (c - a) * uy + (a - b - c + d) * ux * uy;
+  };
+}
+function generateMap(width = MAP_WIDTH, height = MAP_HEIGHT, seed = 2026) {
+  const rng = createRng(seed);
+  const elevNoise = createNoise2D(rng, 16);
+  const moistNoise = createNoise2D(rng, 16);
+  const detailNoise = createNoise2D(rng, 24);
+
+  const tiles = new Array(width * height);
+  const cx = Math.floor(width / 2);
+  const cy = Math.floor(height / 2);
+
+  for (let y = 0; y < height; y++) {
+    for (let x = 0; x < width; x++) {
+      const idx = y * width + x;
+      const distCenter = Math.hypot(x - cx, y - cy);
+
+      let elev =
+        elevNoise(x * 0.09, y * 0.09) * 0.65 +
+        detailNoise(x * 0.22, y * 0.22) * 0.35;
+      const moist = moistNoise(x * 0.1, y * 0.1);
+
+      // Keep landing zone near center flat and fertile/walkable
+      if (distCenter < 7.5) {
+        elev = 0.48 + (elev - 0.5) * 0.2;
+      }
+
+      let terrain = TERRAIN.GRASS;
+      let natural = null;
+
+      if (elev < 0.22) {
+        terrain = TERRAIN.WATER_DEEP;
+      } else if (elev < 0.29) {
+        terrain = TERRAIN.WATER_SHALLOW;
+      } else if (elev < 0.34) {
+        terrain = TERRAIN.SAND;
+      } else if (elev > 0.72) {
+        terrain = TERRAIN.ROCK_FLOOR;
+        const oreRoll = rng();
+        if (oreRoll < 0.16) {
+          natural = NATURAL_OBJECTS.STEEL_ORE;
+        } else if (oreRoll < 0.19) {
+          natural = NATURAL_OBJECTS.GOLD_ORE;
+        } else if (elev > 0.75) {
+          natural = NATURAL_OBJECTS.ROCK_WALL;
+        }
+      } else if (moist > 0.62) {
+        terrain = TERRAIN.FERTILE;
+      } else if (moist < 0.33) {
+        terrain = TERRAIN.DIRT;
+      } else {
+        terrain = TERRAIN.GRASS;
+      }
+
+      // Scatter trees and berry bushes outside the immediate crash clearing
+      if (!natural && distCenter > 4.2) {
+        if (terrain === TERRAIN.GRASS || terrain === TERRAIN.FERTILE) {
+          const flora = rng();
+          if (flora < 0.14) {
+            natural = NATURAL_OBJECTS.TREE;
+          } else if (flora < 0.175) {
+            natural = NATURAL_OBJECTS.BERRY_BUSH;
+          }
+        } else if (terrain === TERRAIN.DIRT && rng() < 0.04) {
+          natural = NATURAL_OBJECTS.TREE;
+        }
+      }
+
+      tiles[idx] = {
+        x,
+        y,
+        terrain,
+        natural,
+        building: null,      // { type, hp, maxHp, built, progress, workRequired, cooldown }
+        zone: null,          // 'stockpile' | 'growing' | null
+        crop: null,          // { progress: 0..100, type: 'rice' }
+        order: null,         // 'chop' | 'mine' | 'harvest' | null
+        variant: rng() > 0.5 ? 1 : 0,
+      };
+    }
+  }
+
+  // Guarantee accessible steel and berry resources near starting zone for smooth gameplay
+  const ensurePatch = (ox, oy, naturalType, terrainType) => {
+    const tx = Math.max(2, Math.min(width - 3, cx + ox));
+    const ty = Math.max(2, Math.min(height - 3, cy + oy));
+    const t = tiles[ty * width + tx];
+    t.terrain = terrainType;
+    t.natural = naturalType;
+  };
+
+  ensurePatch(-8, -5, NATURAL_OBJECTS.STEEL_ORE, TERRAIN.ROCK_FLOOR);
+  ensurePatch(-8, -4, NATURAL_OBJECTS.STEEL_ORE, TERRAIN.ROCK_FLOOR);
+  ensurePatch(-7, -5, NATURAL_OBJECTS.ROCK_WALL, TERRAIN.ROCK_FLOOR);
+  ensurePatch(7, 4, NATURAL_OBJECTS.BERRY_BUSH, TERRAIN.FERTILE);
+  ensurePatch(8, 4, NATURAL_OBJECTS.BERRY_BUSH, TERRAIN.FERTILE);
+  ensurePatch(7, 5, NATURAL_OBJECTS.TREE, TERRAIN.GRASS);
+  ensurePatch(-6, 6, NATURAL_OBJECTS.TREE, TERRAIN.GRASS);
+  ensurePatch(-5, 6, NATURAL_OBJECTS.TREE, TERRAIN.GRASS);
+
+  // Place default initial stockpile zone near center
+  for (let dy = -1; dy <= 1; dy++) {
+    for (let dx = -2; dx <= 0; dx++) {
+      const t = tiles[(cy + dy) * width + (cx + dx)];
+      t.natural = null;
+      t.zone = 'stockpile';
+    }
+  }
+
+  return {
+    width,
+    height,
+    seed,
+    tiles,
+    spawnPoint: { x: cx, y: cy },
+  };
+}
+
+
+// ===== src/pathfinding.js =====
+/**
+ * A* pathfinding with binary min-heap and terrain/building movement costs.
+ */
+
+class MinHeap {
+  constructor() {
+    this.data = [];
+  }
+  get size() {
+    return this.data.length;
+  }
+  push(node) {
+    this.data.push(node);
+    this._bubbleUp(this.data.length - 1);
+  }
+  pop() {
+    if (this.data.length === 0) return null;
+    const top = this.data[0];
+    const last = this.data.pop();
+    if (this.data.length > 0) {
+      this.data[0] = last;
+      this._sinkDown(0);
+    }
+    return top;
+  }
+  _bubbleUp(idx) {
+    while (idx > 0) {
+      const parent = (idx - 1) >> 1;
+      if (this.data[idx].f >= this.data[parent].f) break;
+      [this.data[idx], this.data[parent]] = [this.data[parent], this.data[idx]];
+      idx = parent;
+    }
+  }
+  _sinkDown(idx) {
+    const len = this.data.length;
+    while (true) {
+      let smallest = idx;
+      const left = idx * 2 + 1;
+      const right = idx * 2 + 2;
+      if (left < len && this.data[left].f < this.data[smallest].f) smallest = left;
+      if (right < len && this.data[right].f < this.data[smallest].f) smallest = right;
+      if (smallest === idx) break;
+      [this.data[idx], this.data[smallest]] = [this.data[smallest], this.data[idx]];
+      idx = smallest;
+    }
+  }
+}
+function isTileWalkable(tile) {
+  if (!tile) return false;
+  const tInfo = TERRAIN_INFO[tile.terrain];
+  if (!tInfo || !tInfo.walkable) return false;
+  if (tile.natural && !NATURAL_INFO[tile.natural].walkable) return false;
+  if (tile.building && tile.building.built) {
+    const bInfo = BUILDING_INFO[tile.building.type];
+    if (bInfo && !bInfo.walkable) return false;
+  }
+  return true;
+}
+function getTileMoveCost(tile) {
+  if (!isTileWalkable(tile)) return Infinity;
+  let cost = TERRAIN_INFO[tile.terrain].moveCost;
+  if (tile.natural && NATURAL_INFO[tile.natural].moveCost) {
+    cost *= NATURAL_INFO[tile.natural].moveCost;
+  }
+  if (tile.building && tile.building.built && BUILDING_INFO[tile.building.type].moveCost) {
+    cost *= BUILDING_INFO[tile.building.type].moveCost;
+  }
+  return cost;
+}
+
+const DIRS = [
+  [1, 0, 1],
+  [-1, 0, 1],
+  [0, 1, 1],
+  [0, -1, 1],
+  [1, 1, 1.414],
+  [1, -1, 1.414],
+  [-1, 1, 1.414],
+  [-1, -1, 1.414],
+];
+
+/**
+ * Finds shortest path from (sx, sy) to (gx, gy).
+ * If allowAdjacent is true, stops when within 1 tile of (gx, gy) (useful for mining/building impassable walls).
+ */
+function findPath(map, sx, sy, gx, gy, allowAdjacent = false, maxExpansions = 1600) {
+  const { width, height, tiles } = map;
+  const startX = Math.max(0, Math.min(width - 1, Math.round(sx)));
+  const startY = Math.max(0, Math.min(height - 1, Math.round(sy)));
+  const goalX = Math.max(0, Math.min(width - 1, Math.round(gx)));
+  const goalY = Math.max(0, Math.min(height - 1, Math.round(gy)));
+
+  if (startX === goalX && startY === goalY) return [];
+  if (!allowAdjacent && !isTileWalkable(tiles[goalY * width + goalX])) return null;
+  if (allowAdjacent && Math.abs(startX - goalX) <= 1 && Math.abs(startY - goalY) <= 1) return [];
+
+  const total = width * height;
+  const gScore = new Float32Array(total).fill(Infinity);
+  const cameFrom = new Int32Array(total).fill(-1);
+  const closed = new Uint8Array(total);
+
+  const startIdx = startY * width + startX;
+  const goalIdx = goalY * width + goalX;
+  gScore[startIdx] = 0;
+
+  const open = new MinHeap();
+  const h = (x, y) => Math.hypot(goalX - x, goalY - y);
+  open.push({ idx: startIdx, x: startX, y: startY, f: h(startX, startY) });
+
+  let expansions = 0;
+  let reachedIdx = -1;
+
+  while (open.size > 0 && expansions < maxExpansions) {
+    const cur = open.pop();
+    if (closed[cur.idx]) continue;
+    closed[cur.idx] = 1;
+    expansions++;
+
+    if (cur.idx === goalIdx) {
+      reachedIdx = cur.idx;
+      break;
+    }
+    if (allowAdjacent && Math.abs(cur.x - goalX) <= 1 && Math.abs(cur.y - goalY) <= 1) {
+      reachedIdx = cur.idx;
+      break;
+    }
+
+    for (let i = 0; i < DIRS.length; i++) {
+      const [dx, dy, baseStep] = DIRS[i];
+      const nx = cur.x + dx;
+      const ny = cur.y + dy;
+      if (nx < 0 || nx >= width || ny < 0 || ny >= height) continue;
+
+      const nIdx = ny * width + nx;
+      if (closed[nIdx]) continue;
+
+      const nTile = tiles[nIdx];
+      if (!isTileWalkable(nTile)) continue;
+
+      // Prevent diagonal corner cutting through impassable walls
+      if (dx !== 0 && dy !== 0) {
+        if (
+          !isTileWalkable(tiles[cur.y * width + nx]) ||
+          !isTileWalkable(tiles[ny * width + cur.x])
+        ) {
+          continue;
+        }
+      }
+
+      const moveCost = getTileMoveCost(nTile);
+      const tentativeG = gScore[cur.idx] + baseStep * moveCost;
+
+      if (tentativeG < gScore[nIdx]) {
+        cameFrom[nIdx] = cur.idx;
+        gScore[nIdx] = tentativeG;
+        open.push({ idx: nIdx, x: nx, y: ny, f: tentativeG + h(nx, ny) });
+      }
+    }
+  }
+
+  if (reachedIdx === -1) return null;
+
+  const path = [];
+  let trace = reachedIdx;
+  while (trace !== startIdx && trace !== -1) {
+    path.push({ x: trace % width, y: Math.floor(trace / width) });
+    trace = cameFrom[trace];
+  }
+  path.reverse();
+  return path;
+}
+
+
+// ===== src/colonists.js =====
+/**
+ * Colonist & Raider entity factories, needs decay, thoughts, and mood calculation.
+ */
+
+const PRESET_NAMES = [
+  '林岚', '陈默', '苏晴', '周毅', '沈舟', '许宁', '顾寒', '叶蓁', '陆离', '唐果',
+];
+
+const SHIRT_COLORS = ['#4f86c6', '#c65d4f', '#5ca66e', '#c6974f', '#8b68b8', '#4fa8a3'];
+const HAIR_COLORS = ['#2a231e', '#5c3c24', '#8c5a32', '#1d1e22', '#7a3b2e', '#d6c29f'];
+function createColonist(id, x, y, rng = Math.random, customName = null) {
+  const name = customName || PRESET_NAMES[id % PRESET_NAMES.length];
+  const trait = TRAITS[Math.floor(rng() * TRAITS.length)];
+  const skillVal = () => Math.floor(2 + rng() * 8);
+
+  return {
+    id: `col_${id}`,
+    name,
+    faction: 'player',
+    x,
+    y,
+    hp: 100,
+    maxHp: 100,
+    alive: true,
+    drafted: false,
+    shirtColor: SHIRT_COLORS[id % SHIRT_COLORS.length],
+    hairColor: HAIR_COLORS[id % HAIR_COLORS.length],
+    trait,
+    skills: {
+      build: skillVal(),
+      mine: skillVal(),
+      plant: skillVal(),
+      cook: skillVal(),
+      shooting: skillVal(),
+      medical: skillVal(),
+      research: skillVal(),
+    },
+    workPriorities: {
+      medical: 1,
+      cook: 2,
+      build: 2,
+      plant: 2,
+      mine: 3,
+      research: 3,
+    },
+    needs: {
+      hunger: 82 + rng() * 15, // 0 = starving, 100 = full
+      rest: 80 + rng() * 18,   // 0 = exhausted, 100 = rested
+      joy: 75 + rng() * 20,    // 0 = bored, 100 = happy
+    },
+    mood: 72,
+    thoughts: [],
+    job: null, // { type, tx, ty, progress, workRequired, targetId }
+    path: [],
+    attackCooldown: 0,
+    statusText: '空闲',
+  };
+}
+function createRaider(id, x, y, wave = 1) {
+  const hp = 70 + wave * 12;
+  return {
+    id: `raider_${id}`,
+    name: `掠夺者 #${id}`,
+    faction: 'hostile',
+    x,
+    y,
+    hp,
+    maxHp: hp,
+    alive: true,
+    damage: 9 + Math.min(12, wave * 2),
+    range: 4.5,
+    speed: 2.0 + Math.min(0.8, wave * 0.08),
+    attackCooldown: 0,
+    path: [],
+    targetId: null,
+    statusText: '进攻中',
+  };
+}
+function getColonistWorkSpeed(colonist, skillKey = null) {
+  let speed = colonist.trait?.workSpeed || 1.0;
+  if (skillKey && colonist.skills[skillKey] != null) {
+    speed *= 0.75 + colonist.skills[skillKey] * 0.07;
+  }
+  if (colonist.needs.rest < 20) speed *= 0.75;
+  if (colonist.hp < 50) speed *= 0.8;
+  return speed;
+}
+function getColonistMoveSpeed(colonist, weatherMoveMult = 1.0) {
+  let speed = 2.7 * (colonist.trait?.moveSpeed || 1.0) * weatherMoveMult;
+  if (colonist.hp < 50) speed *= 0.75;
+  if (colonist.needs.hunger < 15) speed *= 0.82;
+  return speed;
+}
+function updateColonistNeeds(colonist, dt, world) {
+  if (!colonist.alive) return;
+
+  const hungerMult = colonist.trait?.hungerRate || 1.0;
+  const isSleeping = colonist.job?.type === JOB_TYPES.SLEEP;
+  const isRelaxing = colonist.job?.type === JOB_TYPES.RELAX;
+
+  colonist.needs.hunger = Math.max(0, colonist.needs.hunger - dt * 0.42 * hungerMult);
+  if (!isSleeping) {
+    colonist.needs.rest = Math.max(0, colonist.needs.rest - dt * 0.34);
+  }
+  if (!isRelaxing) {
+    colonist.needs.joy = Math.max(0, colonist.needs.joy - dt * 0.24);
+  }
+
+  // Starvation damage
+  if (colonist.needs.hunger <= 0) {
+    colonist.hp = Math.max(0, colonist.hp - dt * 1.4);
+  } else if (colonist.hp < colonist.maxHp && colonist.needs.hunger > 40) {
+    const medMult = world.researchedTechs.has('medicine_adv') ? 1.5 : 1.0;
+    colonist.hp = Math.min(colonist.maxHp, colonist.hp + dt * 0.35 * medMult);
+  }
+
+  if (colonist.hp <= 0) {
+    colonist.alive = false;
+    colonist.statusText = '阵亡';
+    return;
+  }
+
+  // Compute thoughts and target mood
+  const thoughts = [];
+  let targetMood = 55 + (colonist.trait?.moodMod || 0);
+
+  if (colonist.needs.hunger > 75) {
+    thoughts.push({ label: '吃饱喝足', delta: 8 });
+    targetMood += 8;
+  } else if (colonist.needs.hunger < 25) {
+    thoughts.push({ label: '饥肠辘辘', delta: -16 });
+    targetMood -= 16;
+  }
+
+  if (colonist.needs.rest > 75) {
+    thoughts.push({ label: '精力充沛', delta: 6 });
+    targetMood += 6;
+  } else if (colonist.needs.rest < 20) {
+    thoughts.push({ label: '极度疲惫', delta: -14 });
+    targetMood -= 14;
+  }
+
+  if (colonist.needs.joy > 70) {
+    thoughts.push({ label: '心情愉悦', delta: 6 });
+    targetMood += 6;
+  } else if (colonist.needs.joy < 25) {
+    thoughts.push({ label: '枯燥乏味', delta: -8 });
+    targetMood -= 8;
+  }
+
+  if (colonist.hp < 65) {
+    thoughts.push({ label: '身体受伤', delta: -12 });
+    targetMood -= 12;
+  }
+
+  if (world.weather.id === 'heatwave') {
+    thoughts.push({ label: '酷暑难耐', delta: -6 });
+    targetMood -= 6;
+  } else if (world.weather.id === 'coldsnap') {
+    thoughts.push({ label: '刺骨寒风', delta: -6 });
+    targetMood -= 6;
+  }
+
+  if (world.stats.bedsBuilt > 0) {
+    thoughts.push({ label: '温馨营地', delta: 5 });
+    targetMood += 5;
+  }
+
+  colonist.thoughts = thoughts;
+  const clamped = Math.max(0, Math.min(100, targetMood));
+  colonist.mood += (clamped - colonist.mood) * Math.min(1, dt * 0.6);
+}
+
+
+// ===== src/ai.js =====
+/**
+ * Colonist utility/priority job scheduler, FSM executor, and Raider combat AI.
+ */
+
+
+
+function dist(ax, ay, bx, by) {
+  return Math.hypot(ax - bx, ay - by);
+}
+
+function tileKey(x, y) {
+  return `${x},${y}`;
+}
+
+function getReservedTiles(world, excludeColonistId) {
+  const reserved = new Set();
+  for (const c of world.colonists) {
+    if (!c.alive || c.id === excludeColonistId || !c.job) continue;
+    if (c.job.tx != null && c.job.ty != null) {
+      reserved.add(tileKey(c.job.tx, c.job.ty));
+    }
+  }
+  return reserved;
+}
+
+function findNearestTile(world, cx, cy, predicate, reserved = null) {
+  let best = null;
+  let bestDist = Infinity;
+  const { tiles } = world.map;
+  for (let i = 0; i < tiles.length; i++) {
+    const t = tiles[i];
+    if (reserved && reserved.has(tileKey(t.x, t.y))) continue;
+    if (!predicate(t)) continue;
+    const d = dist(cx, cy, t.x, t.y);
+    if (d < bestDist) {
+      bestDist = d;
+      best = t;
+    }
+  }
+  return best;
+}
+
+function assignPathJob(colonist, world, job, allowAdjacent = false) {
+  const path = findPath(
+    world.map,
+    colonist.x,
+    colonist.y,
+    job.tx,
+    job.ty,
+    allowAdjacent
+  );
+  if (path === null) return false;
+  colonist.job = job;
+  colonist.path = path;
+  return true;
+}
+function assignJob(colonist, world) {
+  if (!colonist.alive) return;
+
+  // Drafted colonists only follow manual move orders or engage nearby hostiles
+  if (colonist.drafted) {
+    if (colonist.job && colonist.job.type === JOB_TYPES.MOVE_DRAFTED) return;
+    const nearestRaider = findNearestLiving(colonist.x, colonist.y, world.raiders, 8.5);
+    if (nearestRaider) {
+      colonist.job = { type: JOB_TYPES.FIGHT, targetId: nearestRaider.id, tx: nearestRaider.x, ty: nearestRaider.y };
+      colonist.path = [];
+      colonist.statusText = '射击防御';
+    } else {
+      colonist.job = null;
+      colonist.statusText = '征召待命';
+    }
+    return;
+  }
+
+  // 1. Self-defense when raider is close
+  const threat = findNearestLiving(colonist.x, colonist.y, world.raiders, 6.5);
+  if (threat) {
+    colonist.job = { type: JOB_TYPES.FIGHT, targetId: threat.id, tx: threat.x, ty: threat.y };
+    colonist.path = [];
+    colonist.statusText = '迎击掠夺者';
+    return;
+  }
+
+  const reserved = getReservedTiles(world, colonist.id);
+
+  // 2. Urgent survival needs
+  if (colonist.needs.hunger < 28 && (world.resources.meals > 0 || world.resources.rawFood > 0)) {
+    const stockpile = findNearestTile(world, colonist.x, colonist.y, (t) => t.zone === 'stockpile');
+    const tx = stockpile ? stockpile.x : Math.round(colonist.x);
+    const ty = stockpile ? stockpile.y : Math.round(colonist.y);
+    if (assignPathJob(colonist, world, { type: JOB_TYPES.EAT, tx, ty, progress: 0, workRequired: 18 }, false)) {
+      colonist.statusText = '前去进食';
+      return;
+    }
+  }
+
+  const isNight = world.timeOfDay >= 22 || world.timeOfDay < 5.5;
+  if (colonist.needs.rest < 24 || (isNight && colonist.needs.rest < 58)) {
+    const bed = findNearestTile(
+      world,
+      colonist.x,
+      colonist.y,
+      (t) => t.building && t.building.built && t.building.type === 'bed',
+      reserved
+    );
+    const tx = bed ? bed.x : Math.round(colonist.x);
+    const ty = bed ? bed.y : Math.round(colonist.y);
+    if (assignPathJob(colonist, world, { type: JOB_TYPES.SLEEP, tx, ty, inBed: Boolean(bed) }, false)) {
+      colonist.statusText = bed ? '回床休息' : '就地休整';
+      return;
+    }
+  }
+
+  if (colonist.needs.joy < 22) {
+    const fire = findNearestTile(
+      world,
+      colonist.x,
+      colonist.y,
+      (t) => t.building && t.building.built && (t.building.type === 'campfire' || t.building.type === 'torch')
+    );
+    const tx = fire ? fire.x : world.map.spawnPoint.x;
+    const ty = fire ? fire.y : world.map.spawnPoint.y;
+    if (assignPathJob(colonist, world, { type: JOB_TYPES.RELAX, tx, ty }, true)) {
+      colonist.statusText = '放松娱乐';
+      return;
+    }
+  }
+
+  // 3. Work priority queue (1..4, lower number = higher priority; 0 = disabled)
+  const categories = Object.entries(colonist.workPriorities)
+    .filter(([, prio]) => prio > 0)
+    .sort((a, b) => a[1] - b[1]);
+
+  for (const [cat] of categories) {
+    if (cat === 'medical' && world.resources.medicine > 0) {
+      const patient = world.colonists.find((c) => c.alive && c.id !== colonist.id && c.hp < 75);
+      if (patient) {
+        if (
+          assignPathJob(
+            colonist,
+            world,
+            { type: JOB_TYPES.TEND, targetId: patient.id, tx: Math.round(patient.x), ty: Math.round(patient.y), progress: 0, workRequired: 28 },
+            true
+          )
+        ) {
+          colonist.statusText = `治疗 ${patient.name}`;
+          return;
+        }
+      }
+    }
+
+    if (cat === 'cook' && world.resources.rawFood >= 5 && world.resources.meals < 20) {
+      const stove = findNearestTile(
+        world,
+        colonist.x,
+        colonist.y,
+        (t) => t.building && t.building.built && t.building.type === 'campfire',
+        reserved
+      );
+      if (stove) {
+        if (
+          assignPathJob(
+            colonist,
+            world,
+            { type: JOB_TYPES.COOK, tx: stove.x, ty: stove.y, progress: 0, workRequired: 35 },
+            true
+          )
+        ) {
+          colonist.statusText = '烹饪餐食';
+          return;
+        }
+      }
+    }
+
+    if (cat === 'build') {
+      const blueprint = findNearestTile(
+        world,
+        colonist.x,
+        colonist.y,
+        (t) => t.building && !t.building.built,
+        reserved
+      );
+      if (blueprint) {
+        const bInfo = BUILDING_INFO[blueprint.building.type];
+        if (
+          assignPathJob(
+            colonist,
+            world,
+            {
+              type: JOB_TYPES.BUILD,
+              tx: blueprint.x,
+              ty: blueprint.y,
+              workRequired: bInfo.work,
+            },
+            true
+          )
+        ) {
+          colonist.statusText = `建造 ${bInfo.name}`;
+          return;
+        }
+      }
+    }
+
+    if (cat === 'plant') {
+      // Designated chop/harvest first
+      const orderTile = findNearestTile(
+        world,
+        colonist.x,
+        colonist.y,
+        (t) => (t.order === 'chop' && t.natural === 'tree') || (t.order === 'harvest' && t.natural === 'berry_bush'),
+        reserved
+      );
+      if (orderTile) {
+        const nInfo = NATURAL_INFO[orderTile.natural];
+        const jType = orderTile.order === 'chop' ? JOB_TYPES.CHOP : JOB_TYPES.HARVEST;
+        if (
+          assignPathJob(
+            colonist,
+            world,
+            { type: jType, tx: orderTile.x, ty: orderTile.y, progress: 0, workRequired: nInfo.work },
+            true
+          )
+        ) {
+          colonist.statusText = jType === JOB_TYPES.CHOP ? '砍伐树木' : '采摘浆果';
+          return;
+        }
+      }
+
+      // Ripe crops in growing zone
+      const ripe = findNearestTile(
+        world,
+        colonist.x,
+        colonist.y,
+        (t) => t.zone === 'growing' && t.crop && t.crop.progress >= 100,
+        reserved
+      );
+      if (ripe) {
+        if (
+          assignPathJob(
+            colonist,
+            world,
+            { type: JOB_TYPES.HARVEST, tx: ripe.x, ty: ripe.y, progress: 0, workRequired: 24, isCrop: true },
+            false
+          )
+        ) {
+          colonist.statusText = '收割作物';
+          return;
+        }
+      }
+
+      // Empty growing zone tile to sow
+      const emptyPlot = findNearestTile(
+        world,
+        colonist.x,
+        colonist.y,
+        (t) =>
+          t.zone === 'growing' &&
+          !t.crop &&
+          !t.natural &&
+          !t.building &&
+          TERRAIN_INFO[t.terrain].fertile > 0,
+        reserved
+      );
+      if (emptyPlot) {
+        if (
+          assignPathJob(
+            colonist,
+            world,
+            { type: JOB_TYPES.SOW, tx: emptyPlot.x, ty: emptyPlot.y, progress: 0, workRequired: 22 },
+            false
+          )
+        ) {
+          colonist.statusText = '播种农田';
+          return;
+        }
+      }
+    }
+
+    if (cat === 'mine') {
+      const mineTile = findNearestTile(
+        world,
+        colonist.x,
+        colonist.y,
+        (t) =>
+          t.order === 'mine' &&
+          t.natural &&
+          NATURAL_INFO[t.natural] &&
+          NATURAL_INFO[t.natural].order === 'mine',
+        reserved
+      );
+      if (mineTile) {
+        const nInfo = NATURAL_INFO[mineTile.natural];
+        if (
+          assignPathJob(
+            colonist,
+            world,
+            { type: JOB_TYPES.MINE, tx: mineTile.x, ty: mineTile.y, progress: 0, workRequired: nInfo.work },
+            true
+          )
+        ) {
+          colonist.statusText = `开采 ${nInfo.name}`;
+          return;
+        }
+      }
+    }
+
+    if (cat === 'research' && world.activeTechId && !world.researchedTechs.has(world.activeTechId)) {
+      const bench = findNearestTile(
+        world,
+        colonist.x,
+        colonist.y,
+        (t) => t.building && t.building.built && t.building.type === 'research_bench',
+        reserved
+      );
+      if (bench) {
+        if (
+          assignPathJob(
+            colonist,
+            world,
+            { type: JOB_TYPES.RESEARCH, tx: bench.x, ty: bench.y },
+            true
+          )
+        ) {
+          const tech = TECH_TREE.find((t) => t.id === world.activeTechId);
+          colonist.statusText = `研究 ${tech ? tech.name : '科技'}`;
+          return;
+        }
+      }
+    }
+  }
+
+  // Idle fallback: gentle patrol near colony center
+  colonist.job = { type: JOB_TYPES.IDLE, timer: 2.5 + world.rng() * 3 };
+  colonist.statusText = '空闲巡视';
+  const rx = Math.max(1, Math.min(world.map.width - 2, world.map.spawnPoint.x + Math.floor((world.rng() - 0.5) * 10)));
+  const ry = Math.max(1, Math.min(world.map.height - 2, world.map.spawnPoint.y + Math.floor((world.rng() - 0.5) * 8)));
+  if (isTileWalkable(world.getTile(rx, ry))) {
+    const p = findPath(world.map, colonist.x, colonist.y, rx, ry, false, 400);
+    if (p) colonist.path = p;
+  }
+}
+
+function moveAlongPath(entity, dt, speed) {
+  if (!entity.path || entity.path.length === 0) return true;
+  let remaining = speed * dt;
+  while (remaining > 0 && entity.path.length > 0) {
+    const next = entity.path[0];
+    const dx = next.x - entity.x;
+    const dy = next.y - entity.y;
+    const d = Math.hypot(dx, dy);
+    if (d <= remaining) {
+      entity.x = next.x;
+      entity.y = next.y;
+      entity.path.shift();
+      remaining -= d;
+    } else {
+      entity.x += (dx / d) * remaining;
+      entity.y += (dy / d) * remaining;
+      remaining = 0;
+    }
+  }
+  return entity.path.length === 0;
+}
+function findNearestLiving(x, y, entities, maxRange = Infinity) {
+  let best = null;
+  let bestD = maxRange;
+  for (const e of entities) {
+    if (!e.alive) continue;
+    const d = dist(x, y, e.x, e.y);
+    if (d <= bestD) {
+      bestD = d;
+      best = e;
+    }
+  }
+  return best;
+}
+function stepColonistAI(colonist, dt, world) {
+  if (!colonist.alive) return;
+  if (colonist.attackCooldown > 0) colonist.attackCooldown = Math.max(0, colonist.attackCooldown - dt);
+
+  if (!colonist.job) {
+    assignJob(colonist, world);
+    if (!colonist.job) return;
+  }
+
+  const job = colonist.job;
+  const speed = getColonistMoveSpeed(colonist, world.weather.moveMult);
+
+  if (job.type === JOB_TYPES.IDLE) {
+    moveAlongPath(colonist, dt, speed * 0.65);
+    job.timer -= dt;
+    if (job.timer <= 0) {
+      colonist.job = null;
+    }
+    return;
+  }
+
+  if (job.type === JOB_TYPES.MOVE_DRAFTED) {
+    const arrived = moveAlongPath(colonist, dt, speed * 1.1);
+    if (arrived) {
+      colonist.job = null;
+      colonist.statusText = '征召待命';
+    }
+    return;
+  }
+
+  if (job.type === JOB_TYPES.FIGHT) {
+    const target = world.raiders.find((r) => r.id === job.targetId && r.alive);
+    if (!target) {
+      colonist.job = null;
+      return;
+    }
+    const d = dist(colonist.x, colonist.y, target.x, target.y);
+    const shootRange = 6.5;
+    if (d > shootRange) {
+      if (colonist.drafted) {
+        colonist.job = null;
+        return;
+      }
+      const p = findPath(world.map, colonist.x, colonist.y, Math.round(target.x), Math.round(target.y), true, 400);
+      if (p && p.length > 0) {
+        colonist.path = p.slice(0, 3);
+        moveAlongPath(colonist, dt, speed);
+      } else {
+        colonist.job = null;
+      }
+      return;
+    }
+
+    if (colonist.attackCooldown <= 0) {
+      const dmg = Math.round((10 + colonist.skills.shooting * 1.6) * (colonist.trait?.combatBonus || 1.0));
+      target.hp = Math.max(0, target.hp - dmg);
+      colonist.attackCooldown = 0.95;
+      world.spawnProjectile(colonist.x, colonist.y, target.x, target.y, '#ffe066', 'shot');
+      world.spawnFloatingText(target.x, target.y - 0.5, `-${dmg}`, '#ff7b7b');
+      if (target.hp <= 0) {
+        target.alive = false;
+        target.statusText = '已击倒';
+        world.stats.raidersDefeated++;
+        world.addLog(`${colonist.name} 击退了 ${target.name}！`, 'good');
+        colonist.job = null;
+      }
+    }
+    return;
+  }
+
+  // Move to job tile
+  const arrived = moveAlongPath(colonist, dt, speed);
+  if (!arrived) return;
+
+  const tile = world.getTile(job.tx, job.ty);
+
+  if (job.type === JOB_TYPES.EAT) {
+    job.progress += dt * 15;
+    colonist.statusText = '进食中';
+    if (job.progress >= job.workRequired) {
+      if (world.resources.meals > 0) {
+        world.resources.meals -= 1;
+        colonist.needs.hunger = Math.min(100, colonist.needs.hunger + 68);
+        colonist.needs.joy = Math.min(100, colonist.needs.joy + 8);
+        world.spawnFloatingText(colonist.x, colonist.y - 0.5, '+餐食', '#e6b84c');
+      } else if (world.resources.rawFood > 0) {
+        world.resources.rawFood -= 2;
+        world.resources.rawFood = Math.max(0, world.resources.rawFood);
+        colonist.needs.hunger = Math.min(100, colonist.needs.hunger + 38);
+      }
+      colonist.job = null;
+    }
+    return;
+  }
+
+  if (job.type === JOB_TYPES.SLEEP) {
+    const rate = job.inBed ? 8.5 : 5.0;
+    colonist.needs.rest = Math.min(100, colonist.needs.rest + dt * rate);
+    colonist.statusText = job.inBed ? '熟睡中' : '露宿中';
+    if (colonist.needs.rest >= 96) {
+      colonist.job = null;
+    }
+    return;
+  }
+
+  if (job.type === JOB_TYPES.RELAX) {
+    colonist.needs.joy = Math.min(100, colonist.needs.joy + dt * 9.0);
+    colonist.statusText = '休闲中';
+    if (colonist.needs.joy >= 88) {
+      colonist.job = null;
+    }
+    return;
+  }
+
+  if (job.type === JOB_TYPES.TEND) {
+    const patient = world.colonists.find((c) => c.id === job.targetId && c.alive);
+    if (!patient || patient.hp >= 95 || world.resources.medicine <= 0) {
+      colonist.job = null;
+      return;
+    }
+    const medBoost = world.researchedTechs.has('medicine_adv') ? 2.0 : 1.0;
+    job.progress += dt * 16 * getColonistWorkSpeed(colonist, 'medical') * medBoost;
+    colonist.statusText = `救治 ${patient.name}`;
+    if (job.progress >= job.workRequired) {
+      world.resources.medicine = Math.max(0, world.resources.medicine - 1);
+      const heal = Math.round(30 + colonist.skills.medical * 3 * medBoost);
+      patient.hp = Math.min(patient.maxHp, patient.hp + heal);
+      world.spawnFloatingText(patient.x, patient.y - 0.5, `+${heal} HP`, '#58b368');
+      colonist.job = null;
+    }
+    return;
+  }
+
+  if (job.type === JOB_TYPES.COOK) {
+    if (!tile?.building?.built || world.resources.rawFood < 5) {
+      colonist.job = null;
+      return;
+    }
+    job.progress += dt * 18 * getColonistWorkSpeed(colonist, 'cook');
+    colonist.statusText = '烹饪中';
+    if (job.progress >= job.workRequired) {
+      world.resources.rawFood -= 5;
+      world.resources.meals += 2;
+      world.stats.mealsCooked += 2;
+      world.spawnFloatingText(tile.x, tile.y - 0.5, '+2 餐食', '#e6b84c');
+      world.emitSound('build');
+      colonist.job = null;
+    }
+    return;
+  }
+
+  if (job.type === JOB_TYPES.BUILD) {
+    if (!tile || !tile.building || tile.building.built) {
+      colonist.job = null;
+      return;
+    }
+    const techBoost = world.researchedTechs.has('fortification') ? 1.3 : 1.0;
+    tile.building.progress += dt * 22 * getColonistWorkSpeed(colonist, 'build') * techBoost;
+    colonist.statusText = `建造 ${BUILDING_INFO[tile.building.type].name}`;
+    if (tile.building.progress >= tile.building.workRequired) {
+      tile.building.built = true;
+      tile.building.progress = tile.building.workRequired;
+      tile.building.hp = tile.building.maxHp;
+      world.stats.buildingsBuilt++;
+      if (tile.building.type === 'bed') world.stats.bedsBuilt++;
+      world.spawnFloatingText(tile.x, tile.y - 0.5, `${BUILDING_INFO[tile.building.type].name}完工`, '#7bdff2');
+      world.emitSound('build');
+      colonist.job = null;
+    }
+    return;
+  }
+
+  if (job.type === JOB_TYPES.CHOP || job.type === JOB_TYPES.MINE) {
+    if (!tile || !tile.natural || tile.order !== job.type) {
+      colonist.job = null;
+      return;
+    }
+    const skill = job.type === JOB_TYPES.CHOP ? 'plant' : 'mine';
+    job.progress += dt * 22 * getColonistWorkSpeed(colonist, skill);
+    if (job.progress >= job.workRequired) {
+      const nInfo = NATURAL_INFO[tile.natural];
+      for (const [res, amt] of Object.entries(nInfo.yield)) {
+        world.resources[res] = (world.resources[res] || 0) + amt;
+        world.spawnFloatingText(tile.x, tile.y - 0.5, `+${amt}`, '#d9f99d');
+      }
+      tile.natural = null;
+      tile.order = null;
+      world.emitSound(job.type === JOB_TYPES.CHOP ? 'chop' : 'mine');
+      colonist.job = null;
+    }
+    return;
+  }
+
+  if (job.type === JOB_TYPES.HARVEST) {
+    if (job.isCrop) {
+      if (!tile || !tile.crop || tile.crop.progress < 100) {
+        colonist.job = null;
+        return;
+      }
+      job.progress += dt * 20 * getColonistWorkSpeed(colonist, 'plant');
+      if (job.progress >= job.workRequired) {
+        const yieldAmt = world.researchedTechs.has('agriculture') ? 15 : 12;
+        world.resources.rawFood += yieldAmt;
+        tile.crop = null;
+        world.spawnFloatingText(tile.x, tile.y - 0.5, `+${yieldAmt} 生食`, '#a3e635');
+        world.emitSound('chop');
+        colonist.job = null;
+      }
+    } else {
+      if (!tile || tile.natural !== 'berry_bush') {
+        colonist.job = null;
+        return;
+      }
+      job.progress += dt * 20 * getColonistWorkSpeed(colonist, 'plant');
+      if (job.progress >= job.workRequired) {
+        world.resources.rawFood += 14;
+        tile.natural = null;
+        tile.order = null;
+        world.spawnFloatingText(tile.x, tile.y - 0.5, '+14 生食', '#a3e635');
+        world.emitSound('chop');
+        colonist.job = null;
+      }
+    }
+    return;
+  }
+
+  if (job.type === JOB_TYPES.SOW) {
+    if (!tile || tile.zone !== 'growing' || tile.crop || tile.natural || tile.building) {
+      colonist.job = null;
+      return;
+    }
+    job.progress += dt * 22 * getColonistWorkSpeed(colonist, 'plant');
+    if (job.progress >= job.workRequired) {
+      tile.crop = { type: 'rice', progress: 1 };
+      colonist.job = null;
+    }
+    return;
+  }
+
+  if (job.type === JOB_TYPES.RESEARCH) {
+    if (!tile?.building?.built || !world.activeTechId || world.researchedTechs.has(world.activeTechId)) {
+      colonist.job = null;
+      return;
+    }
+    const tech = TECH_TREE.find((t) => t.id === world.activeTechId);
+    if (!tech) {
+      colonist.job = null;
+      return;
+    }
+    const gain = dt * 6.5 * getColonistWorkSpeed(colonist, 'research');
+    world.techProgress[tech.id] = (world.techProgress[tech.id] || 0) + gain;
+    if (world.techProgress[tech.id] >= tech.cost) {
+      world.researchedTechs.add(tech.id);
+      world.addAlert('科技完成', `已解锁「${tech.name}」：${tech.desc}`, 'good');
+      world.addLog(`科技解锁：${tech.name}`, 'good');
+      // Pick next unresearched tech automatically
+      const next = TECH_TREE.find((t) => !world.researchedTechs.has(t.id));
+      world.activeTechId = next ? next.id : null;
+      colonist.job = null;
+    }
+  }
+}
+function stepRaiderAI(raider, dt, world) {
+  if (!raider.alive) return;
+  if (raider.attackCooldown > 0) raider.attackCooldown = Math.max(0, raider.attackCooldown - dt);
+
+  const targetCol = findNearestLiving(raider.x, raider.y, world.colonists, Infinity);
+  if (!targetCol) {
+    raider.statusText = '劫掠营地';
+    return;
+  }
+
+  const d = dist(raider.x, raider.y, targetCol.x, targetCol.y);
+  if (d <= raider.range) {
+    raider.path = [];
+    raider.statusText = `攻击 ${targetCol.name}`;
+    if (raider.attackCooldown <= 0) {
+      targetCol.hp = Math.max(0, targetCol.hp - raider.damage);
+      raider.attackCooldown = 1.25;
+      world.spawnProjectile(raider.x, raider.y, targetCol.x, targetCol.y, '#ff595e', 'shot');
+      world.spawnFloatingText(targetCol.x, targetCol.y - 0.5, `-${raider.damage}`, '#ff595e');
+      if (targetCol.hp <= 0) {
+        targetCol.alive = false;
+        targetCol.statusText = '阵亡';
+        world.addAlert('殖民者阵亡', `${targetCol.name} 在战斗中倒下了！`, 'danger');
+        world.addLog(`${targetCol.name} 阵亡。`, 'danger');
+      }
+    }
+    return;
+  }
+
+  if (!raider.path || raider.path.length === 0) {
+    const p = findPath(
+      world.map,
+      raider.x,
+      raider.y,
+      Math.round(targetCol.x),
+      Math.round(targetCol.y),
+      true,
+      600
+    );
+    if (p && p.length > 0) {
+      raider.path = p.slice(0, 6);
+    } else {
+      // Attack blocking player wall/building if path is sealed
+      const wall = findNearestTile(
+        world,
+        raider.x,
+        raider.y,
+        (t) => t.building && t.building.built
+      );
+      if (wall && dist(raider.x, raider.y, wall.x, wall.y) <= 2.2) {
+        if (raider.attackCooldown <= 0) {
+          wall.building.hp -= raider.damage;
+          raider.attackCooldown = 1.2;
+          world.spawnFloatingText(wall.x, wall.y - 0.4, `-${raider.damage}`, '#ff9f1c');
+          if (wall.building.hp <= 0) {
+            wall.building = null;
+          }
+        }
+      }
+    }
+  }
+
+  moveAlongPath(raider, dt, raider.speed);
+}
+
+
+// ===== src/simulation.js =====
+/**
+ * Headless colony simulation engine (World): fixed-timestep tick, power grid,
+ * crop growth, turrets, day/night cycle, weather, AI storyteller, and save/load.
+ */
+class World {
+  constructor(options = {}) {
+    this.seed = options.seed ?? 2026;
+    this.rng = createRng(this.seed);
+    this.map = generateMap(options.width ?? MAP_WIDTH, options.height ?? MAP_HEIGHT, this.seed);
+
+    this.resources = {
+      wood: 220,
+      steel: 140,
+      stone: 60,
+      rawFood: 45,
+      meals: 18,
+      medicine: 10,
+      silver: 150,
+    };
+
+    this.day = 1;
+    this.timeOfDay = 8.0; // Start at 08:00 AM
+    this.totalTime = 0;
+    this.paused = false;
+    this.speed = 1;
+
+    this.weather = WEATHER_TYPES.CLEAR;
+    this.weatherTimer = 65;
+
+    this.power = { produced: 0, consumed: 0, net: 0 };
+    this.researchedTechs = new Set();
+    this.activeTechId = TECH_TREE[0].id;
+    this.techProgress = {};
+
+    this.colonists = [];
+    this.raiders = [];
+    this.projectiles = [];
+    this.floatingTexts = [];
+    this.alerts = [];
+    this.logs = [];
+
+    this.nextColonistId = 0;
+    this.nextRaiderId = 1;
+    this.raidWave = 0;
+    this.storytellerTimer = 38;
+    this.onSound = null;
+
+    this.stats = {
+      buildingsBuilt: 0,
+      bedsBuilt: 0,
+      mealsCooked: 0,
+      raidersDefeated: 0,
+    };
+
+    const { x: cx, y: cy } = this.map.spawnPoint;
+    const offsets = [
+      [1, 0],
+      [2, 0],
+      [1, 1],
+      [2, 1],
+    ];
+    for (let i = 0; i < 4; i++) {
+      const [ox, oy] = offsets[i];
+      this.colonists.push(createColonist(this.nextColonistId++, cx + ox, cy + oy, this.rng));
+    }
+
+    // Place a starter campfire so colonists can cook right away
+    const fireTile = this.getTile(cx + 1, cy - 1);
+    if (fireTile) {
+      fireTile.natural = null;
+      fireTile.building = {
+        type: 'campfire',
+        hp: BUILDING_INFO.campfire.maxHp,
+        maxHp: BUILDING_INFO.campfire.maxHp,
+        built: true,
+        progress: BUILDING_INFO.campfire.work,
+        workRequired: BUILDING_INFO.campfire.work,
+        cooldown: 0,
+      };
+    }
+
+    this.addLog('空投舱安全着陆！4 名殖民者已抵达边缘星球。', 'info');
+    this.addAlert('迫降成功', '建立掩体、开垦农田并准备迎接边缘世界的考验。', 'info');
+  }
+
+  getTile(x, y) {
+    if (x < 0 || x >= this.map.width || y < 0 || y >= this.map.height) return null;
+    return this.map.tiles[y * this.map.width + x];
+  }
+
+  emitSound(name) {
+    if (typeof this.onSound === 'function') this.onSound(name);
+  }
+
+  addLog(text, level = 'info') {
+    const hh = String(Math.floor(this.timeOfDay)).padStart(2, '0');
+    const mm = String(Math.floor((this.timeOfDay % 1) * 60)).padStart(2, '0');
+    this.logs.unshift({ day: this.day, time: `${hh}:${mm}`, text, level });
+    if (this.logs.length > 40) this.logs.pop();
+  }
+
+  addAlert(title, message, level = 'info') {
+    const id = `${Date.now()}_${Math.floor(this.rng() * 10000)}`;
+    this.alerts.unshift({ id, title, message, level, ttl: 14 });
+    if (this.alerts.length > 5) this.alerts.pop();
+  }
+
+  dismissAlert(id) {
+    this.alerts = this.alerts.filter((a) => a.id !== id);
+  }
+
+  spawnProjectile(x1, y1, x2, y2, color, kind = 'shot') {
+    this.projectiles.push({ x1, y1, x2, y2, color, kind, life: 0.18, maxLife: 0.18 });
+    this.emitSound(kind);
+  }
+
+  spawnFloatingText(x, y, text, color = '#ffffff') {
+    this.floatingTexts.push({ x, y, text, color, life: 1.2, maxLife: 1.2 });
+  }
+
+  canAfford(cost) {
+    for (const [res, amt] of Object.entries(cost)) {
+      if ((this.resources[res] || 0) < amt) return false;
+    }
+    return true;
+  }
+
+  payCost(cost) {
+    for (const [res, amt] of Object.entries(cost)) {
+      this.resources[res] -= amt;
+    }
+  }
+
+  placeBlueprint(x, y, buildingType) {
+    const tile = this.getTile(x, y);
+    const info = BUILDING_INFO[buildingType];
+    if (!tile || !info) return { ok: false, reason: '无效位置' };
+    if (!TERRAIN_INFO[tile.terrain].walkable) return { ok: false, reason: '深水区无法建造' };
+    if (tile.building) return { ok: false, reason: '此处已有建筑' };
+    if (tile.natural && !NATURAL_INFO[tile.natural].walkable) return { ok: false, reason: '需先开采山体' };
+    if (!this.canAfford(info.cost)) return { ok: false, reason: '资源不足' };
+
+    this.payCost(info.cost);
+    tile.natural = null;
+    tile.order = null;
+    tile.crop = null;
+    tile.building = {
+      type: buildingType,
+      hp: info.maxHp,
+      maxHp: info.maxHp,
+      built: false,
+      progress: 0,
+      workRequired: info.work,
+      cooldown: 0,
+    };
+    this.emitSound('click');
+    return { ok: true };
+  }
+
+  designateOrder(x1, y1, x2, y2, orderType) {
+    const minX = Math.max(0, Math.min(x1, x2));
+    const maxX = Math.min(this.map.width - 1, Math.max(x1, x2));
+    const minY = Math.max(0, Math.min(y1, y2));
+    const maxY = Math.min(this.map.height - 1, Math.max(y1, y2));
+    let count = 0;
+
+    for (let y = minY; y <= maxY; y++) {
+      for (let x = minX; x <= maxX; x++) {
+        const tile = this.getTile(x, y);
+        if (!tile) continue;
+
+        if (orderType === 'cancel') {
+          if (tile.order) {
+            tile.order = null;
+            count++;
+          }
+          if (tile.building && !tile.building.built) {
+            const info = BUILDING_INFO[tile.building.type];
+            for (const [res, amt] of Object.entries(info.cost)) {
+              this.resources[res] += Math.floor(amt * 0.8);
+            }
+            tile.building = null;
+            count++;
+          }
+          continue;
+        }
+
+        if (tile.natural && NATURAL_INFO[tile.natural]?.order === orderType) {
+          tile.order = orderType;
+          count++;
+        }
+      }
+    }
+    if (count > 0) this.emitSound('click');
+    return count;
+  }
+
+  designateZone(x1, y1, x2, y2, zoneType) {
+    const minX = Math.max(0, Math.min(x1, x2));
+    const maxX = Math.min(this.map.width - 1, Math.max(x1, x2));
+    const minY = Math.max(0, Math.min(y1, y2));
+    const maxY = Math.min(this.map.height - 1, Math.max(y1, y2));
+    let count = 0;
+
+    for (let y = minY; y <= maxY; y++) {
+      for (let x = minX; x <= maxX; x++) {
+        const tile = this.getTile(x, y);
+        if (!tile) continue;
+        if (zoneType === 'clear') {
+          if (tile.zone) {
+            tile.zone = null;
+            count++;
+          }
+          continue;
+        }
+        if (!TERRAIN_INFO[tile.terrain].walkable) continue;
+        if (zoneType === 'growing' && TERRAIN_INFO[tile.terrain].fertile <= 0) continue;
+        tile.zone = zoneType;
+        count++;
+      }
+    }
+    if (count > 0) this.emitSound('click');
+    return count;
+  }
+
+  draftColonist(colonistId, drafted) {
+    const col = this.colonists.find((c) => c.id === colonistId && c.alive);
+    if (!col) return false;
+    col.drafted = drafted;
+    col.job = null;
+    col.path = [];
+    col.statusText = drafted ? '征召待命' : '空闲';
+    this.emitSound('click');
+    return true;
+  }
+
+  commandDraftedMove(colonistId, tx, ty) {
+    const col = this.colonists.find((c) => c.id === colonistId && c.alive && c.drafted);
+    if (!col) return false;
+    const tile = this.getTile(tx, ty);
+    if (!tile || !isTileWalkable(tile)) return false;
+    const path = findPath(this.map, col.x, col.y, tx, ty, false, 1600);
+    if (!path) return false;
+    col.job = { type: JOB_TYPES.MOVE_DRAFTED, tx, ty };
+    col.path = path;
+    col.statusText = '战术移动';
+    this.emitSound('click');
+    return true;
+  }
+
+  getAmbientLight() {
+    // Smooth day/night brightness factor: 0.25 (midnight) .. 1.0 (daytime)
+    const h = this.timeOfDay;
+    if (h >= 7 && h <= 17) return 1.0;
+    if (h > 17 && h < 21) return 1.0 - ((h - 17) / 4) * 0.72;
+    if (h >= 21 || h <= 4) return 0.28;
+    return 0.28 + ((h - 4) / 3) * 0.72;
+  }
+
+  getTemperature() {
+    const base = 18 + Math.sin(((this.timeOfDay - 8) / 24) * Math.PI * 2) * 6;
+    return Math.round(base + this.weather.tempOffset);
+  }
+
+  triggerStorytellerEvent(forcedType = null) {
+    const roll = this.rng();
+    const type =
+      forcedType ||
+      (roll < 0.34
+        ? 'raid'
+        : roll < 0.56
+        ? 'cargo_pods'
+        : roll < 0.74
+        ? 'weather'
+        : roll < 0.9
+        ? 'caravan'
+        : 'wanderer');
+
+    if (type === 'cargo_pods') {
+      const wood = 45 + Math.floor(this.rng() * 35);
+      const steel = 25 + Math.floor(this.rng() * 25);
+      const meals = 6 + Math.floor(this.rng() * 6);
+      this.resources.wood += wood;
+      this.resources.steel += steel;
+      this.resources.meals += meals;
+      this.addAlert('空投补给舱', `回收物资：+${wood} 木材、+${steel} 钢铁、+${meals} 餐食。`, 'good');
+      this.addLog(`空投补给舱坠落，获得木材 ${wood}、钢铁 ${steel}、餐食 ${meals}。`, 'good');
+      this.emitSound('alert');
+      return 'cargo_pods';
+    }
+
+    if (type === 'caravan') {
+      const silver = 70 + Math.floor(this.rng() * 60);
+      const med = 4;
+      this.resources.silver += silver;
+      this.resources.medicine += med;
+      this.addAlert('轨道商队路过', `友好商队赠送了 ${silver} 白银与 ${med} 草药。`, 'good');
+      this.addLog(`友好商队造访，获得 ${silver} 白银与 ${med} 草药。`, 'good');
+      this.emitSound('alert');
+      return 'caravan';
+    }
+
+    if (type === 'wanderer') {
+      if (this.colonists.filter((c) => c.alive).length < 8) {
+        const edge = this._findWalkableEdgeTile();
+        const col = createColonist(this.nextColonistId++, edge.x, edge.y, this.rng);
+        this.colonists.push(col);
+        this.addAlert('流浪者加入', `${col.name}（${col.trait.name}）请求加入你的殖民地！`, 'good');
+        this.addLog(`新殖民者 ${col.name} 加入了队伍。`, 'good');
+        this.emitSound('alert');
+        return 'wanderer';
+      }
+      return this.triggerStorytellerEvent('cargo_pods');
+    }
+
+    if (type === 'weather') {
+      const pool = Object.values(WEATHER_TYPES);
+      const next = pool[Math.floor(this.rng() * pool.length)];
+      this.weather = next;
+      this.weatherTimer = 50 + this.rng() * 40;
+      this.addAlert('天气变化', `当前天气转为：${next.name}。`, 'info');
+      this.addLog(`天气转变为 ${next.name}。`, 'info');
+      return 'weather';
+    }
+
+    if (type === 'raid') {
+      this.raidWave++;
+      const count = Math.min(5, 1 + Math.floor((this.raidWave + 1) / 2));
+      const edge = this._findWalkableEdgeTile();
+      for (let i = 0; i < count; i++) {
+        const rx = Math.max(1, Math.min(this.map.width - 2, edge.x + (i % 2)));
+        const ry = Math.max(1, Math.min(this.map.height - 2, edge.y + Math.floor(i / 2)));
+        this.raiders.push(createRaider(this.nextRaiderId++, rx, ry, this.raidWave));
+      }
+      this.addAlert('敌方袭击！', `${count} 名海盗掠夺者从边缘逼近！请征召殖民者或启动炮塔。`, 'danger');
+      this.addLog(`警报：第 ${this.raidWave} 波袭击（${count} 名掠夺者）！`, 'danger');
+      this.emitSound('raid');
+      return 'raid';
+    }
+
+    return type;
+  }
+
+  _findWalkableEdgeTile() {
+    const { width, height } = this.map;
+    for (let attempt = 0; attempt < 40; attempt++) {
+      const side = Math.floor(this.rng() * 4);
+      let x = 1;
+      let y = 1;
+      if (side === 0) {
+        x = Math.floor(2 + this.rng() * (width - 4));
+        y = 1;
+      } else if (side === 1) {
+        x = Math.floor(2 + this.rng() * (width - 4));
+        y = height - 2;
+      } else if (side === 2) {
+        x = 1;
+        y = Math.floor(2 + this.rng() * (height - 4));
+      } else {
+        x = width - 2;
+        y = Math.floor(2 + this.rng() * (height - 4));
+      }
+      if (isTileWalkable(this.getTile(x, y))) return { x, y };
+    }
+    return { x: 2, y: 2 };
+  }
+
+  _updatePowerAndTurrets(dt) {
+    const light = this.getAmbientLight();
+    const hasSolarTech = this.researchedTechs.has('solar_grid');
+    const solarFactor = Math.max(hasSolarTech ? 0.35 : 0.05, (light - 0.25) / 0.75) * this.weather.solarMult * (hasSolarTech ? 1.4 : 1.0);
+
+    let produced = 0;
+    let consumed = 0;
+    const turrets = [];
+
+    for (let i = 0; i < this.map.tiles.length; i++) {
+      const t = this.map.tiles[i];
+      if (!t.building || !t.building.built) continue;
+      const info = BUILDING_INFO[t.building.type];
+      if (info.power > 0) produced += Math.round(info.power * solarFactor);
+      if (info.power < 0) consumed += Math.abs(info.power);
+      if (t.building.type === 'turret') turrets.push(t);
+    }
+
+    this.power = { produced, consumed, net: produced - consumed };
+    const turretsPowered = produced >= consumed && produced > 0;
+    const dmgBoost = this.researchedTechs.has('fortification') ? 1.25 : 1.0;
+
+    for (const tile of turrets) {
+      const b = tile.building;
+      if (b.cooldown > 0) b.cooldown = Math.max(0, b.cooldown - dt);
+      if (!turretsPowered || b.cooldown > 0) continue;
+
+      const info = BUILDING_INFO.turret;
+      const target = findNearestLiving(tile.x, tile.y, this.raiders, info.range);
+      if (target) {
+        const dmg = Math.round(info.damage * dmgBoost);
+        target.hp = Math.max(0, target.hp - dmg);
+        b.cooldown = info.cooldown;
+        this.spawnProjectile(tile.x, tile.y, target.x, target.y, '#38bdf8', 'shot');
+        this.spawnFloatingText(target.x, target.y - 0.5, `-${dmg}`, '#38bdf8');
+        if (target.hp <= 0) {
+          target.alive = false;
+          target.statusText = '已击倒';
+          this.stats.raidersDefeated++;
+          this.addLog(`自动机枪塔击毁了 ${target.name}！`, 'good');
+        }
+      }
+    }
+  }
+
+  _updateCrops(dt) {
+    const light = this.getAmbientLight();
+    if (light < 0.4) return;
+    const techMult = this.researchedTechs.has('agriculture') ? 1.35 : 1.0;
+
+    for (let i = 0; i < this.map.tiles.length; i++) {
+      const t = this.map.tiles[i];
+      if (t.crop && t.crop.progress < 100) {
+        const fert = TERRAIN_INFO[t.terrain].fertile || 0.5;
+        t.crop.progress = Math.min(100, t.crop.progress + dt * 2.1 * fert * techMult);
+      }
+    }
+  }
+
+  tick(rawDt) {
+    if (this.paused) return;
+    const dt = Math.min(0.1, rawDt) * this.speed;
+    this.totalTime += dt;
+
+    // Day/night clock
+    this.timeOfDay += (dt / DAY_LENGTH_SECONDS) * 24;
+    if (this.timeOfDay >= 24) {
+      this.timeOfDay -= 24;
+      this.day += 1;
+      this.addLog(`第 ${this.day} 天开始了。`, 'info');
+    }
+
+    // Weather countdown
+    this.weatherTimer -= dt;
+    if (this.weatherTimer <= 0) {
+      this.weather = WEATHER_TYPES.CLEAR;
+      this.weatherTimer = 60;
+    }
+
+    // Storyteller events
+    this.storytellerTimer -= dt;
+    if (this.storytellerTimer <= 0) {
+      this.triggerStorytellerEvent();
+      this.storytellerTimer = 42 + this.rng() * 28;
+    }
+
+    this._updatePowerAndTurrets(dt);
+    this._updateCrops(dt);
+
+    for (const c of this.colonists) {
+      updateColonistNeeds(c, dt, this);
+      stepColonistAI(c, dt, this);
+    }
+
+    for (const r of this.raiders) {
+      stepRaiderAI(r, dt, this);
+    }
+    this.raiders = this.raiders.filter((r) => r.alive);
+
+    // Visual effects decay
+    for (const p of this.projectiles) p.life -= rawDt;
+    this.projectiles = this.projectiles.filter((p) => p.life > 0);
+
+    for (const f of this.floatingTexts) {
+      f.y -= rawDt * 0.7;
+      f.life -= rawDt;
+    }
+    this.floatingTexts = this.floatingTexts.filter((f) => f.life > 0);
+
+    for (const a of this.alerts) a.ttl -= rawDt;
+    this.alerts = this.alerts.filter((a) => a.ttl > 0);
+  }
+
+  serialize() {
+    return JSON.stringify({
+      version: 1,
+      seed: this.seed,
+      day: this.day,
+      timeOfDay: this.timeOfDay,
+      totalTime: this.totalTime,
+      resources: this.resources,
+      weatherId: this.weather.id,
+      researchedTechs: Array.from(this.researchedTechs),
+      activeTechId: this.activeTechId,
+      techProgress: this.techProgress,
+      colonists: this.colonists,
+      raiders: this.raiders,
+      raidWave: this.raidWave,
+      nextColonistId: this.nextColonistId,
+      nextRaiderId: this.nextRaiderId,
+      stats: this.stats,
+      map: this.map,
+    });
+  }
+
+  static deserialize(jsonStr) {
+    const data = JSON.parse(jsonStr);
+    const w = new World({ seed: data.seed, width: data.map.width, height: data.map.height });
+    w.day = data.day;
+    w.timeOfDay = data.timeOfDay;
+    w.totalTime = data.totalTime;
+    w.resources = { ...data.resources };
+    w.weather = Object.values(WEATHER_TYPES).find((wt) => wt.id === data.weatherId) || WEATHER_TYPES.CLEAR;
+    w.researchedTechs = new Set(data.researchedTechs || []);
+    w.activeTechId = data.activeTechId ?? null;
+    w.techProgress = { ...(data.techProgress || {}) };
+    w.colonists = data.colonists || [];
+    w.raiders = data.raiders || [];
+    w.raidWave = data.raidWave || 0;
+    w.nextColonistId = data.nextColonistId ?? w.colonists.length;
+    w.nextRaiderId = data.nextRaiderId ?? 1;
+    w.stats = { ...w.stats, ...(data.stats || {}) };
+    w.map = data.map;
+    return w;
+  }
+}
+
+
+// ===== src/audio.js =====
+/**
+ * Procedural Web Audio API sound effects synthesizer (zero external audio files).
+ */
+class SoundEngine {
+  constructor() {
+    this.ctx = null;
+    this.muted = false;
+  }
+
+  unlock() {
+    if (this.muted) return;
+    if (!this.ctx && typeof window !== 'undefined') {
+      const AudioCtx = window.AudioContext || window.webkitAudioContext;
+      if (AudioCtx) {
+        this.ctx = new AudioCtx();
+      }
+    }
+    if (this.ctx && this.ctx.state === 'suspended') {
+      this.ctx.resume().catch(() => {});
+    }
+  }
+
+  toggleMute() {
+    this.muted = !this.muted;
+    return this.muted;
+  }
+
+  play(type) {
+    if (this.muted || !this.ctx || this.ctx.state !== 'running') return;
+    const now = this.ctx.currentTime;
+
+    const osc = this.ctx.createOscillator();
+    const gain = this.ctx.createGain();
+    osc.connect(gain);
+    gain.connect(this.ctx.destination);
+
+    if (type === 'click') {
+      osc.type = 'triangle';
+      osc.frequency.setValueAtTime(520, now);
+      osc.frequency.exponentialRampToValueAtTime(300, now + 0.05);
+      gain.gain.setValueAtTime(0.06, now);
+      gain.gain.exponentialRampToValueAtTime(0.001, now + 0.06);
+      osc.start(now);
+      osc.stop(now + 0.06);
+    } else if (type === 'chop') {
+      osc.type = 'square';
+      osc.frequency.setValueAtTime(160, now);
+      osc.frequency.exponentialRampToValueAtTime(70, now + 0.09);
+      gain.gain.setValueAtTime(0.08, now);
+      gain.gain.exponentialRampToValueAtTime(0.001, now + 0.1);
+      osc.start(now);
+      osc.stop(now + 0.1);
+    } else if (type === 'mine') {
+      osc.type = 'sine';
+      osc.frequency.setValueAtTime(880, now);
+      osc.frequency.exponentialRampToValueAtTime(420, now + 0.11);
+      gain.gain.setValueAtTime(0.07, now);
+      gain.gain.exponentialRampToValueAtTime(0.001, now + 0.12);
+      osc.start(now);
+      osc.stop(now + 0.12);
+    } else if (type === 'build') {
+      osc.type = 'triangle';
+      osc.frequency.setValueAtTime(320, now);
+      osc.frequency.setValueAtTime(480, now + 0.06);
+      gain.gain.setValueAtTime(0.08, now);
+      gain.gain.exponentialRampToValueAtTime(0.001, now + 0.16);
+      osc.start(now);
+      osc.stop(now + 0.16);
+    } else if (type === 'shot') {
+      osc.type = 'sawtooth';
+      osc.frequency.setValueAtTime(640, now);
+      osc.frequency.exponentialRampToValueAtTime(120, now + 0.08);
+      gain.gain.setValueAtTime(0.06, now);
+      gain.gain.exponentialRampToValueAtTime(0.001, now + 0.09);
+      osc.start(now);
+      osc.stop(now + 0.09);
+    } else if (type === 'alert') {
+      osc.type = 'sine';
+      osc.frequency.setValueAtTime(523.25, now);
+      osc.frequency.setValueAtTime(659.25, now + 0.12);
+      gain.gain.setValueAtTime(0.08, now);
+      gain.gain.exponentialRampToValueAtTime(0.001, now + 0.3);
+      osc.start(now);
+      osc.stop(now + 0.3);
+    } else if (type === 'raid') {
+      osc.type = 'sawtooth';
+      osc.frequency.setValueAtTime(220, now);
+      osc.frequency.linearRampToValueAtTime(165, now + 0.45);
+      gain.gain.setValueAtTime(0.11, now);
+      gain.gain.exponentialRampToValueAtTime(0.001, now + 0.5);
+      osc.start(now);
+      osc.stop(now + 0.5);
+    }
+  }
+}
+
+
+// ===== src/renderer.js =====
+/**
+ * HTML5 Canvas 2D renderer for Web RimWorld: camera pan/zoom, terrain, structures,
+ * colonists, raiders, day/night lighting, weather particles, and drag-selection.
+ */
+class Renderer {
+  constructor(canvas) {
+    this.canvas = canvas;
+    this.ctx = canvas.getContext('2d');
+    this.camera = { x: 0, y: 0, zoom: 1.0 };
+    this.rainDrops = Array.from({ length: 70 }, () => ({
+      x: Math.random(),
+      y: Math.random(),
+      speed: 0.45 + Math.random() * 0.4,
+    }));
+  }
+
+  resize() {
+    const parent = this.canvas.parentElement;
+    if (!parent) return;
+    const rect = parent.getBoundingClientRect();
+    const dpr = Math.min(window.devicePixelRatio || 1, 2);
+    this.canvas.width = Math.max(300, Math.floor(rect.width * dpr));
+    this.canvas.height = Math.max(200, Math.floor(rect.height * dpr));
+    this.ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+    this.viewW = rect.width;
+    this.viewH = rect.height;
+  }
+
+  centerOn(tileX, tileY) {
+    this.camera.x = (tileX + 0.5) * TILE_SIZE;
+    this.camera.y = (tileY + 0.5) * TILE_SIZE;
+  }
+
+  screenToTile(sx, sy) {
+    const wx = (sx - this.viewW / 2) / this.camera.zoom + this.camera.x;
+    const wy = (sy - this.viewH / 2) / this.camera.zoom + this.camera.y;
+    return {
+      x: Math.floor(wx / TILE_SIZE),
+      y: Math.floor(wy / TILE_SIZE),
+      wx: wx / TILE_SIZE,
+      wy: wy / TILE_SIZE,
+    };
+  }
+
+  render(world, uiState, timeSec) {
+    const ctx = this.ctx;
+    const w = this.viewW || this.canvas.width;
+    const h = this.viewH || this.canvas.height;
+
+    ctx.fillStyle = '#14191f';
+    ctx.fillRect(0, 0, w, h);
+
+    ctx.save();
+    ctx.translate(w / 2, h / 2);
+    ctx.scale(this.camera.zoom, this.camera.zoom);
+    ctx.translate(-this.camera.x, -this.camera.y);
+
+    // Visible tile bounds (frustum culling)
+    const halfW = w / (2 * this.camera.zoom);
+    const halfH = h / (2 * this.camera.zoom);
+    const minX = Math.max(0, Math.floor((this.camera.x - halfW) / TILE_SIZE) - 1);
+    const maxX = Math.min(world.map.width - 1, Math.ceil((this.camera.x + halfW) / TILE_SIZE) + 1);
+    const minY = Math.max(0, Math.floor((this.camera.y - halfH) / TILE_SIZE) - 1);
+    const maxY = Math.min(world.map.height - 1, Math.ceil((this.camera.y + halfH) / TILE_SIZE) + 1);
+
+    // 1. Terrain & Zones & Crops
+    for (let y = minY; y <= maxY; y++) {
+      for (let x = minX; x <= maxX; x++) {
+        const tile = world.getTile(x, y);
+        const px = x * TILE_SIZE;
+        const py = y * TILE_SIZE;
+        const tInfo = TERRAIN_INFO[tile.terrain];
+
+        ctx.fillStyle = tile.variant ? tInfo.color : tInfo.altColor;
+        ctx.fillRect(px, py, TILE_SIZE, TILE_SIZE);
+
+        // Subtle grid line
+        ctx.strokeStyle = 'rgba(0,0,0,0.08)';
+        ctx.lineWidth = 0.5;
+        ctx.strokeRect(px, py, TILE_SIZE, TILE_SIZE);
+
+        // Zones
+        if (tile.zone === 'stockpile') {
+          ctx.fillStyle = 'rgba(56, 189, 248, 0.16)';
+          ctx.fillRect(px + 1, py + 1, TILE_SIZE - 2, TILE_SIZE - 2);
+          ctx.strokeStyle = 'rgba(56, 189, 248, 0.48)';
+          ctx.lineWidth = 1;
+          ctx.strokeRect(px + 1.5, py + 1.5, TILE_SIZE - 3, TILE_SIZE - 3);
+        } else if (tile.zone === 'growing') {
+          ctx.fillStyle = 'rgba(132, 204, 22, 0.15)';
+          ctx.fillRect(px + 1, py + 1, TILE_SIZE - 2, TILE_SIZE - 2);
+          ctx.strokeStyle = 'rgba(163, 230, 53, 0.45)';
+          ctx.lineWidth = 1;
+          ctx.strokeRect(px + 1.5, py + 1.5, TILE_SIZE - 3, TILE_SIZE - 3);
+        }
+
+        // Crops
+        if (tile.crop) {
+          const pct = tile.crop.progress / 100;
+          const r = 3 + pct * 7;
+          ctx.fillStyle = pct >= 1 ? '#eab308' : '#84cc16';
+          for (const [ox, oy] of [[9, 10], [22, 11], [11, 22], [22, 22]]) {
+            ctx.beginPath();
+            ctx.arc(px + ox, py + oy, r * 0.45, 0, Math.PI * 2);
+            ctx.fill();
+          }
+        }
+      }
+    }
+
+    // 2. Natural Objects & Buildings & Orders
+    const lights = [];
+    for (let y = minY; y <= maxY; y++) {
+      for (let x = minX; x <= maxX; x++) {
+        const tile = world.getTile(x, y);
+        const px = x * TILE_SIZE;
+        const py = y * TILE_SIZE;
+
+        if (tile.natural) {
+          this._drawNatural(ctx, tile.natural, px, py);
+        }
+
+        if (tile.building) {
+          this._drawBuilding(ctx, tile.building, px, py, timeSec, world.power.net >= 0 && world.power.produced > 0);
+          const bInfo = BUILDING_INFO[tile.building.type];
+          if (tile.building.built && bInfo.lightRadius) {
+            lights.push({ x: px + TILE_SIZE / 2, y: py + TILE_SIZE / 2, r: bInfo.lightRadius * TILE_SIZE });
+          }
+        }
+
+        if (tile.order) {
+          this._drawOrderMarker(ctx, tile.order, px, py);
+        }
+      }
+    }
+
+    // 3. Selected turret range indicator
+    if (uiState.selectedTile) {
+      const st = world.getTile(uiState.selectedTile.x, uiState.selectedTile.y);
+      if (st?.building?.built && st.building.type === 'turret') {
+        ctx.save();
+        ctx.strokeStyle = 'rgba(56, 189, 248, 0.55)';
+        ctx.fillStyle = 'rgba(56, 189, 248, 0.08)';
+        ctx.lineWidth = 1.5;
+        ctx.beginPath();
+        ctx.arc(
+          (st.x + 0.5) * TILE_SIZE,
+          (st.y + 0.5) * TILE_SIZE,
+          BUILDING_INFO.turret.range * TILE_SIZE,
+          0,
+          Math.PI * 2
+        );
+        ctx.fill();
+        ctx.stroke();
+        ctx.restore();
+      }
+    }
+
+    // 4. Colonists
+    for (const c of world.colonists) {
+      if (!c.alive) continue;
+      this._drawPawn(ctx, c, uiState.selectedColonistId === c.id, false, timeSec);
+    }
+
+    // 5. Raiders
+    for (const r of world.raiders) {
+      if (!r.alive) continue;
+      this._drawPawn(ctx, r, false, true, timeSec);
+    }
+
+    // 6. Projectiles
+    for (const p of world.projectiles) {
+      ctx.save();
+      ctx.strokeStyle = p.color;
+      ctx.lineWidth = 2.4;
+      ctx.beginPath();
+      ctx.moveTo((p.x1 + 0.5) * TILE_SIZE, (p.y1 + 0.5) * TILE_SIZE);
+      ctx.lineTo((p.x2 + 0.5) * TILE_SIZE, (p.y2 + 0.5) * TILE_SIZE);
+      ctx.stroke();
+      ctx.restore();
+    }
+
+    // 7. Hover & Drag preview
+    if (uiState.hoverTile) {
+      const { x, y } = uiState.hoverTile;
+      if (uiState.dragStart && uiState.activeTool && uiState.activeTool.mode !== 'select') {
+        const x1 = Math.min(uiState.dragStart.x, x);
+        const x2 = Math.max(uiState.dragStart.x, x);
+        const y1 = Math.min(uiState.dragStart.y, y);
+        const y2 = Math.max(uiState.dragStart.y, y);
+        ctx.fillStyle = 'rgba(250, 204, 21, 0.22)';
+        ctx.strokeStyle = '#facc15';
+        ctx.lineWidth = 1.5;
+        ctx.fillRect(x1 * TILE_SIZE, y1 * TILE_SIZE, (x2 - x1 + 1) * TILE_SIZE, (y2 - y1 + 1) * TILE_SIZE);
+        ctx.strokeRect(x1 * TILE_SIZE, y1 * TILE_SIZE, (x2 - x1 + 1) * TILE_SIZE, (y2 - y1 + 1) * TILE_SIZE);
+      } else {
+        ctx.strokeStyle = uiState.activeTool?.mode === 'build' ? '#38bdf8' : 'rgba(255,255,255,0.5)';
+        ctx.lineWidth = 1.5;
+        ctx.strokeRect(x * TILE_SIZE + 1, y * TILE_SIZE + 1, TILE_SIZE - 2, TILE_SIZE - 2);
+      }
+    }
+
+    // 8. Floating feedback texts
+    ctx.font = 'bold 11px Inter, sans-serif';
+    ctx.textAlign = 'center';
+    for (const f of world.floatingTexts) {
+      ctx.globalAlpha = Math.max(0, f.life / f.maxLife);
+      ctx.fillStyle = '#000000';
+      ctx.fillText(f.text, (f.x + 0.5) * TILE_SIZE + 1, (f.y + 0.3) * TILE_SIZE + 1);
+      ctx.fillStyle = f.color;
+      ctx.fillText(f.text, (f.x + 0.5) * TILE_SIZE, (f.y + 0.3) * TILE_SIZE);
+    }
+    ctx.globalAlpha = 1;
+
+    // 9. Day/Night ambient darkness & warm glow cutouts
+    const light = world.getAmbientLight();
+    if (light < 0.98) {
+      const darkness = (1 - light) * 0.72;
+      ctx.fillStyle = `rgba(10, 18, 34, ${darkness.toFixed(3)})`;
+      ctx.fillRect(
+        this.camera.x - halfW - TILE_SIZE,
+        this.camera.y - halfH - TILE_SIZE,
+        halfW * 2 + TILE_SIZE * 2,
+        halfH * 2 + TILE_SIZE * 2
+      );
+
+      // Warm torch/campfire glow
+      ctx.save();
+      ctx.globalCompositeOperation = 'lighter';
+      for (const l of lights) {
+        const grad = ctx.createRadialGradient(l.x, l.y, 4, l.x, l.y, l.r);
+        grad.addColorStop(0, 'rgba(255, 190, 92, 0.38)');
+        grad.addColorStop(1, 'rgba(255, 140, 40, 0)');
+        ctx.fillStyle = grad;
+        ctx.beginPath();
+        ctx.arc(l.x, l.y, l.r, 0, Math.PI * 2);
+        ctx.fill();
+      }
+      ctx.restore();
+    }
+
+    ctx.restore();
+
+    // 10. Weather screen-space overlay (rain/heat/cold)
+    if (world.weather.id === 'rain') {
+      ctx.save();
+      ctx.strokeStyle = 'rgba(147, 197, 253, 0.35)';
+      ctx.lineWidth = 1;
+      for (const drop of this.rainDrops) {
+        drop.y = (drop.y + drop.speed * 0.025) % 1;
+        drop.x = (drop.x + 0.004) % 1;
+        const dx = drop.x * w;
+        const dy = drop.y * h;
+        ctx.beginPath();
+        ctx.moveTo(dx, dy);
+        ctx.lineTo(dx + 4, dy + 12);
+        ctx.stroke();
+      }
+      ctx.restore();
+    } else if (world.weather.id === 'heatwave') {
+      ctx.fillStyle = 'rgba(249, 115, 22, 0.06)';
+      ctx.fillRect(0, 0, w, h);
+    } else if (world.weather.id === 'coldsnap') {
+      ctx.fillStyle = 'rgba(125, 211, 252, 0.08)';
+      ctx.fillRect(0, 0, w, h);
+    }
+  }
+
+  _drawNatural(ctx, type, px, py) {
+    if (type === NATURAL_OBJECTS.TREE) {
+      // Shadow
+      ctx.fillStyle = 'rgba(0,0,0,0.25)';
+      ctx.beginPath();
+      ctx.ellipse(px + 18, py + 24, 10, 5, 0, 0, Math.PI * 2);
+      ctx.fill();
+      // Trunk
+      ctx.fillStyle = '#5c4028';
+      ctx.fillRect(px + 14, py + 16, 4, 10);
+      // Canopy
+      ctx.fillStyle = '#2c5e2e';
+      ctx.beginPath();
+      ctx.arc(px + 16, py + 13, 10, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.fillStyle = '#3d7a3f';
+      ctx.beginPath();
+      ctx.arc(px + 13, py + 11, 6, 0, Math.PI * 2);
+      ctx.fill();
+    } else if (type === NATURAL_OBJECTS.BERRY_BUSH) {
+      ctx.fillStyle = '#2d6a3e';
+      ctx.beginPath();
+      ctx.arc(px + 16, py + 17, 9, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.fillStyle = '#e63946';
+      for (const [bx, by] of [[12, 15], [19, 14], [15, 20], [20, 19]]) {
+        ctx.beginPath();
+        ctx.arc(px + bx, py + by, 2.2, 0, Math.PI * 2);
+        ctx.fill();
+      }
+    } else if (type === NATURAL_OBJECTS.ROCK_WALL) {
+      ctx.fillStyle = '#4a4e54';
+      ctx.fillRect(px + 1, py + 1, TILE_SIZE - 2, TILE_SIZE - 2);
+      ctx.fillStyle = '#636870';
+      ctx.fillRect(px + 3, py + 3, TILE_SIZE - 6, TILE_SIZE - 10);
+    } else if (type === NATURAL_OBJECTS.STEEL_ORE) {
+      ctx.fillStyle = '#4a4e54';
+      ctx.fillRect(px + 1, py + 1, TILE_SIZE - 2, TILE_SIZE - 2);
+      ctx.fillStyle = '#94a3b8';
+      ctx.fillRect(px + 6, py + 6, 8, 6);
+      ctx.fillRect(px + 17, py + 15, 9, 7);
+      ctx.fillStyle = '#cbd5e1';
+      ctx.fillRect(px + 8, py + 8, 4, 2);
+    } else if (type === NATURAL_OBJECTS.GOLD_ORE) {
+      ctx.fillStyle = '#4a4e54';
+      ctx.fillRect(px + 1, py + 1, TILE_SIZE - 2, TILE_SIZE - 2);
+      ctx.fillStyle = '#eab308';
+      ctx.fillRect(px + 6, py + 8, 7, 6);
+      ctx.fillRect(px + 17, py + 14, 8, 7);
+      ctx.fillStyle = '#fef08a';
+      ctx.fillRect(px + 8, py + 9, 3, 2);
+    }
+  }
+
+  _drawBuilding(ctx, b, px, py, timeSec, hasPower) {
+    const info = BUILDING_INFO[b.type];
+    if (!b.built) {
+      ctx.save();
+      ctx.fillStyle = 'rgba(56, 189, 248, 0.2)';
+      ctx.strokeStyle = '#38bdf8';
+      ctx.lineWidth = 1.5;
+      ctx.setLineDash([4, 3]);
+      ctx.fillRect(px + 2, py + 2, TILE_SIZE - 4, TILE_SIZE - 4);
+      ctx.strokeRect(px + 2, py + 2, TILE_SIZE - 4, TILE_SIZE - 4);
+      ctx.setLineDash([]);
+      const pct = Math.min(1, b.progress / b.workRequired);
+      ctx.fillStyle = '#0f172a';
+      ctx.fillRect(px + 4, py + TILE_SIZE - 7, TILE_SIZE - 8, 4);
+      ctx.fillStyle = '#38bdf8';
+      ctx.fillRect(px + 4, py + TILE_SIZE - 7, (TILE_SIZE - 8) * pct, 4);
+      ctx.restore();
+      return;
+    }
+
+    if (b.type === 'wood_wall' || b.type === 'stone_wall') {
+      ctx.fillStyle = b.type === 'wood_wall' ? '#6d4c2c' : '#585d66';
+      ctx.fillRect(px, py, TILE_SIZE, TILE_SIZE);
+      ctx.fillStyle = info.color;
+      ctx.fillRect(px + 2, py + 2, TILE_SIZE - 4, TILE_SIZE - 7);
+      ctx.strokeStyle = 'rgba(0,0,0,0.35)';
+      ctx.strokeRect(px + 0.5, py + 0.5, TILE_SIZE - 1, TILE_SIZE - 1);
+    } else if (b.type === 'door') {
+      ctx.fillStyle = '#5c3f24';
+      ctx.fillRect(px + 2, py + 10, TILE_SIZE - 4, 12);
+      ctx.fillStyle = '#c4905a';
+      ctx.fillRect(px + 5, py + 12, TILE_SIZE - 10, 8);
+    } else if (b.type === 'bed') {
+      ctx.fillStyle = '#6d4c2c';
+      ctx.fillRect(px + 4, py + 3, TILE_SIZE - 8, TILE_SIZE - 6);
+      ctx.fillStyle = '#e2e8f0';
+      ctx.fillRect(px + 7, py + 6, TILE_SIZE - 14, 6);
+      ctx.fillStyle = '#3b82f6';
+      ctx.fillRect(px + 6, py + 13, TILE_SIZE - 12, TILE_SIZE - 18);
+    } else if (b.type === 'campfire') {
+      ctx.fillStyle = '#5c4028';
+      ctx.beginPath();
+      ctx.arc(px + 16, py + 17, 9, 0, Math.PI * 2);
+      ctx.fill();
+      const flicker = Math.sin(timeSec * 12) * 1.5;
+      ctx.fillStyle = '#f97316';
+      ctx.beginPath();
+      ctx.arc(px + 16, py + 15, 6 + flicker * 0.4, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.fillStyle = '#fde047';
+      ctx.beginPath();
+      ctx.arc(px + 16, py + 16, 3.2, 0, Math.PI * 2);
+      ctx.fill();
+    } else if (b.type === 'torch') {
+      ctx.fillStyle = '#6d4c2c';
+      ctx.fillRect(px + 14, py + 14, 4, 11);
+      ctx.fillStyle = '#fbbf24';
+      ctx.beginPath();
+      ctx.arc(px + 16, py + 12, 4.5 + Math.sin(timeSec * 10) * 0.8, 0, Math.PI * 2);
+      ctx.fill();
+    } else if (b.type === 'solar') {
+      ctx.fillStyle = '#1e3a5f';
+      ctx.fillRect(px + 2, py + 3, TILE_SIZE - 4, TILE_SIZE - 6);
+      ctx.strokeStyle = '#60a5fa';
+      ctx.lineWidth = 1;
+      ctx.strokeRect(px + 3, py + 4, TILE_SIZE - 6, TILE_SIZE - 8);
+      ctx.beginPath();
+      ctx.moveTo(px + 16, py + 4);
+      ctx.lineTo(px + 16, py + TILE_SIZE - 4);
+      ctx.moveTo(px + 3, py + 16);
+      ctx.lineTo(px + TILE_SIZE - 3, py + 16);
+      ctx.stroke();
+    } else if (b.type === 'turret') {
+      ctx.fillStyle = '#475569';
+      ctx.beginPath();
+      ctx.arc(px + 16, py + 16, 10, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.fillStyle = hasPower ? '#38bdf8' : '#ef4444';
+      ctx.beginPath();
+      ctx.arc(px + 16, py + 16, 4.5, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.strokeStyle = '#cbd5e1';
+      ctx.lineWidth = 3;
+      ctx.beginPath();
+      ctx.moveTo(px + 16, py + 16);
+      ctx.lineTo(px + 26, py + 12);
+      ctx.stroke();
+    } else if (b.type === 'sandbag') {
+      ctx.fillStyle = '#bfa67a';
+      ctx.beginPath();
+      ctx.roundRect(px + 3, py + 10, TILE_SIZE - 6, 12, 5);
+      ctx.fill();
+      ctx.strokeStyle = '#786646';
+      ctx.lineWidth = 1;
+      ctx.stroke();
+    } else if (b.type === 'research_bench') {
+      ctx.fillStyle = '#4c3f6e';
+      ctx.fillRect(px + 3, py + 6, TILE_SIZE - 6, TILE_SIZE - 12);
+      ctx.fillStyle = '#a78bfa';
+      ctx.fillRect(px + 6, py + 9, 8, 6);
+      ctx.fillStyle = '#38bdf8';
+      ctx.fillRect(px + 17, py + 10, 9, 5);
+    }
+
+    // Damage bar if injured
+    if (b.hp < b.maxHp) {
+      ctx.fillStyle = '#111827';
+      ctx.fillRect(px + 3, py + 2, TILE_SIZE - 6, 3);
+      ctx.fillStyle = '#ef4444';
+      ctx.fillRect(px + 3, py + 2, (TILE_SIZE - 6) * (b.hp / b.maxHp), 3);
+    }
+  }
+
+  _drawOrderMarker(ctx, order, px, py) {
+    ctx.save();
+    ctx.strokeStyle = order === 'mine' ? '#f59e0b' : order === 'chop' ? '#84cc16' : '#ec4899';
+    ctx.lineWidth = 1.6;
+    ctx.strokeRect(px + 3, py + 3, TILE_SIZE - 6, TILE_SIZE - 6);
+    ctx.fillStyle = ctx.strokeStyle;
+    ctx.font = 'bold 10px Inter, sans-serif';
+    ctx.textAlign = 'center';
+    const glyph = order === 'mine' ? '⛏' : order === 'chop' ? '🪓' : '✂';
+    ctx.fillText(glyph, px + 16, py + 19);
+    ctx.restore();
+  }
+
+  _drawPawn(ctx, pawn, isSelected, isHostile, timeSec) {
+    const cx = (pawn.x + 0.5) * TILE_SIZE;
+    const cy = (pawn.y + 0.5) * TILE_SIZE;
+    const bob = pawn.path && pawn.path.length > 0 ? Math.sin(timeSec * 14) * 1.5 : 0;
+
+    // Selection or drafted ring
+    if (isSelected || pawn.drafted) {
+      ctx.strokeStyle = pawn.drafted ? '#f59e0b' : '#38bdf8';
+      ctx.lineWidth = 2;
+      ctx.beginPath();
+      ctx.arc(cx, cy + 2, 13, 0, Math.PI * 2);
+      ctx.stroke();
+    }
+
+    // Shadow
+    ctx.fillStyle = 'rgba(0,0,0,0.3)';
+    ctx.beginPath();
+    ctx.ellipse(cx, cy + 10, 8, 4, 0, 0, Math.PI * 2);
+    ctx.fill();
+
+    // Body (RimWorld bean silhouette)
+    ctx.fillStyle = isHostile ? '#b91c1c' : pawn.shirtColor;
+    ctx.beginPath();
+    ctx.roundRect(cx - 7, cy - 2 + bob, 14, 12, 5);
+    ctx.fill();
+    ctx.strokeStyle = '#0f172a';
+    ctx.lineWidth = 1.2;
+    ctx.stroke();
+
+    // Head
+    ctx.fillStyle = isHostile ? '#fca5a5' : '#f1c27d';
+    ctx.beginPath();
+    ctx.arc(cx, cy - 6 + bob, 6, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.stroke();
+
+    // Hair / Helmet
+    ctx.fillStyle = isHostile ? '#3f1d2e' : pawn.hairColor;
+    ctx.beginPath();
+    ctx.arc(cx, cy - 8 + bob, 6, Math.PI, Math.PI * 2);
+    ctx.fill();
+
+    // HP bar
+    if (pawn.hp < pawn.maxHp) {
+      ctx.fillStyle = '#111827';
+      ctx.fillRect(cx - 10, cy - 17, 20, 3);
+      ctx.fillStyle = isHostile ? '#ef4444' : '#22c55e';
+      ctx.fillRect(cx - 10, cy - 17, 20 * (pawn.hp / pawn.maxHp), 3);
+    }
+
+    // Name tag
+    ctx.font = '600 10px Inter, sans-serif';
+    ctx.textAlign = 'center';
+    ctx.fillStyle = 'rgba(15, 23, 42, 0.78)';
+    const label = pawn.drafted ? `⚔ ${pawn.name}` : pawn.name;
+    const tw = ctx.measureText(label).width + 6;
+    ctx.fillRect(cx - tw / 2, cy + 12, tw, 13);
+    ctx.fillStyle = isHostile ? '#fca5a5' : '#f8fafc';
+    ctx.fillText(label, cx, cy + 21.5);
+  }
+}
+
+
+// ===== src/main.js =====
+/**
+ * Main UI controller, input handler, HUD updates, modals, and game loop.
+ */
+
+
+
+
+const SAVE_KEY = 'rimweb_colony_save_v1';
+
+const SUB_MENUS = {
+  orders: [
+    { id: 'chop', label: '🪓 砍伐树木', mode: 'order', value: 'chop' },
+    { id: 'mine', label: '⛏ 开采矿石', mode: 'order', value: 'mine' },
+    { id: 'harvest', label: '🫐 采摘浆果', mode: 'order', value: 'harvest' },
+    { id: 'cancel', label: '✖ 取消/退料', mode: 'order', value: 'cancel' },
+  ],
+  zones: [
+    { id: 'growing', label: '🌾 种植区', mode: 'zone', value: 'growing' },
+    { id: 'stockpile', label: '📦 储存区', mode: 'zone', value: 'stockpile' },
+    { id: 'clear_zone', label: '🧹 清除区域', mode: 'zone', value: 'clear' },
+  ],
+  build: Object.entries(BUILDING_INFO).map(([key, info]) => {
+    const costStr = Object.entries(info.cost)
+      .map(([r, n]) => `${RESOURCE_INFO[r]?.name || r}${n}`)
+      .join(' ');
+    return {
+      id: `build_${key}`,
+      label: `${info.name}`,
+      hint: costStr,
+      mode: 'build',
+      value: key,
+    };
+  }),
+};
+
+function initApp() {
+  const canvas = document.getElementById('game-canvas');
+  if (!canvas) return;
+
+  let world = new World({ seed: Math.floor(Date.now() % 100000) });
+  const renderer = new Renderer(canvas);
+  const sound = new SoundEngine();
+  world.onSound = (name) => sound.play(name);
+
+  const uiState = {
+    activeMenu: 'select',
+    activeTool: { mode: 'select', value: null },
+    selectedColonistId: world.colonists[0]?.id || null,
+    selectedTile: null,
+    hoverTile: null,
+    dragStart: null,
+    isPanning: false,
+    panLast: null,
+    keysDown: new Set(),
+    modalOpen: null,
+  };
+
+  renderer.resize();
+  renderer.centerOn(world.map.spawnPoint.x, world.map.spawnPoint.y);
+
+  // DOM refs
+  const elColonistBar = document.getElementById('colonist-bar');
+  const elClockTime = document.getElementById('clock-time');
+  const elClockSub = document.getElementById('clock-sub');
+  const elPopCount = document.getElementById('pop-count');
+  const elResourceList = document.getElementById('resource-list');
+  const elPowerVal = document.getElementById('power-val');
+  const elAlerts = document.getElementById('alerts-panel');
+  const elInspector = document.getElementById('inspector-panel');
+  const elLogList = document.getElementById('log-list');
+  const elSubToolbar = document.getElementById('sub-toolbar');
+  const elMainToolbar = document.getElementById('main-toolbar');
+  const elModalBackdrop = document.getElementById('modal-backdrop');
+  const elModalTitle = document.getElementById('modal-title');
+  const elModalBody = document.getElementById('modal-body');
+
+  const btnPause = document.getElementById('btn-pause');
+  const btnS1 = document.getElementById('btn-s1');
+  const btnS2 = document.getElementById('btn-s2');
+  const btnS3 = document.getElementById('btn-s3');
+  const btnMute = document.getElementById('btn-mute');
+
+  function updateSpeedButtons() {
+    btnPause.classList.toggle('active', world.paused);
+    btnPause.textContent = world.paused ? '▶' : '⏸';
+    btnS1.classList.toggle('active', !world.paused && world.speed === 1);
+    btnS2.classList.toggle('active', !world.paused && world.speed === 2);
+    btnS3.classList.toggle('active', !world.paused && world.speed === 3);
+  }
+
+  function setMenu(menuName) {
+    uiState.activeMenu = menuName;
+    elMainToolbar.querySelectorAll('[data-menu]').forEach((b) => {
+      b.classList.toggle('active', b.dataset.menu === menuName);
+    });
+
+    if (menuName === 'select' || !SUB_MENUS[menuName]) {
+      uiState.activeTool = { mode: 'select', value: null };
+      elSubToolbar.classList.remove('visible');
+      elSubToolbar.innerHTML = '';
+      return;
+    }
+
+    const items = SUB_MENUS[menuName];
+    elSubToolbar.innerHTML = items
+      .map(
+        (it, idx) =>
+          `<button class="btn${idx === 0 ? ' active' : ''}" data-mode="${it.mode}" data-val="${it.value}">${it.label}${
+            it.hint ? `<span class="tool-hint">${it.hint}</span>` : ''
+          }</button>`
+      )
+      .join('');
+    elSubToolbar.classList.add('visible');
+    uiState.activeTool = { mode: items[0].mode, value: items[0].value };
+  }
+
+  // Event delegation for main toolbar & sub toolbar
+  elMainToolbar.addEventListener('click', (e) => {
+    sound.unlock();
+    const btn = e.target.closest('button');
+    if (!btn) return;
+    if (btn.dataset.menu) {
+      sound.play('click');
+      setMenu(btn.dataset.menu);
+    }
+  });
+
+  elSubToolbar.addEventListener('click', (e) => {
+    sound.unlock();
+    const btn = e.target.closest('button');
+    if (!btn || !btn.dataset.mode) return;
+    sound.play('click');
+    elSubToolbar.querySelectorAll('button').forEach((b) => b.classList.remove('active'));
+    btn.classList.add('active');
+    uiState.activeTool = { mode: btn.dataset.mode, value: btn.dataset.val };
+  });
+
+  // Speed & audio buttons
+  btnPause.addEventListener('click', () => {
+    sound.unlock();
+    world.paused = !world.paused;
+    updateSpeedButtons();
+  });
+  btnS1.addEventListener('click', () => {
+    sound.unlock();
+    world.paused = false;
+    world.speed = 1;
+    updateSpeedButtons();
+  });
+  btnS2.addEventListener('click', () => {
+    sound.unlock();
+    world.paused = false;
+    world.speed = 2;
+    updateSpeedButtons();
+  });
+  btnS3.addEventListener('click', () => {
+    sound.unlock();
+    world.paused = false;
+    world.speed = 3;
+    updateSpeedButtons();
+  });
+  btnMute.addEventListener('click', () => {
+    sound.unlock();
+    const muted = sound.toggleMute();
+    btnMute.textContent = muted ? '🔇' : '🔊';
+  });
+
+  // Modal Helpers
+  function openModal(type, title) {
+    uiState.modalOpen = type;
+    elModalTitle.textContent = title;
+    renderModalContent();
+    elModalBackdrop.classList.add('visible');
+  }
+
+  function closeModal() {
+    uiState.modalOpen = null;
+    elModalBackdrop.classList.remove('visible');
+  }
+
+  document.getElementById('modal-close').addEventListener('click', closeModal);
+  elModalBackdrop.addEventListener('click', (e) => {
+    if (e.target === elModalBackdrop) closeModal();
+  });
+
+  document.getElementById('btn-open-work').addEventListener('click', () => openModal('work', '工作优先级调度 (1最高 / 0关闭)'));
+  document.getElementById('btn-open-tech').addEventListener('click', () => openModal('tech', '殖民地科技树'));
+  document.getElementById('btn-open-story').addEventListener('click', () => openModal('story', 'AI 叙事者与沙盒事件'));
+  document.getElementById('btn-open-save').addEventListener('click', () => openModal('save', '存档与新开局'));
+  document.getElementById('btn-open-help').addEventListener('click', () => openModal('help', 'RimWeb 操作与生存指南'));
+
+  function renderModalContent() {
+    if (uiState.modalOpen === 'work') {
+      const headers = WORK_CATEGORIES.map((c) => `<th>${c.label}</th>`).join('');
+      const rows = world.colonists
+        .filter((c) => c.alive)
+        .map((c) => {
+          const cells = WORK_CATEGORIES.map((cat) => {
+            const p = c.workPriorities[cat.id] ?? 0;
+            return `<td><button class="prio-btn p${p}" data-col="${c.id}" data-cat="${cat.id}">${p === 0 ? '-' : p}</button></td>`;
+          }).join('');
+          return `<tr><td>${c.name} <span style="color:#94a3b8;font-weight:400">(${c.trait.name})</span></td>${cells}</tr>`;
+        })
+        .join('');
+      elModalBody.innerHTML = `<table class="work-table"><thead><tr><th>殖民者</th>${headers}</tr></thead><tbody>${rows}</tbody></table>
+        <p style="color:#94a3b8;font-size:11px;margin-top:10px;">点击数字可在 1 → 2 → 3 → 4 → 关闭(-) 间循环切换。</p>`;
+    } else if (uiState.modalOpen === 'tech') {
+      elModalBody.innerHTML = TECH_TREE.map((t) => {
+        const done = world.researchedTechs.has(t.id);
+        const active = world.activeTechId === t.id && !done;
+        const prog = Math.min(t.cost, Math.round(world.techProgress[t.id] || 0));
+        return `<div class="tech-card ${done ? 'done' : active ? 'active' : ''}">
+          <div>
+            <div style="font-weight:700">${t.name} ${done ? '✅' : active ? '(研究中)' : ''}</div>
+            <div style="font-size:11px;color:#94a3b8;margin-top:2px">${t.desc}</div>
+            <div style="font-size:11px;color:#38bdf8;margin-top:4px">进度：${done ? t.cost : prog} / ${t.cost}</div>
+          </div>
+          ${
+            done
+              ? '<span style="color:#22c55e;font-weight:700">已解锁</span>'
+              : `<button class="btn ${active ? 'active' : ''}" data-select-tech="${t.id}">${active ? '当前研究' : '设为研究'}</button>`
+          }
+        </div>`;
+      }).join('') + '<p style="color:#94a3b8;font-size:11px;">提示：建造「研究台」后，殖民者会自动前来推进当前科技。</p>';
+    } else if (uiState.modalOpen === 'story') {
+      elModalBody.innerHTML = `
+        <p style="color:#cbd5e1;margin-top:0">AI 叙事者会随时间自动触发随机事件，你也可以在此手动测试各类突发状况：</p>
+        <div style="display:flex;flex-wrap:wrap;gap:8px;margin-top:10px">
+          <button class="btn btn-danger" data-event="raid">⚔ 触发海盗袭击</button>
+          <button class="btn" data-event="cargo_pods">📦 投放空投补给</button>
+          <button class="btn" data-event="wanderer">🧑 招募流浪者</button>
+          <button class="btn" data-event="caravan">🪙 呼叫商队赠礼</button>
+          <button class="btn" data-event="weather">🌦 切换随机天气</button>
+        </div>
+        <div style="margin-top:14px;padding-top:10px;border-top:1px solid rgba(148,163,184,0.2);font-size:12px;color:#94a3b8">
+          已击退掠夺者：<b>${world.stats.raidersDefeated}</b> · 已建成建筑：<b>${world.stats.buildingsBuilt}</b> · 已烹制餐食：<b>${world.stats.mealsCooked}</b>
+        </div>`;
+    } else if (uiState.modalOpen === 'save') {
+      elModalBody.innerHTML = `
+        <div style="display:flex;flex-wrap:wrap;gap:8px;margin-bottom:12px">
+          <button class="btn active" id="btn-save-local">💾 保存到浏览器本地</button>
+          <button class="btn" id="btn-load-local">📂 读取本地存档</button>
+          <button class="btn" id="btn-export-json">📤 导出 JSON 存档</button>
+          <button class="btn btn-danger" id="btn-new-game">🔄 生成新地图开局</button>
+        </div>
+        <div id="save-feedback" style="font-size:12px;color:#38bdf8;min-height:18px;margin-bottom:8px"></div>
+        <label style="font-size:11px;color:#94a3b8;display:block;margin-bottom:4px">JSON 存档导入/导出区：</label>
+        <textarea id="save-json-area" rows="5" style="width:100%;background:#0f172a;color:#e2e8f0;border:1px solid #334155;border-radius:6px;padding:8px;font-family:monospace;font-size:11px"></textarea>
+        <button class="btn" id="btn-import-json" style="margin-top:6px">📥 从上方 JSON 载入</button>`;
+    } else if (uiState.modalOpen === 'help') {
+      elModalBody.innerHTML = `
+        <ul style="line-height:1.7;padding-left:18px;margin:0;color:#e2e8f0">
+          <li><b>视角控制</b>：WASD / 方向键平移，右键拖拽地图，滚轮缩放视野。</li>
+          <li><b>资源采集</b>：点击底部「指令」选择砍树、采矿或采摘，在地图上拖拽框选目标区域。</li>
+          <li><b>农耕与建造</b>：在肥沃土壤划定「种植区」自动播种收割；建造「木床」提升休息效率，「太阳能板 + 自动机枪塔」构建自动防线。</li>
+          <li><b>战斗征召</b>：选中殖民者后按 <b>R</b> 键或点击「征召」，右键点击地图任意可行走位置进行战术走位，进入射程后自动迎敌。</li>
+          <li><b>快捷键</b>：<code>Space</code> 暂停/继续，<code>1/2/3</code> 切换倍速，<code>Esc</code> 返回选择模式。</li>
+        </ul>`;
+    }
+  }
+
+  elModalBody.addEventListener('click', (e) => {
+    sound.unlock();
+    const prioBtn = e.target.closest('.prio-btn');
+    if (prioBtn) {
+      const col = world.colonists.find((c) => c.id === prioBtn.dataset.col);
+      if (col) {
+        const cur = col.workPriorities[prioBtn.dataset.cat] ?? 0;
+        col.workPriorities[prioBtn.dataset.cat] = (cur + 1) % 5;
+        sound.play('click');
+        renderModalContent();
+      }
+      return;
+    }
+
+    const techBtn = e.target.closest('[data-select-tech]');
+    if (techBtn) {
+      world.activeTechId = techBtn.dataset.selectTech;
+      sound.play('click');
+      renderModalContent();
+      return;
+    }
+
+    const evBtn = e.target.closest('[data-event]');
+    if (evBtn) {
+      world.triggerStorytellerEvent(evBtn.dataset.event);
+      closeModal();
+      return;
+    }
+
+    const feedback = document.getElementById('save-feedback');
+    if (e.target.id === 'btn-save-local') {
+      try {
+        localStorage.setItem(SAVE_KEY, world.serialize());
+        if (feedback) feedback.textContent = '✅ 已成功保存到浏览器本地存储。';
+      } catch {
+        if (feedback) feedback.textContent = '⚠️ 当前环境受限，请使用下方 JSON 导出备份。';
+      }
+    } else if (e.target.id === 'btn-load-local') {
+      try {
+        const raw = localStorage.getItem(SAVE_KEY);
+        if (!raw) {
+          if (feedback) feedback.textContent = '未找到本地存档。';
+        } else {
+          world = World.deserialize(raw);
+          world.onSound = (name) => sound.play(name);
+          renderer.centerOn(world.map.spawnPoint.x, world.map.spawnPoint.y);
+          if (feedback) feedback.textContent = '✅ 已读取本地存档！';
+        }
+      } catch {
+        if (feedback) feedback.textContent = '⚠️ 读取失败或当前环境不支持本地存储。';
+      }
+    } else if (e.target.id === 'btn-export-json') {
+      const area = document.getElementById('save-json-area');
+      if (area) {
+        area.value = world.serialize();
+        area.select();
+        try { document.execCommand('copy'); } catch {}
+        if (feedback) feedback.textContent = '✅ 已生成 JSON 存档文本。';
+      }
+    } else if (e.target.id === 'btn-import-json') {
+      const area = document.getElementById('save-json-area');
+      try {
+        world = World.deserialize(area.value);
+        world.onSound = (name) => sound.play(name);
+        renderer.centerOn(world.map.spawnPoint.x, world.map.spawnPoint.y);
+        if (feedback) feedback.textContent = '✅ JSON 存档导入成功！';
+      } catch {
+        if (feedback) feedback.textContent = '❌ JSON 格式无效，无法载入。';
+      }
+    } else if (e.target.id === 'btn-new-game') {
+      world = new World({ seed: Math.floor(Math.random() * 100000) });
+      world.onSound = (name) => sound.play(name);
+      uiState.selectedColonistId = world.colonists[0]?.id || null;
+      renderer.centerOn(world.map.spawnPoint.x, world.map.spawnPoint.y);
+      closeModal();
+    }
+  });
+
+  // Canvas Input (Mouse & Touch)
+  function getCanvasPos(e) {
+    const rect = canvas.getBoundingClientRect();
+    return { x: e.clientX - rect.left, y: e.clientY - rect.top };
+  }
+
+  canvas.addEventListener('contextmenu', (e) => e.preventDefault());
+
+  canvas.addEventListener('pointerdown', (e) => {
+    sound.unlock();
+    const pos = getCanvasPos(e);
+    const tilePos = renderer.screenToTile(pos.x, pos.y);
+
+    // Right click: drafted move OR pan
+    if (e.button === 2 || e.button === 1) {
+      if (e.button === 2 && uiState.selectedColonistId) {
+        const col = world.colonists.find((c) => c.id === uiState.selectedColonistId && c.alive);
+        if (col && col.drafted) {
+          if (world.commandDraftedMove(col.id, tilePos.x, tilePos.y)) {
+            world.spawnFloatingText(tilePos.x, tilePos.y - 0.3, '→ 移动', '#facc15');
+            return;
+          }
+        }
+      }
+      uiState.isPanning = true;
+      uiState.panLast = pos;
+      canvas.setPointerCapture(e.pointerId);
+      return;
+    }
+
+    // Left click
+    if (uiState.activeTool.mode === 'select') {
+      // Check if clicked on a colonist
+      const clickedCol = world.colonists.find(
+        (c) => c.alive && Math.hypot(c.x + 0.5 - tilePos.wx, c.y + 0.5 - tilePos.wy) < 0.85
+      );
+      if (clickedCol) {
+        uiState.selectedColonistId = clickedCol.id;
+        uiState.selectedTile = null;
+        sound.play('click');
+      } else {
+        uiState.selectedColonistId = null;
+        uiState.selectedTile = { x: tilePos.x, y: tilePos.y };
+        sound.play('click');
+      }
+      updateInspector();
+    } else if (uiState.activeTool.mode === 'build') {
+      const res = world.placeBlueprint(tilePos.x, tilePos.y, uiState.activeTool.value);
+      if (!res.ok) {
+        world.spawnFloatingText(tilePos.x, tilePos.y - 0.3, res.reason, '#fca5a5');
+      }
+    } else {
+      uiState.dragStart = { x: tilePos.x, y: tilePos.y };
+    }
+  });
+
+  canvas.addEventListener('pointermove', (e) => {
+    const pos = getCanvasPos(e);
+    if (uiState.isPanning && uiState.panLast) {
+      const dx = (pos.x - uiState.panLast.x) / renderer.camera.zoom;
+      const dy = (pos.y - uiState.panLast.y) / renderer.camera.zoom;
+      renderer.camera.x -= dx;
+      renderer.camera.y -= dy;
+      uiState.panLast = pos;
+      return;
+    }
+    const tilePos = renderer.screenToTile(pos.x, pos.y);
+    if (tilePos.x >= 0 && tilePos.x < world.map.width && tilePos.y >= 0 && tilePos.y < world.map.height) {
+      uiState.hoverTile = { x: tilePos.x, y: tilePos.y };
+    } else {
+      uiState.hoverTile = null;
+    }
+  });
+
+  canvas.addEventListener('pointerup', (e) => {
+    if (uiState.isPanning) {
+      uiState.isPanning = false;
+      uiState.panLast = null;
+      return;
+    }
+    if (uiState.dragStart && uiState.hoverTile) {
+      const { x: x1, y: y1 } = uiState.dragStart;
+      const { x: x2, y: y2 } = uiState.hoverTile;
+      if (uiState.activeTool.mode === 'order') {
+        world.designateOrder(x1, y1, x2, y2, uiState.activeTool.value);
+      } else if (uiState.activeTool.mode === 'zone') {
+        world.designateZone(x1, y1, x2, y2, uiState.activeTool.value);
+      }
+    }
+    uiState.dragStart = null;
+  });
+
+  canvas.addEventListener(
+    'wheel',
+    (e) => {
+      e.preventDefault();
+      const factor = e.deltaY < 0 ? 1.12 : 0.89;
+      renderer.camera.zoom = Math.max(0.55, Math.min(2.2, renderer.camera.zoom * factor));
+    },
+    { passive: false }
+  );
+
+  // Keyboard controls
+  window.addEventListener('keydown', (e) => {
+    if (e.target.tagName === 'TEXTAREA' || e.target.tagName === 'INPUT') return;
+    uiState.keysDown.add(e.code);
+
+    if (e.code === 'Space') {
+      e.preventDefault();
+      world.paused = !world.paused;
+      updateSpeedButtons();
+    } else if (e.code === 'Digit1') {
+      world.paused = false;
+      world.speed = 1;
+      updateSpeedButtons();
+    } else if (e.code === 'Digit2') {
+      world.paused = false;
+      world.speed = 2;
+      updateSpeedButtons();
+    } else if (e.code === 'Digit3') {
+      world.paused = false;
+      world.speed = 3;
+      updateSpeedButtons();
+    } else if (e.code === 'Escape') {
+      if (uiState.modalOpen) closeModal();
+      else setMenu('select');
+    } else if (e.code === 'KeyR' && uiState.selectedColonistId) {
+      const col = world.colonists.find((c) => c.id === uiState.selectedColonistId && c.alive);
+      if (col) {
+        world.draftColonist(col.id, !col.drafted);
+        updateInspector();
+      }
+    }
+  });
+
+  window.addEventListener('keyup', (e) => {
+    uiState.keysDown.delete(e.code);
+  });
+
+  window.addEventListener('resize', () => {
+    renderer.resize();
+  });
+
+  // Top colonist bar click
+  elColonistBar.addEventListener('click', (e) => {
+    const chip = e.target.closest('.colonist-chip');
+    if (!chip) return;
+    const col = world.colonists.find((c) => c.id === chip.dataset.id && c.alive);
+    if (col) {
+      uiState.selectedColonistId = col.id;
+      uiState.selectedTile = null;
+      renderer.centerOn(col.x, col.y);
+      sound.play('click');
+      updateInspector();
+    }
+  });
+
+  // Inspector actions (Draft button)
+  elInspector.addEventListener('click', (e) => {
+    const btn = e.target.closest('#btn-toggle-draft');
+    if (!btn || !uiState.selectedColonistId) return;
+    const col = world.colonists.find((c) => c.id === uiState.selectedColonistId && c.alive);
+    if (col) {
+      world.draftColonist(col.id, !col.drafted);
+      updateInspector();
+    }
+  });
+
+  // Dismiss alerts
+  elAlerts.addEventListener('click', (e) => {
+    const card = e.target.closest('.alert-card');
+    if (card) world.dismissAlert(card.dataset.id);
+  });
+
+  function updateInspector() {
+    if (uiState.selectedColonistId) {
+      const c = world.colonists.find((col) => col.id === uiState.selectedColonistId && col.alive);
+      if (!c) {
+        elInspector.classList.remove('visible');
+        return;
+      }
+      const thoughtsHtml = c.thoughts
+        .map((t) => `<span class="thought-tag ${t.delta >= 0 ? 'pos' : 'neg'}">${t.label} ${t.delta > 0 ? '+' : ''}${t.delta}</span>`)
+        .join('');
+      elInspector.innerHTML = `
+        <div class="insp-header">
+          <span class="insp-name">${c.name} <span style="font-size:11px;color:#94a3b8;font-weight:400">${c.trait.name}</span></span>
+          <button id="btn-toggle-draft" class="btn ${c.drafted ? 'btn-warn active' : ''}">${c.drafted ? '⚔ 取消征召 (R)' : '⚔ 征召 (R)'}</button>
+        </div>
+        <div style="font-size:11px;color:#38bdf8;margin-bottom:4px">状态：${c.statusText}</div>
+        <div class="insp-grid">
+          <div>生命：<b>${Math.round(c.hp)}/${c.maxHp}</b></div>
+          <div>心情：<b>${Math.round(c.mood)}%</b></div>
+          <div>饱食：<b>${Math.round(c.needs.hunger)}%</b></div>
+          <div>精力：<b>${Math.round(c.needs.rest)}%</b></div>
+          <div>娱乐：<b>${Math.round(c.needs.joy)}%</b></div>
+          <div>射击/建造：<b>${c.skills.shooting}/${c.skills.build}</b></div>
+        </div>
+        <div class="thought-tags">${thoughtsHtml}</div>`;
+      elInspector.classList.add('visible');
+      return;
+    }
+
+    if (uiState.selectedTile) {
+      const t = world.getTile(uiState.selectedTile.x, uiState.selectedTile.y);
+      if (!t) {
+        elInspector.classList.remove('visible');
+        return;
+      }
+      const tInfo = TERRAIN_INFO[t.terrain];
+      const bInfo = t.building ? BUILDING_INFO[t.building.type] : null;
+      const nInfo = t.natural ? NATURAL_INFO[t.natural] : null;
+      elInspector.innerHTML = `
+        <div class="insp-header">
+          <span class="insp-name">${bInfo ? bInfo.name : nInfo ? nInfo.name : tInfo.name}</span>
+          <span style="font-size:11px;color:#94a3b8">(${t.x}, ${t.y})</span>
+        </div>
+        <div style="font-size:11px;color:#cbd5e1;line-height:1.5">
+          地形：${tInfo.name}（肥力 ${Math.round(tInfo.fertile * 100)}%）<br/>
+          ${bInfo ? `建筑耐久：${Math.round(t.building.hp)}/${t.building.maxHp}${t.building.built ? '' : '（建造中）'}<br/>${bInfo.desc}` : ''}
+          ${t.crop ? `作物进度：${Math.round(t.crop.progress)}%` : ''}
+          ${t.zone ? `区域：${t.zone === 'growing' ? '种植区' : '储存区'}` : ''}
+        </div>`;
+      elInspector.classList.add('visible');
+      return;
+    }
+
+    elInspector.classList.remove('visible');
+  }
+
+  let hudAccum = 0;
+  function updateHUD() {
+    // Clock
+    const hh = String(Math.floor(world.timeOfDay)).padStart(2, '0');
+    const mm = String(Math.floor((world.timeOfDay % 1) * 60)).padStart(2, '0');
+    elClockTime.textContent = `第 ${world.day} 天 · ${hh}:${mm}`;
+    elClockSub.textContent = `${world.weather.name} · ${world.getTemperature()}°C`;
+
+    // Colonist Bar
+    const living = world.colonists.filter((c) => c.alive);
+    elPopCount.textContent = `${living.length}人`;
+    elColonistBar.innerHTML = living
+      .map((c) => {
+        const moodColor = c.mood > 60 ? '#22c55e' : c.mood > 35 ? '#eab308' : '#ef4444';
+        const hpColor = c.hp > 60 ? '#38bdf8' : '#ef4444';
+        return `<div class="hud-panel colonist-chip ${uiState.selectedColonistId === c.id ? 'selected' : ''} ${c.drafted ? 'drafted' : ''}" data-id="${c.id}">
+          <div class="chip-top">
+            <span class="pawn-dot" style="background:${c.shirtColor}"></span>
+            <span class="chip-name">${c.name}</span>
+          </div>
+          <div class="mini-bar"><div class="mini-bar-fill" style="width:${Math.round(c.hp)}%;background:${hpColor}"></div></div>
+          <div class="mini-bar"><div class="mini-bar-fill" style="width:${Math.round(c.mood)}%;background:${moodColor}"></div></div>
+          <div class="chip-status">${c.statusText}</div>
+        </div>`;
+      })
+      .join('');
+
+    // Resources
+    elResourceList.innerHTML = Object.entries(RESOURCE_INFO)
+      .map(
+        ([k, info]) =>
+          `<div class="res-row"><span>${info.icon} ${info.name}</span><span class="res-val">${Math.floor(world.resources[k] || 0)}</span></div>`
+      )
+      .join('');
+    elPowerVal.textContent = `${world.power.net >= 0 ? '+' : ''}${world.power.net}W`;
+    elPowerVal.style.color = world.power.net >= 0 ? '#86efac' : '#fca5a5';
+
+    // Alerts
+    elAlerts.innerHTML = world.alerts
+      .map(
+        (a) =>
+          `<div class="hud-panel alert-card ${a.level}" data-id="${a.id}"><div class="alert-title">${a.title}</div><div class="alert-msg">${a.message}</div></div>`
+      )
+      .join('');
+
+    // Logs
+    elLogList.innerHTML = world.logs
+      .slice(0, 12)
+      .map((l) => `<div class="log-item ${l.level}">[D${l.day} ${l.time}] ${l.text}</div>`)
+      .join('');
+
+    updateInspector();
+  }
+
+  // Main Animation Loop
+  let lastTs = performance.now();
+  let rafId = null;
+
+  function frame(ts) {
+    const rawDt = Math.min(0.08, (ts - lastTs) / 1000);
+    lastTs = ts;
+
+    // Keyboard camera pan
+    const panSpeed = (340 / renderer.camera.zoom) * rawDt;
+    if (uiState.keysDown.has('KeyW') || uiState.keysDown.has('ArrowUp')) renderer.camera.y -= panSpeed;
+    if (uiState.keysDown.has('KeyS') || uiState.keysDown.has('ArrowDown')) renderer.camera.y += panSpeed;
+    if (uiState.keysDown.has('KeyA') || uiState.keysDown.has('ArrowLeft')) renderer.camera.x -= panSpeed;
+    if (uiState.keysDown.has('KeyD') || uiState.keysDown.has('ArrowRight')) renderer.camera.x += panSpeed;
+
+    world.tick(rawDt);
+    renderer.render(world, uiState, ts / 1000);
+
+    hudAccum += rawDt;
+    if (hudAccum >= 0.2) {
+      hudAccum = 0;
+      updateHUD();
+    }
+
+    rafId = requestAnimationFrame(frame);
+  }
+
+  updateHUD();
+  updateSpeedButtons();
+  if (rafId) cancelAnimationFrame(rafId);
+  rafId = requestAnimationFrame(frame);
+}
+
+if (typeof window !== 'undefined') {
+  if (document.readyState === 'complete') {
+    initApp();
+  } else {
+    window.addEventListener('load', initApp);
+  }
+}
+
+})();
+  </script>
+</body>
+</html>

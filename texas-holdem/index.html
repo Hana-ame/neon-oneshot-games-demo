@@ -1,0 +1,132 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>网页德州扑克 · Royal Hold'em</title>
+  <link rel="stylesheet" href="./src/ui/styles.css" />
+</head>
+<body>
+  <header class="topbar">
+    <div class="brand">
+      <div class="brand-logo">♠</div>
+      <div>
+        <div class="brand-title">Royal Hold'em 德州扑克</div>
+        <div id="hand-meta" class="brand-meta">准备发牌...</div>
+      </div>
+    </div>
+    <div class="topbar-controls">
+      <button id="btn-toggle-equity" class="btn-ghost active" type="button">📊 胜率辅助</button>
+      <button id="btn-toggle-sound" class="btn-ghost active" type="button">🔊 音效</button>
+      <button id="btn-open-rules" class="btn-ghost" type="button">📖 牌型表</button>
+      <button id="btn-toggle-log" class="btn-ghost" type="button">📜 牌局记录</button>
+      <button id="btn-open-settings" class="btn-ghost" type="button">⚙️ 设置 / 新局</button>
+    </div>
+  </header>
+
+  <main class="stage">
+    <div class="table-wrapper">
+      <section id="opponents-row" class="opponents-row" aria-label="对手座位"></section>
+
+      <section class="poker-table" aria-label="公共牌桌">
+        <div class="table-header-row">
+          <div id="phase-badge" class="phase-badge">翻牌前</div>
+          <div id="pot-display" class="pot-display">🪙 总底池: 0</div>
+        </div>
+        <div id="side-pots-bar" class="side-pots-bar"></div>
+        <div id="community-cards" class="community-cards"></div>
+        <div id="showdown-banner" class="showdown-banner" style="display:none;"></div>
+      </section>
+
+      <section id="hero-area" class="hero-area" aria-label="玩家手牌"></section>
+    </div>
+  </main>
+
+  <footer class="control-dock">
+    <div id="action-buttons-row" class="action-buttons-row"></div>
+    <div id="raise-controls-row" class="raise-controls-row"></div>
+    <div id="status-hint" class="status-hint">欢迎来到无限注德州扑克</div>
+  </footer>
+
+  <!-- 牌局日志抽屉 -->
+  <aside id="log-drawer" class="log-drawer" aria-label="牌局记录">
+    <div class="log-header">
+      <span>📜 牌局行动记录</span>
+      <button id="btn-close-log" class="btn-ghost" type="button">关闭</button>
+    </div>
+    <div id="log-list" class="log-list"></div>
+  </aside>
+
+  <!-- 牌型大小表弹窗 -->
+  <div id="rules-modal" class="modal-backdrop" role="dialog" aria-modal="true">
+    <div class="modal-card">
+      <div class="modal-title-row">
+        <div class="modal-title">📖 德州扑克牌型大小表（由大到小）</div>
+        <button id="btn-close-rules" class="btn-ghost" type="button">关闭</button>
+      </div>
+      <table class="hand-rank-table">
+        <thead>
+          <tr><th>牌型</th><th>英文</th><th>示例</th></tr>
+        </thead>
+        <tbody>
+          <tr><td>1. 皇家同花顺</td><td>Royal Flush</td><td>A♠ K♠ Q♠ J♠ 10♠</td></tr>
+          <tr><td>2. 同花顺</td><td>Straight Flush</td><td>9♥ 8♥ 7♥ 6♥ 5♥</td></tr>
+          <tr><td>3. 四条</td><td>Four of a Kind</td><td>K♠ K♥ K♦ K♣ 2♦</td></tr>
+          <tr><td>4. 葫芦</td><td>Full House</td><td>Q♠ Q♥ Q♦ 9♣ 9♦</td></tr>
+          <tr><td>5. 同花</td><td>Flush</td><td>A♦ J♦ 9♦ 5♦ 2♦</td></tr>
+          <tr><td>6. 顺子</td><td>Straight</td><td>10♥ 9♦ 8♠ 7♣ 6♥</td></tr>
+          <tr><td>7. 三条</td><td>Three of a Kind</td><td>8♠ 8♥ 8♦ K♣ 4♠</td></tr>
+          <tr><td>8. 两对</td><td>Two Pair</td><td>A♠ A♥ J♦ J♣ 3♠</td></tr>
+          <tr><td>9. 一对</td><td>One Pair</td><td>10♦ 10♥ A♣ 9♠ 4♦</td></tr>
+          <tr><td>10. 高牌</td><td>High Card</td><td>A♠ K♦ 9♣ 6♥ 2♠</td></tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+
+  <!-- 设置弹窗 -->
+  <div id="settings-modal" class="modal-backdrop" role="dialog" aria-modal="true">
+    <div class="modal-card">
+      <div class="modal-title-row">
+        <div class="modal-title">⚙️ 牌局设置</div>
+        <button id="btn-close-settings" class="btn-ghost" type="button">取消</button>
+      </div>
+      <div class="form-group">
+        <label for="setting-players">牌桌人数（含玩家）</label>
+        <select id="setting-players" class="form-select">
+          <option value="2">2 人单挑 (Heads-Up)</option>
+          <option value="4">4 人桌</option>
+          <option value="6" selected>6 人标准桌 (6-Max)</option>
+        </select>
+      </div>
+      <div class="form-group">
+        <label for="setting-chips">初始筹码</label>
+        <select id="setting-chips" class="form-select">
+          <option value="1000">1,000</option>
+          <option value="2000" selected>2,000</option>
+          <option value="5000">5,000</option>
+        </select>
+      </div>
+      <div class="form-group">
+        <label for="setting-blinds">盲注级别 (SB / BB)</label>
+        <select id="setting-blinds" class="form-select">
+          <option value="10/20" selected>10 / 20</option>
+          <option value="25/50">25 / 50</option>
+          <option value="50/100">50 / 100</option>
+        </select>
+      </div>
+      <div class="form-group">
+        <label for="setting-speed">AI 思考速度</label>
+        <select id="setting-speed" class="form-select">
+          <option value="fast">快速</option>
+          <option value="normal" selected>标准</option>
+          <option value="slow">慢速</option>
+        </select>
+      </div>
+      <button id="btn-apply-settings" class="btn-action btn-next" type="button" style="width:100%;">应用并开始新牌局</button>
+    </div>
+  </div>
+
+  <script type="module" src="./src/ui/app.js"></script>
+</body>
+</html>

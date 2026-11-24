@@ -1,0 +1,133 @@
+/**
+ * 科技树定义：步兵、装甲、工业、陆军学说四大领域共 12 项科技
+ */
+
+export const TECHNOLOGIES = [
+  // 步兵与火炮
+  {
+    id: 'inf_weapons_1',
+    name: '改进型步兵武器',
+    branch: 'infantry',
+    branchName: '步兵科技',
+    costDays: 40,
+    prereq: [],
+    desc: '提升全体部队软攻 +12%、防御 +8%。',
+    effects: { softAttackMult: 0.12, defenseMult: 0.08 },
+  },
+  {
+    id: 'artillery_modern',
+    name: '现代化师属火炮',
+    branch: 'infantry',
+    branchName: '步兵科技',
+    costDays: 55,
+    prereq: ['inf_weapons_1'],
+    desc: '强化火力覆盖，全体部队软攻 +18%、突破 +10%。',
+    effects: { softAttackMult: 0.18, breakthroughMult: 0.1 },
+  },
+  {
+    id: 'anti_tank_1',
+    name: '反坦克火炮',
+    branch: 'infantry',
+    branchName: '步兵科技',
+    costDays: 50,
+    prereq: ['inf_weapons_1'],
+    desc: '提升硬攻 +25%、穿甲值 +10，有效克制敌方装甲师。',
+    effects: { hardAttackMult: 0.25, piercingFlat: 10 },
+  },
+
+  // 装甲与机械化
+  {
+    id: 'medium_tank_1',
+    name: '中型坦克量产',
+    branch: 'armor',
+    branchName: '装甲科技',
+    costDays: 50,
+    prereq: [],
+    desc: '装甲师装甲值 +8、突破 +15%。',
+    effects: { armorFlat: 8, breakthroughMult: 0.15 },
+  },
+  {
+    id: 'heavy_armor_doctrine',
+    name: '倾斜装甲与长管火炮',
+    branch: 'armor',
+    branchName: '装甲科技',
+    costDays: 65,
+    prereq: ['medium_tank_1'],
+    desc: '装甲值 +12、硬攻 +20%、穿甲 +8。',
+    effects: { armorFlat: 12, hardAttackMult: 0.2, piercingFlat: 8 },
+  },
+  {
+    id: 'motorized_logistics',
+    name: '机械化后勤补给',
+    branch: 'armor',
+    branchName: '装甲科技',
+    costDays: 45,
+    prereq: ['medium_tank_1'],
+    desc: '行军速度 +15%、补给消耗降低 15%。',
+    effects: { speedMult: 0.15, supplyUseMult: -0.15 },
+  },
+
+  // 工业与建造
+  {
+    id: 'basic_machine_tools',
+    name: '基础机床工具',
+    branch: 'industry',
+    branchName: '工业科技',
+    costDays: 35,
+    prereq: [],
+    desc: '军工生产效率 +15%。',
+    effects: { factoryOutputMult: 0.15 },
+  },
+  {
+    id: 'concentrated_industry',
+    name: '集中工业体系',
+    branch: 'industry',
+    branchName: '工业科技',
+    costDays: 55,
+    prereq: ['basic_machine_tools'],
+    desc: '军工产能 +20%、民用建造速度 +15%。',
+    effects: { factoryOutputMult: 0.2, constructionMult: 0.15 },
+  },
+  {
+    id: 'excavation_1',
+    name: '战略资源勘探',
+    branch: 'industry',
+    branchName: '工业科技',
+    costDays: 45,
+    prereq: ['basic_machine_tools'],
+    desc: '全国钢铁、石油、钨矿产出提升 +25%。',
+    effects: { resourceMult: 0.25 },
+  },
+
+  // 陆军学说
+  {
+    id: 'mobile_warfare',
+    name: '机动战学说',
+    branch: 'doctrine',
+    branchName: '陆军学说',
+    costDays: 50,
+    prereq: [],
+    desc: '部队最大组织度 +8、突破 +15%、行军速度 +10%。',
+    effects: { maxOrgFlat: 8, breakthroughMult: 0.15, speedMult: 0.1 },
+  },
+  {
+    id: 'deep_battle',
+    name: '大纵深作战理论',
+    branch: 'doctrine',
+    branchName: '陆军学说',
+    costDays: 60,
+    prereq: ['mobile_warfare'],
+    desc: '组织度恢复速率 +25%、补给消耗 -10%、最大组织度 +6。',
+    effects: { orgRecoveryMult: 0.25, supplyUseMult: -0.1, maxOrgFlat: 6 },
+  },
+  {
+    id: 'superior_firepower',
+    name: '优势火力协同',
+    branch: 'doctrine',
+    branchName: '陆军学说',
+    costDays: 60,
+    prereq: ['mobile_warfare'],
+    desc: '软攻 +15%、防御 +15%、组织度 +5。',
+    effects: { softAttackMult: 0.15, defenseMult: 0.15, maxOrgFlat: 5 },
+  },
+];

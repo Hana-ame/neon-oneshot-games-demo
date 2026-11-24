@@ -1,0 +1,3639 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
+  <title>百战天虫 2D (Worms 2D Web)</title>
+  <style>
+:root {
+  --bg-dark: #0b1220;
+  --panel-bg: rgba(15, 23, 42, 0.88);
+  --panel-border: rgba(148, 163, 184, 0.24);
+  --text-main: #f1f5f9;
+  --text-muted: #94a3b8;
+  --red: #ff4d4f;
+  --blue: #38bdf8;
+  --gold: #facc15;
+  --green: #22c55e;
+}
+
+* {
+  box-sizing: border-box;
+  user-select: none;
+  -webkit-user-select: none;
+}
+
+html,
+body {
+  margin: 0;
+  padding: 0;
+  width: 100%;
+  height: 100%;
+  overflow: hidden;
+  background: var(--bg-dark);
+  color: var(--text-main);
+  font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+}
+
+.app-shell {
+  display: flex;
+  flex-direction: column;
+  width: 100%;
+  height: 100vh;
+  height: 100dvh;
+}
+
+/* Top bar */
+.top-bar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  padding: 6px 12px;
+  background: var(--panel-bg);
+  border-bottom: 1px solid var(--panel-border);
+  flex-wrap: wrap;
+  z-index: 10;
+}
+
+.brand {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-weight: 800;
+  font-size: 15px;
+  letter-spacing: 0.3px;
+  white-space: nowrap;
+}
+
+.brand-badge {
+  background: linear-gradient(135deg, #ef4444, #f97316);
+  color: #fff;
+  font-size: 11px;
+  padding: 2px 6px;
+  border-radius: 6px;
+}
+
+.controls-group {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  flex-wrap: wrap;
+}
+
+.ui-select,
+.ui-btn {
+  background: rgba(30, 41, 59, 0.92);
+  color: var(--text-main);
+  border: 1px solid var(--panel-border);
+  border-radius: 8px;
+  padding: 5px 9px;
+  font-size: 12px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background 0.15s, border-color 0.15s, transform 0.1s;
+}
+
+.ui-btn:hover,
+.ui-select:hover {
+  background: rgba(51, 65, 85, 0.95);
+  border-color: rgba(148, 163, 184, 0.55);
+}
+
+.ui-btn.primary {
+  background: linear-gradient(135deg, #2563eb, #0284c7);
+  border-color: transparent;
+}
+
+.ui-btn.primary:hover {
+  filter: brightness(1.1);
+}
+
+/* Stage wrapper */
+.stage-wrap {
+  position: relative;
+  flex: 1;
+  min-height: 260px;
+  overflow: hidden;
+  background: #0f294a;
+}
+
+#game-canvas {
+  display: block;
+  width: 100%;
+  height: 100%;
+  touch-action: none;
+  cursor: crosshair;
+}
+
+/* Floating HUD inside stage */
+.hud-top-overlay {
+  position: absolute;
+  top: 10px;
+  left: 12px;
+  right: 12px;
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 10px;
+  pointer-events: none;
+}
+
+.team-bars {
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+  min-width: 155px;
+  max-width: 220px;
+  background: rgba(15, 23, 42, 0.78);
+  padding: 7px 10px;
+  border-radius: 10px;
+  border: 1px solid var(--panel-border);
+  backdrop-filter: blur(6px);
+}
+
+.team-row {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.team-meta {
+  display: flex;
+  justify-content: space-between;
+  font-size: 11px;
+  font-weight: 700;
+}
+
+.hp-track {
+  width: 100%;
+  height: 6px;
+  background: rgba(255, 255, 255, 0.12);
+  border-radius: 99px;
+  overflow: hidden;
+}
+
+.hp-fill {
+  height: 100%;
+  transition: width 0.25s ease;
+  border-radius: 99px;
+}
+
+.hp-fill.red {
+  background: linear-gradient(90deg, #dc2626, #ff4d4f);
+}
+
+.hp-fill.blue {
+  background: linear-gradient(90deg, #0284c7, #38bdf8);
+}
+
+.center-status {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  background: rgba(15, 23, 42, 0.82);
+  padding: 6px 12px;
+  border-radius: 12px;
+  border: 1px solid var(--panel-border);
+  backdrop-filter: blur(6px);
+}
+
+.turn-badge {
+  font-size: 12px;
+  font-weight: 800;
+  padding: 3px 8px;
+  border-radius: 7px;
+  border: 1.5px solid var(--red);
+  background: rgba(255, 255, 255, 0.06);
+}
+
+.timer-val {
+  font-size: 20px;
+  font-weight: 900;
+  min-width: 28px;
+  text-align: center;
+  color: var(--gold);
+  font-variant-numeric: tabular-nums;
+}
+
+.timer-val.urgent {
+  color: #ff4d4f;
+  animation: pulse 0.6s infinite alternate;
+}
+
+@keyframes pulse {
+  from { transform: scale(1); }
+  to { transform: scale(1.16); }
+}
+
+.wind-box {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 3px;
+  min-width: 82px;
+}
+
+.wind-label {
+  font-size: 11px;
+  font-weight: 700;
+  color: #cbd5e1;
+}
+
+.wind-track {
+  position: relative;
+  width: 78px;
+  height: 6px;
+  background: rgba(255, 255, 255, 0.14);
+  border-radius: 99px;
+  overflow: hidden;
+}
+
+.wind-midline {
+  position: absolute;
+  left: 50%;
+  top: 0;
+  bottom: 0;
+  width: 1px;
+  background: rgba(255, 255, 255, 0.45);
+}
+
+.wind-bar-fill {
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  background: linear-gradient(90deg, #38bdf8, #a78bfa);
+  transition: left 0.25s, width 0.25s;
+}
+
+/* Turn banner */
+.turn-banner {
+  position: absolute;
+  left: 50%;
+  top: 76px;
+  transform: translateX(-50%) translateY(-8px);
+  background: rgba(15, 23, 42, 0.9);
+  border: 1px solid rgba(250, 204, 21, 0.55);
+  color: #fef08a;
+  padding: 7px 18px;
+  border-radius: 999px;
+  font-size: 14px;
+  font-weight: 800;
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 0.25s, transform 0.25s;
+  white-space: nowrap;
+}
+
+.turn-banner.visible {
+  opacity: 1;
+  transform: translateX(-50%) translateY(0);
+}
+
+/* Bottom HUD dock */
+.bottom-dock {
+  background: var(--panel-bg);
+  border-top: 1px solid var(--panel-border);
+  padding: 6px 10px 8px;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  z-index: 10;
+}
+
+.dock-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.weapon-bar {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  flex-wrap: wrap;
+}
+
+.weapon-btn {
+  position: relative;
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  background: rgba(30, 41, 59, 0.9);
+  color: var(--text-main);
+  border: 1.5px solid var(--panel-border);
+  border-radius: 9px;
+  padding: 5px 9px;
+  font-size: 12px;
+  font-weight: 700;
+  cursor: pointer;
+  transition: transform 0.1s, border-color 0.15s, background 0.15s;
+}
+
+.weapon-btn:hover:not(:disabled) {
+  background: rgba(51, 65, 85, 0.95);
+  border-color: rgba(250, 204, 21, 0.55);
+}
+
+.weapon-btn.active {
+  background: rgba(250, 204, 21, 0.16);
+  border-color: var(--gold);
+  color: #fef08a;
+}
+
+.weapon-btn:disabled {
+  opacity: 0.42;
+  cursor: not-allowed;
+}
+
+.w-key {
+  font-size: 10px;
+  color: var(--text-muted);
+  background: rgba(15, 23, 42, 0.7);
+  padding: 1px 4px;
+  border-radius: 4px;
+}
+
+.w-ammo {
+  font-size: 11px;
+  color: #38bdf8;
+  margin-left: 2px;
+}
+
+.action-pad {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  flex-wrap: wrap;
+}
+
+.pad-btn {
+  background: rgba(30, 41, 59, 0.92);
+  color: var(--text-main);
+  border: 1px solid var(--panel-border);
+  border-radius: 8px;
+  padding: 6px 10px;
+  font-size: 12px;
+  font-weight: 700;
+  cursor: pointer;
+  touch-action: manipulation;
+}
+
+.pad-btn:active {
+  transform: scale(0.95);
+  background: rgba(71, 85, 105, 0.95);
+}
+
+.pad-btn.fire-btn {
+  background: linear-gradient(135deg, #ef4444, #f97316);
+  border-color: transparent;
+  color: #fff;
+  padding: 6px 14px;
+}
+
+.weapon-hint {
+  font-size: 12px;
+  color: var(--text-muted);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+/* Modals */
+.modal-backdrop {
+  position: fixed;
+  inset: 0;
+  background: rgba(2, 6, 23, 0.74);
+  display: none;
+  align-items: center;
+  justify-content: center;
+  padding: 16px;
+  z-index: 40;
+  backdrop-filter: blur(4px);
+}
+
+.modal-backdrop.open {
+  display: flex;
+}
+
+.modal-card {
+  background: #0f172a;
+  border: 1px solid rgba(148, 163, 184, 0.35);
+  border-radius: 16px;
+  padding: 20px 24px;
+  max-width: 440px;
+  width: 100%;
+  box-shadow: 0 20px 50px rgba(0, 0, 0, 0.55);
+}
+
+.modal-card h2 {
+  margin: 0 0 8px;
+  font-size: 20px;
+  color: #fef08a;
+}
+
+.modal-card p {
+  margin: 0 0 14px;
+  font-size: 13px;
+  color: #cbd5e1;
+  line-height: 1.55;
+}
+
+.help-grid {
+  display: grid;
+  grid-template-columns: auto 1fr;
+  gap: 6px 12px;
+  font-size: 13px;
+  margin-bottom: 16px;
+}
+
+.help-key {
+  font-family: monospace;
+  background: rgba(30, 41, 59, 0.95);
+  padding: 2px 7px;
+  border-radius: 5px;
+  color: #38bdf8;
+  font-weight: 700;
+}
+
+@media (max-width: 720px) {
+  .w-name {
+    display: none;
+  }
+  .team-bars {
+    min-width: 125px;
+    padding: 5px 8px;
+  }
+  .brand-title {
+    font-size: 13px;
+  }
+}
+
+</style>
+</head>
+<body>
+  <div class="app-shell">
+    <header class="top-bar">
+      <div class="brand">
+        <span class="brand-title">🐛 百战天虫 2D</span>
+        <span class="brand-badge">WEB EDITION</span>
+      </div>
+      <div class="controls-group">
+        <select id="select-mode" class="ui-select" aria-label="对战模式">
+          <option value="ai" selected>单人 vs AI</option>
+          <option value="pvp">双人同屏</option>
+        </select>
+        <select id="select-theme" class="ui-select" aria-label="战场地图">
+          <option value="emerald" selected>翡翠群岛</option>
+          <option value="volcano">熔岩峡谷</option>
+          <option value="arctic">极地冰原</option>
+        </select>
+        <select id="select-worms" class="ui-select" aria-label="每队虫数">
+          <option value="2">2v2 快战</option>
+          <option value="3" selected>3v3 经典</option>
+          <option value="4">4v4 混战</option>
+        </select>
+        <button id="btn-new" type="button" class="ui-btn primary">🔄 新开一局</button>
+        <button id="btn-pause" type="button" class="ui-btn">⏸ 暂停</button>
+        <button id="btn-mute" type="button" class="ui-btn">🔊 音效</button>
+        <button id="btn-help" type="button" class="ui-btn">❓ 键位</button>
+      </div>
+    </header>
+
+    <main id="stage-wrap" class="stage-wrap">
+      <canvas id="game-canvas"></canvas>
+
+      <div class="hud-top-overlay">
+        <div class="team-bars">
+          <div class="team-row">
+            <div class="team-meta">
+              <span style="color:#ff7875">红队</span>
+              <span id="red-hp-text">300 HP (3)</span>
+            </div>
+            <div class="hp-track"><div id="red-hp-fill" class="hp-fill red" style="width:100%"></div></div>
+          </div>
+          <div class="team-row">
+            <div class="team-meta">
+              <span style="color:#7dd3fc">蓝队</span>
+              <span id="blue-hp-text">300 HP (3)</span>
+            </div>
+            <div class="hp-track"><div id="blue-hp-fill" class="hp-fill blue" style="width:100%"></div></div>
+          </div>
+        </div>
+
+        <div class="center-status">
+          <span id="turn-badge" class="turn-badge">R1 · 红队</span>
+          <span id="timer-val" class="timer-val">30</span>
+          <div class="wind-box">
+            <span id="wind-val" class="wind-label">→ 20</span>
+            <div class="wind-track">
+              <div class="wind-midline"></div>
+              <div id="wind-bar-fill" class="wind-bar-fill" style="left:50%;width:10%"></div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div id="turn-banner" class="turn-banner">回合 1 · 红队行动</div>
+    </main>
+
+    <footer class="bottom-dock">
+      <div class="dock-row">
+        <div id="weapon-bar" class="weapon-bar"></div>
+        <div class="action-pad">
+          <button id="ctrl-left" type="button" class="pad-btn" title="向左移动 (A / ←)">◀</button>
+          <button id="ctrl-right" type="button" class="pad-btn" title="向右移动 (D / →)">▶</button>
+          <button id="ctrl-aim-up" type="button" class="pad-btn" title="抬高瞄准 (W / ↑)">瞄↑</button>
+          <button id="ctrl-aim-down" type="button" class="pad-btn" title="压低瞄准 (S / ↓)">瞄↓</button>
+          <button id="ctrl-jump" type="button" class="pad-btn" title="前跳 (Enter / J)">前跳</button>
+          <button id="ctrl-backflip" type="button" class="pad-btn" title="后空翻 (Backspace / K)">后翻</button>
+          <button id="ctrl-fire" type="button" class="pad-btn fire-btn" title="按住蓄力发射 (Space)">🔥 蓄力开火</button>
+        </div>
+      </div>
+      <div id="weapon-hint" class="weapon-hint">火箭筒：按住空格或“蓄力开火”发射，注意右上角风向！</div>
+    </footer>
+  </div>
+
+  <!-- Help Modal -->
+  <div id="help-modal" class="modal-backdrop">
+    <div class="modal-card">
+      <h2>🎮 操作指南</h2>
+      <div class="help-grid">
+        <span class="help-key">A / D 或 ← / →</span><span>左右移动（自动爬坡）</span>
+        <span class="help-key">W / S 或 ↑ / ↓</span><span>调整瞄准角度</span>
+        <span class="help-key">Enter / J</span><span>向前跳跃</span>
+        <span class="help-key">Backspace / K</span><span>高跳后空翻</span>
+        <span class="help-key">按住 Space</span><span>蓄力并松开发射（霰弹枪/炸药即点即用）</span>
+        <span class="help-key">数字键 1 ~ 6</span><span>快速切换武器</span>
+        <span class="help-key">鼠标拖拽画布</span><span>自由平移镜头查看战场</span>
+        <span class="help-key">空袭模式点击</span><span>点击地图任意位置呼叫 5 枚导弹轰炸</span>
+      </div>
+      <p>提示：第 12 回合起将触发<strong>骤死模式</strong>，海平面每回合上升；留意空投医疗箱与弹药箱！</p>
+      <button id="btn-close-help" type="button" class="ui-btn primary" style="width:100%">开始战斗</button>
+    </div>
+  </div>
+
+  <!-- Game Over Modal -->
+  <div id="gameover-modal" class="modal-backdrop">
+    <div class="modal-card" style="text-align:center">
+      <h2 id="gameover-title">红队胜利！</h2>
+      <p id="gameover-sub">精彩对决！</p>
+      <button id="btn-restart-modal" type="button" class="ui-btn primary" style="width:100%">再来一局</button>
+    </div>
+  </div>
+
+  <script>
+(function() {
+'use strict';
+
+// ===== src/constants.js =====
+// Core simulation constants, map themes, teams, and weapon catalog
+
+const WORLD = {
+  WIDTH: 1600,
+  HEIGHT: 800,
+  INITIAL_WATER_LEVEL: 742,
+  SUDDEN_DEATH_TURN: 12,
+  SUDDEN_DEATH_WATER_RISE: 24,
+  FIXED_DT: 1 / 60,
+};
+
+const PHYSICS = {
+  GRAVITY: 520,            // px/s^2
+  WIND_ACCEL_SCALE: 2.1,   // px/s^2 per wind unit (-100..100)
+  WORM_RADIUS: 11,
+  WORM_WALK_SPEED: 74,     // px/s
+  WORM_MAX_CLIMB: 8,       // max vertical step in pixels while walking
+  WORM_JUMP_VX: 115,
+  WORM_JUMP_VY: -245,
+  WORM_BACKFLIP_VX: -48,
+  WORM_BACKFLIP_VY: -320,
+  FALL_DAMAGE_THRESHOLD: 310, // impact vy threshold for fall damage
+  FALL_DAMAGE_SCALE: 0.09,
+  GROUND_FRICTION: 0.82,
+  AIR_DRAG: 0.996,
+  RESTITUTION_WORM: 0.28,
+  RESTITUTION_GRENADE: 0.56,
+  RESTITUTION_BOMBLET: 0.45,
+  SETTLE_SPEED_SQ: 18 * 18,
+};
+
+const TURN = {
+  DURATION: 30,            // seconds per turn
+  RETREAT_TIME: 3.0,       // seconds after firing (e.g. dynamite/grenade)
+  TRANSITION_DELAY: 1.1,   // pause before switching active worm
+  MAX_CHARGE_TIME: 1.25,   // seconds to reach 100% power
+  MIN_POWER: 0.18,
+};
+
+const THEMES = {
+  emerald: {
+    id: 'emerald',
+    name: '翡翠群岛',
+    skyTop: '#0f294a',
+    skyMid: '#246394',
+    skyBottom: '#7ec8e3',
+    sunColor: '#fff3b0',
+    cloudColor: 'rgba(255, 255, 255, 0.72)',
+    grassTop: '#52c41a',
+    grassMid: '#389e0d',
+    dirtLight: '#8c5a32',
+    dirtDark: '#5e3a1e',
+    rockColor: '#4a3525',
+    scorchColor: '#26180f',
+    waterTop: 'rgba(24, 144, 255, 0.76)',
+    waterDeep: 'rgba(9, 64, 138, 0.92)',
+    waterFoam: 'rgba(220, 244, 255, 0.7)',
+  },
+  volcano: {
+    id: 'volcano',
+    name: '熔岩峡谷',
+    skyTop: '#1a0a14',
+    skyMid: '#4a1820',
+    skyBottom: '#a83820',
+    sunColor: '#ff7a45',
+    cloudColor: 'rgba(180, 110, 90, 0.45)',
+    grassTop: '#6b3e2e',
+    grassMid: '#4d2b20',
+    dirtLight: '#3c2a2e',
+    dirtDark: '#261a1d',
+    rockColor: '#1c1417',
+    scorchColor: '#120b0d',
+    waterTop: 'rgba(255, 92, 26, 0.85)',
+    waterDeep: 'rgba(176, 28, 12, 0.95)',
+    waterFoam: 'rgba(255, 214, 102, 0.85)',
+  },
+  arctic: {
+    id: 'arctic',
+    name: '极地冰原',
+    skyTop: '#0b1d3a',
+    skyMid: '#1d4b7a',
+    skyBottom: '#a8d8f0',
+    sunColor: '#e6f7ff',
+    cloudColor: 'rgba(235, 248, 255, 0.8)',
+    grassTop: '#f0f8ff',
+    grassMid: '#bae7ff',
+    dirtLight: '#5c9ead',
+    dirtDark: '#326273',
+    rockColor: '#244754',
+    scorchColor: '#162d36',
+    waterTop: 'rgba(64, 169, 255, 0.75)',
+    waterDeep: 'rgba(12, 74, 110, 0.92)',
+    waterFoam: 'rgba(240, 250, 255, 0.85)',
+  },
+};
+
+const TEAMS = [
+  {
+    id: 0,
+    name: '红队 · 烈焰虫团',
+    shortName: '红队',
+    color: '#ff4d4f',
+    accent: '#ffa39e',
+    bandColor: '#cf1322',
+    names: ['赤霄', '火炮手', '爆破狂', '铁头娃'],
+  },
+  {
+    id: 1,
+    name: '蓝队 · 雷霆虫团',
+    shortName: '蓝队',
+    color: '#38bdf8',
+    accent: '#bae6fd',
+    bandColor: '#0369a1',
+    names: ['蓝影', '狙击手', '雷神', '钢盔侠'],
+  },
+];
+
+const WEAPONS = [
+  {
+    id: 'bazooka',
+    key: '1',
+    name: '火箭筒',
+    icon: '🚀',
+    type: 'projectile',
+    chargeable: true,
+    windFactor: 1.0,
+    gravityFactor: 1.0,
+    bounces: false,
+    fuse: 0,
+    minSpeed: 190,
+    maxSpeed: 840,
+    blastRadius: 46,
+    maxDamage: 46,
+    knockback: 310,
+    ammo: Infinity,
+    retreatTime: 0.4,
+    description: '经典抛物线火箭，受风力与重力影响，按住蓄力发射。',
+  },
+  {
+    id: 'grenade',
+    key: '2',
+    name: '破片手雷',
+    icon: '💣',
+    type: 'projectile',
+    chargeable: true,
+    windFactor: 0.0,
+    gravityFactor: 1.0,
+    bounces: true,
+    fuse: 3.0,
+    minSpeed: 160,
+    maxSpeed: 740,
+    blastRadius: 48,
+    maxDamage: 50,
+    knockback: 330,
+    ammo: Infinity,
+    retreatTime: 1.8,
+    description: '不受风力影响，碰地形反弹，3秒倒计时引爆。',
+  },
+  {
+    id: 'cluster',
+    key: '3',
+    name: '集束炸弹',
+    icon: '💥',
+    type: 'cluster',
+    chargeable: true,
+    windFactor: 0.0,
+    gravityFactor: 1.0,
+    bounces: true,
+    fuse: 3.0,
+    minSpeed: 160,
+    maxSpeed: 720,
+    blastRadius: 34,
+    maxDamage: 32,
+    knockback: 230,
+    subCount: 5,
+    subRadius: 28,
+    subDamage: 24,
+    subKnockback: 185,
+    ammo: 3,
+    retreatTime: 1.8,
+    description: '引爆后分裂为5枚子炸弹，覆盖大片区域。',
+  },
+  {
+    id: 'shotgun',
+    key: '4',
+    name: '霰弹枪',
+    icon: '🔫',
+    type: 'hitscan',
+    chargeable: false,
+    windFactor: 0.0,
+    gravityFactor: 0.0,
+    bounces: false,
+    fuse: 0,
+    range: 460,
+    shotsPerTurn: 2,
+    blastRadius: 18,
+    maxDamage: 25,
+    knockback: 250,
+    ammo: Infinity,
+    retreatTime: 1.5,
+    description: '直线精准射击，无视风力，每回合可开火2次。',
+  },
+  {
+    id: 'dynamite',
+    key: '5',
+    name: '定时炸药',
+    icon: '🧨',
+    type: 'drop',
+    chargeable: false,
+    windFactor: 0.0,
+    gravityFactor: 1.0,
+    bounces: false,
+    fuse: 4.0,
+    blastRadius: 72,
+    maxDamage: 72,
+    knockback: 420,
+    ammo: 2,
+    retreatTime: 3.6,
+    description: '在脚下放置高威炸药，4秒引爆，放置后立刻撤离！',
+  },
+  {
+    id: 'airstrike',
+    key: '6',
+    name: '空袭导弹',
+    icon: '✈️',
+    type: 'airstrike',
+    chargeable: false,
+    windFactor: 0.35,
+    gravityFactor: 0.85,
+    bounces: false,
+    fuse: 0,
+    missileCount: 5,
+    blastRadius: 34,
+    maxDamage: 32,
+    knockback: 240,
+    ammo: 1,
+    retreatTime: 0.4,
+    description: '点击地图任意位置呼叫5枚空袭导弹轰炸目标区。',
+  },
+];
+
+const WEAPON_MAP = Object.fromEntries(WEAPONS.map((w) => [w.id, w]));
+
+// ===== src/terrain.js =====
+// Destructible 2D pixel-mask terrain engine (DOM-independent for Node tests + optional Canvas cache)
+
+
+const CELL_EMPTY = 0;
+const CELL_DIRT = 1;
+const CELL_GRASS = 2;
+const CELL_SCORCH = 3;
+
+// Deterministic PRNG (Mulberry32) so maps are reproducible in tests and replays
+function createRng(seed = 1337) {
+  let a = seed >>> 0;
+  return function next() {
+    a |= 0;
+    a = (a + 0x6d2b79f5) | 0;
+    let t = Math.imul(a ^ (a >>> 15), 1 | a);
+    t = (t + Math.imul(t ^ (t >>> 7), 61 | t)) ^ t;
+    return ((t ^ (t >>> 14)) >>> 0) / 4294967296;
+  };
+}
+
+class Terrain {
+  constructor(width = WORLD.WIDTH, height = WORLD.HEIGHT, themeId = 'emerald', seed = Date.now()) {
+    this.width = width;
+    this.height = height;
+    this.themeId = themeId;
+    this.theme = THEMES[themeId] || THEMES.emerald;
+    this.seed = seed >>> 0;
+    this.mask = new Uint8Array(width * height);
+    this.canvas = null;
+    this.ctx = null;
+    this.dirty = true;
+    this.generate(this.seed);
+  }
+
+  generate(seed = this.seed) {
+    this.seed = seed >>> 0;
+    const rng = createRng(this.seed);
+    this.mask.fill(CELL_EMPTY);
+
+    // Multi-octave harmonic island profile with cliffs and valleys
+    const phases = Array.from({ length: 6 }, () => rng() * Math.PI * 2);
+    const baseHeight = this.height * 0.56;
+    const marginLeft = 90;
+    const marginRight = this.width - 90;
+
+    for (let x = 0; x < this.width; x++) {
+      // Smooth island envelope so left/right edges drop into the sea
+      const nx = x / this.width;
+      const edgeFade = Math.sin(Math.min(1, Math.max(0, (x - marginLeft) / (marginRight - marginLeft))) * Math.PI);
+      const envelope = Math.pow(Math.max(0, edgeFade), 0.42);
+
+      if (envelope <= 0.04) continue;
+
+      const wave =
+        Math.sin(nx * Math.PI * 3 + phases[0]) * 78 +
+        Math.sin(nx * Math.PI * 7 + phases[1]) * 42 +
+        Math.sin(nx * Math.PI * 13 + phases[2]) * 20 +
+        Math.cos(nx * Math.PI * 23 + phases[3]) * 9;
+
+      // Occasional dramatic central chasm or plateau
+      const plateau = Math.sin(nx * Math.PI * 2 + phases[4]) * 38;
+      const rawSurface = baseHeight - (wave + plateau) * envelope;
+      const surfaceY = Math.max(175, Math.min(this.height - 68, Math.floor(rawSurface)));
+
+      // Carve a few dramatic cliffs/islands near the middle
+      const seaDrop = this.height - 20;
+      for (let y = surfaceY; y < seaDrop; y++) {
+        const depth = y - surfaceY;
+        const idx = y * this.width + x;
+        this.mask[idx] = depth < 9 ? CELL_GRASS : CELL_DIRT;
+      }
+    }
+
+    // Carve 2-3 decorative tunnels/caves inside deeper hills for classic Worms feel
+    const caveCount = 2 + Math.floor(rng() * 2);
+    for (let i = 0; i < caveCount; i++) {
+      const cx = Math.floor(280 + rng() * (this.width - 560));
+      const sy = this.getSurfaceY(cx);
+      if (sy > 0 && sy < this.height - 210) {
+        const cy = sy + 95 + Math.floor(rng() * 55);
+        const rx = 44 + Math.floor(rng() * 34);
+        const ry = 26 + Math.floor(rng() * 16);
+        this.carveEllipse(cx, cy, rx, ry, false);
+      }
+    }
+
+    this.dirty = true;
+    this.rebuildCanvas();
+  }
+
+  carveEllipse(cx, cy, rx, ry, scorch = false) {
+    const minX = Math.max(0, Math.floor(cx - rx - 4));
+    const maxX = Math.min(this.width - 1, Math.ceil(cx + rx + 4));
+    const minY = Math.max(0, Math.floor(cy - ry - 4));
+    const maxY = Math.min(this.height - 1, Math.ceil(cy + ry + 4));
+
+    for (let y = minY; y <= maxY; y++) {
+      const dy = (y - cy) / ry;
+      for (let x = minX; x <= maxX; x++) {
+        const dx = (x - cx) / rx;
+        const d2 = dx * dx + dy * dy;
+        const idx = y * this.width + x;
+        if (d2 <= 1.0) {
+          this.mask[idx] = CELL_EMPTY;
+        } else if (scorch && d2 <= 1.25 && this.mask[idx] !== CELL_EMPTY) {
+          this.mask[idx] = CELL_SCORCH;
+        }
+      }
+    }
+  }
+
+  isSolid(x, y) {
+    const ix = Math.floor(x);
+    const iy = Math.floor(y);
+    if (ix < 0 || ix >= this.width || iy < 0 || iy >= this.height) {
+      return false;
+    }
+    return this.mask[iy * this.width + ix] !== CELL_EMPTY;
+  }
+
+  // Returns the highest solid Y at column x, or -1 if none
+  getSurfaceY(x, startY = 0) {
+    const ix = Math.floor(x);
+    if (ix < 0 || ix >= this.width) return -1;
+    const sy = Math.max(0, Math.floor(startY));
+    for (let y = sy; y < this.height; y++) {
+      if (this.mask[y * this.width + ix] !== CELL_EMPTY) {
+        return y;
+      }
+    }
+    return -1;
+  }
+
+  // Carve a circular crater and scorch its rim; returns count of destroyed pixels
+  carveCrater(cx, cy, radius) {
+    const r = Math.max(1, radius);
+    const scorchR = r + 5;
+    const r2 = r * r;
+    const scorchR2 = scorchR * scorchR;
+
+    const minX = Math.max(0, Math.floor(cx - scorchR));
+    const maxX = Math.min(this.width - 1, Math.ceil(cx + scorchR));
+    const minY = Math.max(0, Math.floor(cy - scorchR));
+    const maxY = Math.min(this.height - 1, Math.ceil(cy + scorchR));
+
+    let destroyed = 0;
+
+    for (let y = minY; y <= maxY; y++) {
+      const dy = y - cy;
+      const dy2 = dy * dy;
+      const rowOffset = y * this.width;
+      for (let x = minX; x <= maxX; x++) {
+        const dx = x - cx;
+        const d2 = dx * dx + dy2;
+        const idx = rowOffset + x;
+        if (d2 <= r2) {
+          if (this.mask[idx] !== CELL_EMPTY) {
+            this.mask[idx] = CELL_EMPTY;
+            destroyed++;
+          }
+        } else if (d2 <= scorchR2 && this.mask[idx] !== CELL_EMPTY) {
+          this.mask[idx] = CELL_SCORCH;
+        }
+      }
+    }
+
+    if (this.ctx) {
+      this.patchCanvasRegion(minX, minY, maxX, maxY);
+    } else {
+      this.dirty = true;
+    }
+
+    return destroyed;
+  }
+
+  // Compute approximate surface normal around (x, y) for bouncing projectiles
+  getNormal(x, y, sampleRadius = 5) {
+    let nx = 0;
+    let ny = 0;
+    for (let dy = -sampleRadius; dy <= sampleRadius; dy++) {
+      for (let dx = -sampleRadius; dx <= sampleRadius; dx++) {
+        if (dx === 0 && dy === 0) continue;
+        if (this.isSolid(x + dx, y + dy)) {
+          nx -= dx;
+          ny -= dy;
+        }
+      }
+    }
+    const len = Math.hypot(nx, ny);
+    if (len < 0.001) return { x: 0, y: -1 };
+    return { x: nx / len, y: ny / len };
+  }
+
+  // Find valid spawn points well-spaced across the island
+  findSpawnPositions(count, waterLevel = WORLD.INITIAL_WATER_LEVEL) {
+    const candidates = [];
+    const step = 28;
+    for (let x = 150; x < this.width - 150; x += step) {
+      const sy = this.getSurfaceY(x, 40);
+      if (sy > 90 && sy < waterLevel - 45) {
+        // Check local flatness so worms don't spawn on 1px spikes
+        const sl = this.getSurfaceY(x - 10, 40);
+        const sr = this.getSurfaceY(x + 10, 40);
+        if (sl > 0 && sr > 0 && Math.abs(sl - sy) < 18 && Math.abs(sr - sy) < 18) {
+          candidates.push({ x, y: sy - 14 });
+        }
+      }
+    }
+
+    if (candidates.length <= count) {
+      return candidates;
+    }
+
+    // Evenly pick across the width for balanced team distribution
+    const chosen = [];
+    for (let i = 0; i < count; i++) {
+      const idx = Math.floor(((i + 0.5) / count) * candidates.length);
+      chosen.push(candidates[Math.min(candidates.length - 1, idx)]);
+    }
+    return chosen;
+  }
+
+  // Build offscreen canvas cache in browser environments
+  rebuildCanvas() {
+    if (typeof document === 'undefined') return;
+    if (!this.canvas) {
+      this.canvas = document.createElement('canvas');
+      this.canvas.width = this.width;
+      this.canvas.height = this.height;
+      this.ctx = this.canvas.getContext('2d');
+    }
+    this.patchCanvasRegion(0, 0, this.width - 1, this.height - 1);
+    this.dirty = false;
+  }
+
+  patchCanvasRegion(minX, minY, maxX, maxY) {
+    if (!this.ctx) return;
+    const w = maxX - minX + 1;
+    const h = maxY - minY + 1;
+    if (w <= 0 || h <= 0) return;
+
+    const img = this.ctx.createImageData(w, h);
+    const data = img.data;
+    const grassTop = hexToRgb(this.theme.grassTop);
+    const grassMid = hexToRgb(this.theme.grassMid);
+    const dirtLight = hexToRgb(this.theme.dirtLight);
+    const dirtDark = hexToRgb(this.theme.dirtDark);
+    const rock = hexToRgb(this.theme.rockColor);
+    const scorch = hexToRgb(this.theme.scorchColor);
+
+    for (let y = minY; y <= maxY; y++) {
+      const rowOffset = y * this.width;
+      const localY = (y - minY) * w;
+      for (let x = minX; x <= maxX; x++) {
+        const cell = this.mask[rowOffset + x];
+        const p = (localY + (x - minX)) * 4;
+        if (cell === CELL_EMPTY) {
+          data[p + 3] = 0;
+          continue;
+        }
+
+        // Procedural strata & grain texture
+        const grain = ((x * 374761393 + y * 668265263) ^ (x * y)) & 31;
+        const strata = Math.sin((y + Math.sin(x * 0.025) * 14) * 0.14);
+
+        let c = dirtLight;
+        if (cell === CELL_GRASS) {
+          c = grain > 18 ? grassTop : grassMid;
+        } else if (cell === CELL_SCORCH) {
+          c = scorch;
+        } else {
+          if (strata > 0.35) c = dirtLight;
+          else if (strata < -0.45) c = rock;
+          else c = dirtDark;
+        }
+
+        const shade = (grain - 16) * 0.65;
+        data[p] = clampByte(c.r + shade);
+        data[p + 1] = clampByte(c.g + shade);
+        data[p + 2] = clampByte(c.b + shade);
+        data[p + 3] = 255;
+      }
+    }
+
+    this.ctx.putImageData(img, minX, minY);
+  }
+}
+
+function hexToRgb(hex) {
+  const clean = hex.replace('#', '');
+  const n = parseInt(clean, 16);
+  return { r: (n >> 16) & 255, g: (n >> 8) & 255, b: n & 255 };
+}
+
+function clampByte(v) {
+  return v < 0 ? 0 : v > 255 ? 255 : v | 0;
+}
+
+// ===== src/physics.js =====
+// Fixed-timestep 2D physics for worms, projectiles, crates, and explosions
+
+
+function clamp(val, min, max) {
+  return val < min ? min : val > max ? max : val;
+}
+
+// Consistent ground-support check directly beneath a worm's feet
+function isFootSupported(terrain, x, y) {
+  const footY = y + PHYSICS.WORM_RADIUS + 1;
+  return (
+    terrain.isSolid(x, footY) ||
+    terrain.isSolid(x - 4, footY) ||
+    terrain.isSolid(x + 4, footY)
+  );
+}
+
+// Check if a circle collides with solid terrain at (x, y, radius)
+function circleHitsTerrain(terrain, x, y, radius) {
+  const samples = 12;
+  for (let i = 0; i < samples; i++) {
+    const a = (i / samples) * Math.PI * 2;
+    if (terrain.isSolid(x + Math.cos(a) * radius, y + Math.sin(a) * radius)) {
+      return true;
+    }
+  }
+  return terrain.isSolid(x, y);
+}
+
+// Walk worm horizontally with automatic slope climbing
+function walkWorm(worm, terrain, dir, dt) {
+  if (!worm.alive || !worm.grounded) return false;
+  worm.facing = dir >= 0 ? 1 : -1;
+
+  const stepDist = PHYSICS.WORM_WALK_SPEED * dt;
+  const steps = Math.max(1, Math.ceil(stepDist));
+  const dx = (dir * stepDist) / steps;
+  let moved = false;
+
+  for (let s = 0; s < steps; s++) {
+    const nx = clamp(worm.x + dx, PHYSICS.WORM_RADIUS, terrain.width - PHYSICS.WORM_RADIUS);
+    // Try climbing up to WORM_MAX_CLIMB pixels
+    let climbed = false;
+    for (let climb = 0; climb <= PHYSICS.WORM_MAX_CLIMB; climb++) {
+      const testY = worm.y - climb;
+      const footSolid = terrain.isSolid(nx, testY + PHYSICS.WORM_RADIUS - 1);
+      const midSolid = terrain.isSolid(nx, testY);
+      const headSolid = terrain.isSolid(nx, testY - PHYSICS.WORM_RADIUS + 2);
+      if (!footSolid && !midSolid && !headSolid) {
+        worm.x = nx;
+        worm.y = testY;
+        climbed = true;
+        moved = true;
+        break;
+      }
+    }
+    if (!climbed) break;
+
+    // Follow downward slope smoothly (up to WORM_MAX_CLIMB px)
+    for (let drop = 1; drop <= PHYSICS.WORM_MAX_CLIMB; drop++) {
+      if (isFootSupported(terrain, worm.x, worm.y)) {
+        break;
+      }
+      worm.y += 1;
+    }
+  }
+
+  if (moved) {
+    worm.walkPhase += dt * 12;
+  }
+  return moved;
+}
+
+// Integrate worm physics (gravity, terrain collision, bounce, fall damage, drowning)
+function stepWormPhysics(worm, terrain, waterLevel, dt, onEvent) {
+  if (!worm.alive) return;
+
+  const supported = isFootSupported(terrain, worm.x, worm.y);
+  if (worm.grounded && !supported) {
+    worm.grounded = false;
+  }
+
+  if (!worm.grounded) {
+    worm.vy += PHYSICS.GRAVITY * dt;
+    worm.vx *= PHYSICS.AIR_DRAG;
+  } else {
+    worm.vx *= PHYSICS.GROUND_FRICTION;
+    if (Math.abs(worm.vx) < 4) worm.vx = 0;
+    worm.vy = 0;
+  }
+
+  // Fast path: worm is cleanly resting on solid ground with zero velocity
+  if (worm.grounded && worm.vx === 0 && worm.vy === 0) {
+    if (worm.y + PHYSICS.WORM_RADIUS * 0.5 >= waterLevel || worm.y > terrain.height + 40) {
+      worm.hp = 0;
+      worm.alive = false;
+      worm.drowned = true;
+      onEvent?.({ type: 'worm_drowned', worm });
+    }
+    return;
+  }
+
+  // Sub-step movement to prevent tunneling through thin terrain
+  const speed = Math.hypot(worm.vx, worm.vy);
+  const subSteps = Math.max(1, Math.ceil((speed * dt) / 4));
+  const subDt = dt / subSteps;
+
+  for (let i = 0; i < subSteps; i++) {
+    const nextX = worm.x + worm.vx * subDt;
+    const nextY = worm.y + worm.vy * subDt;
+
+    // Horizontal check
+    if (nextX < PHYSICS.WORM_RADIUS || nextX > terrain.width - PHYSICS.WORM_RADIUS) {
+      worm.vx = -worm.vx * 0.4;
+    } else if (
+      worm.vx !== 0 &&
+      terrain.isSolid(nextX + Math.sign(worm.vx) * (PHYSICS.WORM_RADIUS - 2), worm.y - 2)
+    ) {
+      worm.vx = -worm.vx * PHYSICS.RESTITUTION_WORM;
+    } else {
+      worm.x = nextX;
+    }
+
+    // Vertical check
+    if (worm.vy >= 0) {
+      const hitFloor =
+        terrain.isSolid(worm.x, nextY + PHYSICS.WORM_RADIUS) ||
+        terrain.isSolid(worm.x - 4, nextY + PHYSICS.WORM_RADIUS) ||
+        terrain.isSolid(worm.x + 4, nextY + PHYSICS.WORM_RADIUS);
+
+      if (hitFloor) {
+        const impactVy = worm.vy;
+        if (impactVy > PHYSICS.FALL_DAMAGE_THRESHOLD) {
+          const dmg = Math.round((impactVy - PHYSICS.FALL_DAMAGE_THRESHOLD) * PHYSICS.FALL_DAMAGE_SCALE);
+          if (dmg > 0) {
+            worm.hp = Math.max(0, worm.hp - dmg);
+            onEvent?.({ type: 'fall_damage', worm, damage: dmg });
+            if (worm.hp <= 0) {
+              worm.alive = false;
+              onEvent?.({ type: 'worm_died', worm, reason: 'fall' });
+              return;
+            }
+          }
+        }
+        if (impactVy > 150) {
+          worm.vy = -impactVy * PHYSICS.RESTITUTION_WORM;
+          worm.vx *= 0.65;
+          worm.grounded = false;
+        } else {
+          // Snap cleanly right onto the top of the solid floor pixel so isFootSupported stays true
+          worm.y = Math.floor(nextY + PHYSICS.WORM_RADIUS) - PHYSICS.WORM_RADIUS - 0.1;
+          worm.vy = 0;
+          worm.grounded = true;
+          break;
+        }
+      } else {
+        worm.y = nextY;
+        worm.grounded = isFootSupported(terrain, worm.x, worm.y) && worm.vy === 0;
+      }
+    } else {
+      // Moving upward
+      if (terrain.isSolid(worm.x, nextY - PHYSICS.WORM_RADIUS)) {
+        worm.vy = -worm.vy * 0.3;
+      } else {
+        worm.y = nextY;
+      }
+    }
+  }
+
+  // Water / out-of-bounds drowning check
+  if (worm.y + PHYSICS.WORM_RADIUS * 0.5 >= waterLevel || worm.y > terrain.height + 40) {
+    worm.hp = 0;
+    worm.alive = false;
+    worm.drowned = true;
+    onEvent?.({ type: 'worm_drowned', worm });
+  }
+}
+
+// Integrate projectile physics with wind, gravity, terrain collision, and fuse timers
+function stepProjectilePhysics(proj, terrain, worms, wind, waterLevel, dt) {
+  if (!proj.active) return null;
+
+  proj.age += dt;
+  if (proj.fuse > 0) {
+    proj.fuseRemaining -= dt;
+    if (proj.fuseRemaining <= 0) {
+      proj.active = false;
+      return { reason: 'fuse', x: proj.x, y: proj.y };
+    }
+  }
+
+  const ax = wind * PHYSICS.WIND_ACCEL_SCALE * proj.windFactor;
+  const ay = PHYSICS.GRAVITY * proj.gravityFactor;
+
+  proj.vx += ax * dt;
+  proj.vy += ay * dt;
+
+  const speed = Math.hypot(proj.vx, proj.vy);
+  const subSteps = Math.max(1, Math.ceil((speed * dt) / 3));
+  const subDt = dt / subSteps;
+
+  for (let i = 0; i < subSteps; i++) {
+    const nx = proj.x + proj.vx * subDt;
+    const ny = proj.y + proj.vy * subDt;
+
+    // Out of horizontal bounds or in water
+    if (nx < -120 || nx > terrain.width + 120 || ny >= waterLevel) {
+      proj.active = false;
+      return { reason: 'water', x: nx, y: Math.min(ny, waterLevel) };
+    }
+
+    // Direct hit on worms (after brief grace period so shooter doesn't self-hit immediately)
+    if (!proj.bounces && proj.age > 0.08) {
+      for (const w of worms) {
+        if (!w.alive) continue;
+        if (w.id === proj.ownerId && proj.age < 0.28) continue;
+        const d = Math.hypot(nx - w.x, ny - w.y);
+        if (d <= PHYSICS.WORM_RADIUS + proj.radius) {
+          proj.x = nx;
+          proj.y = ny;
+          proj.active = false;
+          return { reason: 'hit_worm', x: nx, y: ny, worm: w };
+        }
+      }
+    }
+
+    // Terrain collision
+    if (ny >= 0 && terrain.isSolid(nx, ny)) {
+      if (proj.bounces) {
+        const impactSpeed = Math.hypot(proj.vx, proj.vy);
+        const normal = terrain.getNormal(nx, ny, 5);
+        const dot = proj.vx * normal.x + proj.vy * normal.y;
+        const rest = proj.restitution ?? PHYSICS.RESTITUTION_GRENADE;
+        proj.vx = (proj.vx - 2 * dot * normal.x) * rest;
+        proj.vy = (proj.vy - 2 * dot * normal.y) * rest;
+        proj.x += normal.x * 1.2;
+        proj.y += normal.y * 1.2;
+        // Dampen micro-bounces so grenade settles smoothly on the floor
+        if (Math.hypot(proj.vx, proj.vy) < 35) {
+          proj.vx *= 0.35;
+          proj.vy = 0;
+        }
+        proj.bounced = true;
+        return impactSpeed > 55 ? { reason: 'bounce', x: proj.x, y: proj.y } : null;
+      } else if (proj.type === 'drop') {
+        proj.vx *= 0.5;
+        proj.vy = 0;
+        return null;
+      } else {
+        proj.x = nx;
+        proj.y = ny;
+        proj.active = false;
+        return { reason: 'hit_terrain', x: nx, y: ny };
+      }
+    }
+
+    proj.x = nx;
+    proj.y = ny;
+  }
+
+  return null;
+}
+
+// Compute explosion damage and knockback impulse for all living worms
+function applyExplosionDamage(cx, cy, blastRadius, maxDamage, maxKnockback, worms) {
+  const effectiveRadius = blastRadius + PHYSICS.WORM_RADIUS + 8;
+  const affected = [];
+
+  for (const w of worms) {
+    if (!w.alive) continue;
+    const dx = w.x - cx;
+    const dy = w.y - cy;
+    const dist = Math.hypot(dx, dy);
+
+    if (dist <= effectiveRadius) {
+      const falloff = Math.max(0.15, 1 - dist / effectiveRadius);
+      const damage = Math.max(1, Math.round(maxDamage * falloff));
+      const nx = dist > 0.01 ? dx / dist : 0;
+      const ny = dist > 0.01 ? dy / dist : -1;
+      const impulse = maxKnockback * falloff;
+
+      w.hp = Math.max(0, w.hp - damage);
+      w.vx += nx * impulse;
+      w.vy += (ny - 0.35) * impulse;
+      w.grounded = false;
+
+      if (w.hp <= 0) {
+        w.alive = false;
+      }
+
+      affected.push({ worm: w, damage, killed: !w.alive, dist });
+    }
+  }
+
+  return affected;
+}
+
+// Perform hitscan raycast (Shotgun)
+function castRay(terrain, worms, ownerId, startX, startY, angleRad, maxRange) {
+  const step = 3;
+  const dx = Math.cos(angleRad);
+  const dy = Math.sin(angleRad);
+
+  for (let d = 10; d <= maxRange; d += step) {
+    const x = startX + dx * d;
+    const y = startY + dy * d;
+
+    if (x < 0 || x >= terrain.width || y < -100 || y >= WORLD.HEIGHT) {
+      return { hit: false, x, y, type: 'oob' };
+    }
+
+    // Check worm hit
+    for (const w of worms) {
+      if (!w.alive || w.id === ownerId) continue;
+      if (Math.hypot(x - w.x, y - w.y) <= PHYSICS.WORM_RADIUS + 2) {
+        return { hit: true, x, y, type: 'worm', worm: w };
+      }
+    }
+
+    // Check terrain hit
+    if (y >= 0 && terrain.isSolid(x, y)) {
+      return { hit: true, x, y, type: 'terrain' };
+    }
+  }
+
+  return {
+    hit: false,
+    x: startX + dx * maxRange,
+    y: startY + dy * maxRange,
+    type: 'range',
+  };
+}
+
+// ===== src/weapons.js =====
+// Weapon firing, projectile factory, and cluster/airstrike spawning
+
+
+
+let nextProjId = 1;
+
+function createProjectile(config) {
+  return {
+    id: nextProjId++,
+    weaponId: config.weaponId,
+    type: config.type || 'projectile',
+    ownerId: config.ownerId,
+    x: config.x,
+    y: config.y,
+    vx: config.vx,
+    vy: config.vy,
+    radius: config.radius ?? 4,
+    windFactor: config.windFactor ?? 1.0,
+    gravityFactor: config.gravityFactor ?? 1.0,
+    bounces: Boolean(config.bounces),
+    restitution: config.restitution ?? PHYSICS.RESTITUTION_GRENADE,
+    fuse: config.fuse ?? 0,
+    fuseRemaining: config.fuse ?? 0,
+    blastRadius: config.blastRadius ?? 40,
+    maxDamage: config.maxDamage ?? 40,
+    knockback: config.knockback ?? 280,
+    subCount: config.subCount ?? 0,
+    subRadius: config.subRadius ?? 26,
+    subDamage: config.subDamage ?? 22,
+    subKnockback: config.subKnockback ?? 180,
+    age: 0,
+    active: true,
+    bounced: false,
+    trail: [],
+  };
+}
+
+// Compute actual world firing angle from worm facing and aimAngle (-PI/2 .. PI/2)
+function getWorldAimAngle(worm) {
+  return worm.facing === 1 ? worm.aimAngle : Math.PI - worm.aimAngle;
+}
+
+// Fire weapon from active worm; returns spawned projectiles or hitscan result
+function fireWeapon(weaponId, worm, powerRatio, terrain, worms, targetPos = null) {
+  const weapon = WEAPON_MAP[weaponId];
+  if (!weapon) return { projectiles: [], hitscan: null };
+
+  const angle = getWorldAimAngle(worm);
+  const muzzleX = worm.x + Math.cos(angle) * (PHYSICS.WORM_RADIUS + 6);
+  const muzzleY = worm.y - 3 + Math.sin(angle) * (PHYSICS.WORM_RADIUS + 6);
+
+  if (weapon.type === 'hitscan') {
+    const hit = castRay(terrain, worms, worm.id, muzzleX, muzzleY, angle, weapon.range);
+    return {
+      projectiles: [],
+      hitscan: {
+        startX: muzzleX,
+        startY: muzzleY,
+        endX: hit.x,
+        endY: hit.y,
+        hit: hit.hit,
+        hitType: hit.type,
+        blastRadius: weapon.blastRadius,
+        maxDamage: weapon.maxDamage,
+        knockback: weapon.knockback,
+      },
+    };
+  }
+
+  if (weapon.type === 'drop') {
+    const p = createProjectile({
+      weaponId: weapon.id,
+      type: 'drop',
+      ownerId: worm.id,
+      x: worm.x + worm.facing * 8,
+      y: worm.y - 2,
+      vx: worm.facing * 24,
+      vy: -25,
+      radius: 5,
+      windFactor: 0,
+      gravityFactor: 1.0,
+      bounces: false,
+      fuse: weapon.fuse,
+      blastRadius: weapon.blastRadius,
+      maxDamage: weapon.maxDamage,
+      knockback: weapon.knockback,
+    });
+    return { projectiles: [p], hitscan: null };
+  }
+
+  if (weapon.type === 'airstrike') {
+    const tx = targetPos ? targetPos.x : worm.x + worm.facing * 280;
+    const count = weapon.missileCount || 5;
+    const spacing = 34;
+    const startX = tx - ((count - 1) * spacing) / 2;
+    const projectiles = [];
+    for (let i = 0; i < count; i++) {
+      projectiles.push(
+        createProjectile({
+          weaponId: weapon.id,
+          type: 'airstrike_missile',
+          ownerId: worm.id,
+          x: startX + i * spacing - 90,
+          y: -40 - i * 28,
+          vx: 115,
+          vy: 165,
+          radius: 4,
+          windFactor: weapon.windFactor,
+          gravityFactor: weapon.gravityFactor,
+          bounces: false,
+          fuse: 0,
+          blastRadius: weapon.blastRadius,
+          maxDamage: weapon.maxDamage,
+          knockback: weapon.knockback,
+        })
+      );
+    }
+    return { projectiles, hitscan: null };
+  }
+
+  // Standard projectile (bazooka, grenade, cluster)
+  const clampedPower = Math.max(0.15, Math.min(1, powerRatio));
+  const speed = weapon.minSpeed + (weapon.maxSpeed - weapon.minSpeed) * clampedPower;
+
+  const proj = createProjectile({
+    weaponId: weapon.id,
+    type: weapon.type,
+    ownerId: worm.id,
+    x: muzzleX,
+    y: muzzleY,
+    vx: Math.cos(angle) * speed,
+    vy: Math.sin(angle) * speed,
+    radius: weapon.bounces ? 5 : 4,
+    windFactor: weapon.windFactor,
+    gravityFactor: weapon.gravityFactor,
+    bounces: weapon.bounces,
+    fuse: weapon.fuse,
+    blastRadius: weapon.blastRadius,
+    maxDamage: weapon.maxDamage,
+    knockback: weapon.knockback,
+    subCount: weapon.subCount || 0,
+    subRadius: weapon.subRadius || 26,
+    subDamage: weapon.subDamage || 22,
+    subKnockback: weapon.subKnockback || 180,
+  });
+
+  return { projectiles: [proj], hitscan: null };
+}
+
+// Spawn cluster bomblets when a cluster bomb detonates
+function spawnClusterBomblets(parentProj) {
+  const count = parentProj.subCount || 5;
+  const bomblets = [];
+  for (let i = 0; i < count; i++) {
+    const spread = -0.85 + (i / Math.max(1, count - 1)) * 1.7;
+    const angle = -Math.PI / 2 + spread * 0.65;
+    const speed = 185 + (i % 2) * 55;
+    bomblets.push(
+      createProjectile({
+        weaponId: 'cluster_sub',
+        type: 'bomblet',
+        ownerId: parentProj.ownerId,
+        x: parentProj.x,
+        y: parentProj.y - 6,
+        vx: Math.cos(angle) * speed,
+        vy: Math.sin(angle) * speed,
+        radius: 3.5,
+        windFactor: 0.2,
+        gravityFactor: 1.0,
+        bounces: false,
+        fuse: 0,
+        blastRadius: parentProj.subRadius,
+        maxDamage: parentProj.subDamage,
+        knockback: parentProj.subKnockback,
+      })
+    );
+  }
+  return bomblets;
+}
+
+// ===== src/ai.js =====
+// Tactical AI controller with ballistic wind-compensated trajectory solver
+
+
+
+// Numerically solve ballistic firing solution (facing, aimAngle, power) to hit (tx, ty)
+function solveBallisticShot(shooter, target, terrain, wind, weaponId = 'bazooka') {
+  const weapon = WEAPON_MAP[weaponId] || WEAPON_MAP.bazooka;
+  const dx = target.x - shooter.x;
+  const facing = dx >= 0 ? 1 : -1;
+
+  const ax = wind * PHYSICS.WIND_ACCEL_SCALE * weapon.windFactor;
+  const ay = PHYSICS.GRAVITY * weapon.gravityFactor;
+
+  let bestSolution = null;
+  let bestScore = Infinity;
+
+  // Sweep candidate launch angles (-75 deg to +20 deg) and powers (0.25..1.0)
+  const angles = [-1.25, -1.05, -0.88, -0.72, -0.56, -0.4, -0.24, -0.08, 0.12];
+  const powers = [0.28, 0.4, 0.52, 0.64, 0.76, 0.88, 0.98];
+
+  for (const aimAngle of angles) {
+    const worldAngle = facing === 1 ? aimAngle : Math.PI - aimAngle;
+    const cosA = Math.cos(worldAngle);
+    const sinA = Math.sin(worldAngle);
+    const startX = shooter.x + cosA * (PHYSICS.WORM_RADIUS + 7);
+    const startY = shooter.y - 3 + sinA * (PHYSICS.WORM_RADIUS + 7);
+
+    for (const power of powers) {
+      const speed = weapon.minSpeed + (weapon.maxSpeed - weapon.minSpeed) * power;
+      let x = startX;
+      let y = startY;
+      let vx = cosA * speed;
+      let vy = sinA * speed;
+
+      const simDt = 0.035;
+      let minDist = Infinity;
+      let blockedEarly = false;
+
+      for (let step = 0; step < 95; step++) {
+        vx += ax * simDt;
+        vy += ay * simDt;
+        x += vx * simDt;
+        y += vy * simDt;
+
+        const d = Math.hypot(x - target.x, y - target.y);
+        if (d < minDist) minDist = d;
+
+        if (d < 22) break;
+        if (x < 0 || x > terrain.width || y > terrain.height) break;
+
+        if (y >= 0 && terrain.isSolid(x, y)) {
+          if (step < 5) blockedEarly = true;
+          break;
+        }
+      }
+
+      const penalty = blockedEarly ? 240 : 0;
+      const score = minDist + penalty;
+      if (score < bestScore) {
+        bestScore = score;
+        bestSolution = { facing, aimAngle, power, estimatedMiss: minDist };
+      }
+    }
+  }
+
+  return bestSolution || { facing, aimAngle: -0.65, power: 0.65, estimatedMiss: 999 };
+}
+
+// Choose best enemy target and weapon for AI worm
+function planAiTurn(game, worm) {
+  const enemies = game.worms.filter((w) => w.alive && w.teamId !== worm.teamId);
+  if (enemies.length === 0) return null;
+
+  // Prefer closest or low-HP enemy
+  let target = enemies[0];
+  let bestPriority = Infinity;
+  for (const e of enemies) {
+    const dist = Math.hypot(e.x - worm.x, e.y - worm.y);
+    const priority = dist - (100 - e.hp) * 2.2;
+    if (priority < bestPriority) {
+      bestPriority = priority;
+      target = e;
+    }
+  }
+
+  const dist = Math.hypot(target.x - worm.x, target.y - worm.y);
+  const facing = target.x >= worm.x ? 1 : -1;
+  const teamAmmo = game.teamAmmo[worm.teamId];
+
+  // Check if direct shotgun line of sight exists at medium/close range
+  if (dist < 380) {
+    const directAngle = Math.atan2(target.y - (worm.y - 3), target.x - worm.x);
+    const ray = castRay(
+      game.terrain,
+      game.worms,
+      worm.id,
+      worm.x + Math.cos(directAngle) * (PHYSICS.WORM_RADIUS + 6),
+      worm.y - 3 + Math.sin(directAngle) * (PHYSICS.WORM_RADIUS + 6),
+      directAngle,
+      440
+    );
+    if (ray.hit && ray.type === 'worm' && ray.worm.teamId !== worm.teamId) {
+      const localAim = facing === 1 ? directAngle : Math.PI - directAngle;
+      return {
+        weaponId: 'shotgun',
+        facing,
+        aimAngle: Math.max(-1.45, Math.min(1.45, localAim)),
+        power: 1.0,
+        targetPos: { x: target.x, y: target.y },
+        walkDir: 0,
+        walkDuration: 0,
+      };
+    }
+  }
+
+  // If very strong wind or clear overhead, consider airstrike if available
+  if (teamAmmo.airstrike > 0 && Math.abs(game.wind) > 55 && dist > 300) {
+    return {
+      weaponId: 'airstrike',
+      facing,
+      aimAngle: -0.5,
+      power: 1.0,
+      targetPos: { x: target.x, y: target.y },
+      walkDir: 0,
+      walkDuration: 0,
+    };
+  }
+
+  // Try Bazooka vs Grenade ballistic solution
+  const bazookaSol = solveBallisticShot(worm, target, game.terrain, game.wind, 'bazooka');
+  const grenadeSol = solveBallisticShot(worm, target, game.terrain, 0, 'grenade');
+
+  let chosenWeapon = 'bazooka';
+  let sol = bazookaSol;
+
+  if (grenadeSol.estimatedMiss + 12 < bazookaSol.estimatedMiss && dist < 560) {
+    chosenWeapon = teamAmmo.cluster > 0 && dist > 180 ? 'cluster' : 'grenade';
+    sol = grenadeSol;
+  }
+
+  // Add slight human-like imperfection so AI feels fair and fun
+  const jitter = (Math.random() - 0.5) * 0.07;
+  return {
+    weaponId: chosenWeapon,
+    facing: sol.facing,
+    aimAngle: Math.max(-1.42, Math.min(1.35, sol.aimAngle + jitter)),
+    power: Math.max(0.22, Math.min(0.98, sol.power + (Math.random() - 0.5) * 0.06)),
+    targetPos: { x: target.x, y: target.y },
+    walkDir: sol.estimatedMiss > 90 ? facing : 0,
+    walkDuration: sol.estimatedMiss > 90 ? 0.55 : 0,
+  };
+}
+
+// ===== src/audio.js =====
+// Procedural Web Audio API sound synthesizer (zero external audio files, safe in Node & sandboxed Canvas)
+
+class SoundEngine {
+  constructor() {
+    this.ctx = null;
+    this.muted = false;
+  }
+
+  unlock() {
+    if (typeof window === 'undefined') return;
+    if (!this.ctx) {
+      const AudioCtx = window.AudioContext || window.webkitAudioContext;
+      if (AudioCtx) {
+        this.ctx = new AudioCtx();
+      }
+    }
+    if (this.ctx && this.ctx.state === 'suspended') {
+      this.ctx.resume().catch(() => {});
+    }
+  }
+
+  setMuted(muted) {
+    this.muted = Boolean(muted);
+  }
+
+  toggleMute() {
+    this.muted = !this.muted;
+    return this.muted;
+  }
+
+  _ready() {
+    return !this.muted && this.ctx && this.ctx.state === 'running';
+  }
+
+  playLaunch() {
+    if (!this._ready()) return;
+    const now = this.ctx.currentTime;
+    const osc = this.ctx.createOscillator();
+    const gain = this.ctx.createGain();
+    osc.type = 'sawtooth';
+    osc.frequency.setValueAtTime(220, now);
+    osc.frequency.exponentialRampToValueAtTime(75, now + 0.22);
+    gain.gain.setValueAtTime(0.18, now);
+    gain.gain.exponentialRampToValueAtTime(0.001, now + 0.24);
+    osc.connect(gain).connect(this.ctx.destination);
+    osc.start(now);
+    osc.stop(now + 0.25);
+  }
+
+  playShotgun() {
+    if (!this._ready()) return;
+    this._playNoiseBurst(0.16, 1200, 0.28);
+  }
+
+  playBounce() {
+    if (!this._ready()) return;
+    const now = this.ctx.currentTime;
+    const osc = this.ctx.createOscillator();
+    const gain = this.ctx.createGain();
+    osc.type = 'triangle';
+    osc.frequency.setValueAtTime(340, now);
+    osc.frequency.exponentialRampToValueAtTime(160, now + 0.08);
+    gain.gain.setValueAtTime(0.12, now);
+    gain.gain.exponentialRampToValueAtTime(0.001, now + 0.09);
+    osc.connect(gain).connect(this.ctx.destination);
+    osc.start(now);
+    osc.stop(now + 0.1);
+  }
+
+  playExplosion(scale = 1.0) {
+    if (!this._ready()) return;
+    const dur = Math.min(0.75, 0.34 + scale * 0.22);
+    this._playNoiseBurst(dur, 420, Math.min(0.42, 0.26 * scale));
+
+    const now = this.ctx.currentTime;
+    const sub = this.ctx.createOscillator();
+    const gain = this.ctx.createGain();
+    sub.type = 'sine';
+    sub.frequency.setValueAtTime(115, now);
+    sub.frequency.exponentialRampToValueAtTime(28, now + dur);
+    gain.gain.setValueAtTime(0.32, now);
+    gain.gain.exponentialRampToValueAtTime(0.001, now + dur);
+    sub.connect(gain).connect(this.ctx.destination);
+    sub.start(now);
+    sub.stop(now + dur + 0.02);
+  }
+
+  playJump(high = false) {
+    if (!this._ready()) return;
+    const now = this.ctx.currentTime;
+    const osc = this.ctx.createOscillator();
+    const gain = this.ctx.createGain();
+    osc.type = 'sine';
+    osc.frequency.setValueAtTime(high ? 260 : 210, now);
+    osc.frequency.exponentialRampToValueAtTime(high ? 580 : 420, now + 0.13);
+    gain.gain.setValueAtTime(0.12, now);
+    gain.gain.exponentialRampToValueAtTime(0.001, now + 0.15);
+    osc.connect(gain).connect(this.ctx.destination);
+    osc.start(now);
+    osc.stop(now + 0.16);
+  }
+
+  playSplash() {
+    if (!this._ready()) return;
+    this._playNoiseBurst(0.28, 950, 0.2);
+  }
+
+  playTurnChime() {
+    if (!this._ready()) return;
+    const now = this.ctx.currentTime;
+    [523.25, 659.25].forEach((freq, i) => {
+      const osc = this.ctx.createOscillator();
+      const gain = this.ctx.createGain();
+      osc.type = 'triangle';
+      osc.frequency.setValueAtTime(freq, now + i * 0.08);
+      gain.gain.setValueAtTime(0.1, now + i * 0.08);
+      gain.gain.exponentialRampToValueAtTime(0.001, now + i * 0.08 + 0.16);
+      osc.connect(gain).connect(this.ctx.destination);
+      osc.start(now + i * 0.08);
+      osc.stop(now + i * 0.08 + 0.18);
+    });
+  }
+
+  playPickup() {
+    if (!this._ready()) return;
+    const now = this.ctx.currentTime;
+    [587.33, 783.99, 1046.5].forEach((freq, i) => {
+      const osc = this.ctx.createOscillator();
+      const gain = this.ctx.createGain();
+      osc.type = 'sine';
+      osc.frequency.setValueAtTime(freq, now + i * 0.06);
+      gain.gain.setValueAtTime(0.12, now + i * 0.06);
+      gain.gain.exponentialRampToValueAtTime(0.001, now + i * 0.06 + 0.14);
+      osc.connect(gain).connect(this.ctx.destination);
+      osc.start(now + i * 0.06);
+      osc.stop(now + i * 0.06 + 0.16);
+    });
+  }
+
+  playVictory() {
+    if (!this._ready()) return;
+    const now = this.ctx.currentTime;
+    const notes = [523.25, 659.25, 783.99, 1046.5];
+    notes.forEach((freq, i) => {
+      const osc = this.ctx.createOscillator();
+      const gain = this.ctx.createGain();
+      osc.type = 'triangle';
+      osc.frequency.setValueAtTime(freq, now + i * 0.11);
+      gain.gain.setValueAtTime(0.14, now + i * 0.11);
+      gain.gain.exponentialRampToValueAtTime(0.001, now + i * 0.11 + 0.28);
+      osc.connect(gain).connect(this.ctx.destination);
+      osc.start(now + i * 0.11);
+      osc.stop(now + i * 0.11 + 0.3);
+    });
+  }
+
+  _playNoiseBurst(duration, cutoffFreq, volume) {
+    const sampleRate = this.ctx.sampleRate;
+    const length = Math.floor(sampleRate * duration);
+    const buffer = this.ctx.createBuffer(1, length, sampleRate);
+    const data = buffer.getChannelData(0);
+    for (let i = 0; i < length; i++) {
+      data[i] = (Math.random() * 2 - 1) * Math.pow(1 - i / length, 1.4);
+    }
+
+    const src = this.ctx.createBufferSource();
+    src.buffer = buffer;
+
+    const filter = this.ctx.createBiquadFilter();
+    filter.type = 'lowpass';
+    filter.frequency.value = cutoffFreq;
+
+    const gain = this.ctx.createGain();
+    gain.gain.setValueAtTime(volume, this.ctx.currentTime);
+    gain.gain.exponentialRampToValueAtTime(0.001, this.ctx.currentTime + duration);
+
+    src.connect(filter).connect(gain).connect(this.ctx.destination);
+    src.start();
+  }
+}
+
+// ===== src/game.js =====
+// Core turn-based game state machine, crates, sudden death, particles, and camera
+
+
+
+
+
+
+
+const PHASE = {
+  PLAYER_TURN: 'PLAYER_TURN',
+  RETREAT: 'RETREAT',
+  RESOLVING: 'RESOLVING',
+  TURN_TRANSITION: 'TURN_TRANSITION',
+  GAME_OVER: 'GAME_OVER',
+};
+
+const MAX_RESOLVE_TIMEOUT = 6.5; // Safety net when no projectiles remain
+
+class WormsGame {
+  constructor(options = {}) {
+    this.mode = options.mode || 'ai'; // 'ai' | 'pvp'
+    this.themeId = options.themeId || 'emerald';
+    this.wormsPerTeam = options.wormsPerTeam || 3;
+    this.seed = options.seed ?? Math.floor(Math.random() * 1000000);
+    this.sound = options.sound || new SoundEngine();
+
+    this.paused = false;
+    this.reset(this.seed);
+  }
+
+  reset(seed = Math.floor(Math.random() * 1000000)) {
+    this.seed = seed >>> 0;
+    this.rng = createRng(this.seed);
+    this.terrain = new Terrain(WORLD.WIDTH, WORLD.HEIGHT, this.themeId, this.seed);
+    this.waterLevel = WORLD.INITIAL_WATER_LEVEL;
+    this.turnNumber = 1;
+    this.wind = this._rollWind();
+
+    this.worms = [];
+    this.projectiles = [];
+    this.crates = [];
+    this.particles = [];
+    this.explosions = [];
+    this.floatingTexts = [];
+    this.hitscanBeams = [];
+
+    this.teamAmmo = TEAMS.map(() => {
+      const bag = {};
+      for (const w of WEAPONS) bag[w.id] = w.ammo;
+      return bag;
+    });
+
+    this.teamLastWormId = [null, null];
+    this.activeTeamId = 0;
+    this.activeWormId = null;
+    this.selectedWeaponId = 'bazooka';
+    this.shotsRemainingThisTurn = 1;
+    this.hasFiredThisTurn = false;
+
+    this.phase = PHASE.PLAYER_TURN;
+    this.turnTimer = TURN.DURATION;
+    this.retreatTimer = 0;
+    this.resolvingTimer = 0;
+    this.transitionTimer = 0;
+    this.winnerTeamId = null; // 0, 1, or -1 (draw)
+
+    this.charging = false;
+    this.chargeTime = 0;
+    this.chargePower = 0;
+
+    this.aiState = null;
+    this.bannerText = '';
+    this.bannerTimer = 0;
+    this.shakeTime = 0;
+    this.shakeIntensity = 0;
+
+    this.camera = {
+      x: WORLD.WIDTH / 2,
+      y: WORLD.HEIGHT / 2,
+      targetX: WORLD.WIDTH / 2,
+      targetY: WORLD.HEIGHT / 2,
+      manual: false,
+      manualTimer: 0,
+    };
+
+    this._spawnWorms();
+    this._selectNextWormForTeam(0);
+    this._showBanner(`回合 1 · ${TEAMS[0].shortName}行动`, 2.0);
+  }
+
+  _rollWind() {
+    return Math.round((this.rng() * 2 - 1) * 95);
+  }
+
+  _spawnWorms() {
+    const total = this.wormsPerTeam * 2;
+    const spots = this.terrain.findSpawnPositions(total, this.waterLevel);
+    let id = 1;
+
+    for (let i = 0; i < total; i++) {
+      const teamId = i % 2;
+      const memberIdx = Math.floor(i / 2);
+      const team = TEAMS[teamId];
+      const spot = spots[i] || { x: 250 + i * 180, y: 200 };
+
+      this.worms.push({
+        id: id++,
+        teamId,
+        name: team.names[memberIdx % team.names.length],
+        x: spot.x,
+        y: spot.y,
+        vx: 0,
+        vy: 0,
+        hp: 100,
+        maxHp: 100,
+        alive: true,
+        drowned: false,
+        grounded: false,
+        facing: teamId === 0 ? 1 : -1,
+        aimAngle: -0.35,
+        walkPhase: 0,
+      });
+    }
+  }
+
+  getActiveWorm() {
+    return this.worms.find((w) => w.id === this.activeWormId && w.alive) || null;
+  }
+
+  isAiTurn() {
+    return this.mode === 'ai' && this.activeTeamId === 1 && this.phase === PHASE.PLAYER_TURN;
+  }
+
+  getTeamStats() {
+    return TEAMS.map((t) => {
+      const members = this.worms.filter((w) => w.teamId === t.id);
+      const alive = members.filter((w) => w.alive);
+      const totalHp = alive.reduce((sum, w) => sum + w.hp, 0);
+      return {
+        id: t.id,
+        name: t.name,
+        shortName: t.shortName,
+        color: t.color,
+        aliveCount: alive.length,
+        totalHp,
+        maxTotalHp: members.length * 100,
+      };
+    });
+  }
+
+  _selectNextWormForTeam(teamId) {
+    const living = this.worms
+      .filter((w) => w.teamId === teamId && w.alive)
+      .sort((a, b) => a.id - b.id);
+    if (living.length === 0) return null;
+
+    const lastId = this.teamLastWormId[teamId];
+    let worm = living[0];
+    if (lastId !== null) {
+      const next = living.find((w) => w.id > lastId);
+      worm = next || living[0];
+    }
+    this.teamLastWormId[teamId] = worm.id;
+
+    this.activeTeamId = teamId;
+    this.activeWormId = worm.id;
+    this.turnTimer = TURN.DURATION;
+    this.resolvingTimer = 0;
+    this.charging = false;
+    this.chargeTime = 0;
+    this.chargePower = 0;
+    this.hasFiredThisTurn = false;
+    this.aiState = null;
+
+    // Ensure selected weapon has ammo
+    if (!this._hasAmmo(teamId, this.selectedWeaponId)) {
+      this.selectedWeaponId = 'bazooka';
+    }
+    const weapon = WEAPON_MAP[this.selectedWeaponId];
+    this.shotsRemainingThisTurn = weapon.shotsPerTurn || 1;
+
+    this.camera.manual = false;
+    this.camera.targetX = worm.x;
+    this.camera.targetY = worm.y;
+
+    return worm;
+  }
+
+  _hasAmmo(teamId, weaponId) {
+    const amt = this.teamAmmo[teamId]?.[weaponId];
+    return amt === Infinity || amt > 0;
+  }
+
+  selectWeapon(weaponId) {
+    if (this.phase !== PHASE.PLAYER_TURN || this.charging || this.hasFiredThisTurn) return false;
+    if (!WEAPON_MAP[weaponId]) return false;
+    if (!this._hasAmmo(this.activeTeamId, weaponId)) return false;
+
+    this.selectedWeaponId = weaponId;
+    const weapon = WEAPON_MAP[weaponId];
+    this.shotsRemainingThisTurn = weapon.shotsPerTurn || 1;
+    return true;
+  }
+
+  // Player controls
+  moveActiveWorm(dir, dt) {
+    if (this.phase !== PHASE.PLAYER_TURN && this.phase !== PHASE.RETREAT) return;
+    if (this.charging) return;
+    const worm = this.getActiveWorm();
+    if (!worm) return;
+    walkWorm(worm, this.terrain, dir, dt);
+    this.camera.manual = false;
+  }
+
+  aimActiveWorm(deltaAngle) {
+    if (this.phase !== PHASE.PLAYER_TURN) return;
+    const worm = this.getActiveWorm();
+    if (!worm) return;
+    worm.aimAngle = clamp(worm.aimAngle + deltaAngle, -1.48, 1.42);
+  }
+
+  jumpActiveWorm(backflip = false) {
+    if (this.phase !== PHASE.PLAYER_TURN && this.phase !== PHASE.RETREAT) return;
+    if (this.charging) return;
+    const worm = this.getActiveWorm();
+    if (!worm || !worm.grounded) return;
+
+    if (backflip) {
+      worm.vx = worm.facing * PHYSICS.WORM_BACKFLIP_VX;
+      worm.vy = PHYSICS.WORM_BACKFLIP_VY;
+    } else {
+      worm.vx = worm.facing * PHYSICS.WORM_JUMP_VX;
+      worm.vy = PHYSICS.WORM_JUMP_VY;
+    }
+    worm.grounded = false;
+    this.sound.playJump(backflip);
+  }
+
+  startCharge() {
+    if (this.phase !== PHASE.PLAYER_TURN) return;
+    const worm = this.getActiveWorm();
+    if (!worm) return;
+    const weapon = WEAPON_MAP[this.selectedWeaponId];
+    if (!weapon) return;
+
+    if (weapon.type === 'airstrike') {
+      this.fireActiveWeapon(1.0, { x: worm.x + worm.facing * 260, y: worm.y });
+      return;
+    }
+
+    if (!weapon.chargeable) {
+      this.fireActiveWeapon(1.0);
+      return;
+    }
+
+    this.charging = true;
+    this.chargeTime = 0;
+    this.chargePower = TURN.MIN_POWER;
+  }
+
+  releaseCharge() {
+    if (!this.charging) return;
+    const power = this.chargePower;
+    this.charging = false;
+    this.chargeTime = 0;
+    this.chargePower = 0;
+    this.fireActiveWeapon(power);
+  }
+
+  triggerAirstrikeAt(worldX, worldY) {
+    if (this.phase !== PHASE.PLAYER_TURN || this.selectedWeaponId !== 'airstrike') return false;
+    return this.fireActiveWeapon(1.0, { x: worldX, y: worldY });
+  }
+
+  _enterResolving() {
+    this.charging = false;
+    this.phase = PHASE.RESOLVING;
+    this.resolvingTimer = 0;
+  }
+
+  fireActiveWeapon(powerRatio = 0.7, targetPos = null) {
+    if (this.phase !== PHASE.PLAYER_TURN) return false;
+    const worm = this.getActiveWorm();
+    if (!worm) return false;
+    const weapon = WEAPON_MAP[this.selectedWeaponId];
+    if (!weapon || !this._hasAmmo(this.activeTeamId, weapon.id)) return false;
+
+    const result = fireWeapon(weapon.id, worm, powerRatio, this.terrain, this.worms, targetPos);
+
+    // Decrement finite ammo only on the first shot of a turn
+    if (!this.hasFiredThisTurn && this.teamAmmo[this.activeTeamId][weapon.id] !== Infinity) {
+      this.teamAmmo[this.activeTeamId][weapon.id] = Math.max(
+        0,
+        this.teamAmmo[this.activeTeamId][weapon.id] - 1
+      );
+    }
+    this.hasFiredThisTurn = true;
+
+    if (result.hitscan) {
+      const hs = result.hitscan;
+      this.sound.playShotgun();
+      this.hitscanBeams.push({
+        startX: hs.startX,
+        startY: hs.startY,
+        endX: hs.endX,
+        endY: hs.endY,
+        life: 0.2,
+        maxLife: 0.2,
+      });
+      if (hs.hit) {
+        this._detonate(hs.endX, hs.endY, hs.blastRadius, hs.maxDamage, hs.knockback, false);
+      }
+      this.shotsRemainingThisTurn -= 1;
+      if (this.shotsRemainingThisTurn <= 0) {
+        this.phase = PHASE.RETREAT;
+        this.retreatTimer = weapon.retreatTime;
+      }
+      return true;
+    }
+
+    if (result.projectiles.length > 0) {
+      this.projectiles.push(...result.projectiles);
+      this.sound.playLaunch();
+      if (weapon.type === 'drop' || weapon.bounces) {
+        this.phase = PHASE.RETREAT;
+        this.retreatTimer = weapon.retreatTime;
+      } else {
+        this._enterResolving();
+      }
+      return true;
+    }
+
+    return false;
+  }
+
+  _detonate(cx, cy, blastRadius, maxDamage, maxKnockback, shake = true) {
+    this.terrain.carveCrater(cx, cy, blastRadius);
+    const affected = applyExplosionDamage(cx, cy, blastRadius, maxDamage, maxKnockback, this.worms);
+
+    this.sound.playExplosion(blastRadius / 45);
+    if (shake) {
+      this.shakeTime = 0.28;
+      this.shakeIntensity = Math.min(14, blastRadius * 0.2);
+    }
+
+    this.explosions.push({
+      x: cx,
+      y: cy,
+      radius: blastRadius,
+      age: 0,
+      duration: 0.42,
+    });
+
+    const count = Math.min(40, Math.floor(blastRadius * 0.65));
+    for (let i = 0; i < count; i++) {
+      const a = Math.random() * Math.PI * 2;
+      const spd = 60 + Math.random() * (blastRadius * 4.5);
+      const isFire = i < count * 0.55;
+      this.particles.push({
+        x: cx,
+        y: cy,
+        vx: Math.cos(a) * spd,
+        vy: Math.sin(a) * spd - 45,
+        size: isFire ? 3 + Math.random() * 5 : 2 + Math.random() * 3,
+        color: isFire ? (Math.random() > 0.4 ? '#ff922b' : '#ffe066') : this.terrain.theme.dirtLight,
+        life: 0.45 + Math.random() * 0.55,
+        maxLife: 1.0,
+        gravity: isFire ? 90 : 420,
+      });
+    }
+
+    for (const hit of affected) {
+      this._addFloatingText(hit.worm.x, hit.worm.y - 20, `-${hit.damage}`, '#ff6b6b');
+      if (hit.killed) {
+        this._addFloatingText(hit.worm.x, hit.worm.y - 36, '阵亡!', '#ffd43b');
+      }
+    }
+
+    return affected;
+  }
+
+  _addFloatingText(x, y, text, color = '#ffffff') {
+    this.floatingTexts.push({ x, y, text, color, age: 0, duration: 1.35 });
+  }
+
+  _showBanner(text, duration = 2.0) {
+    this.bannerText = text;
+    this.bannerTimer = duration;
+  }
+
+  _maybeSpawnCrate() {
+    if (this.crates.length >= 2) return;
+    if (this.rng() > 0.45) return;
+
+    const x = 220 + this.rng() * (WORLD.WIDTH - 440);
+    const kind = this.rng() < 0.55 ? 'medkit' : 'ammo';
+    this.crates.push({
+      id: Date.now() + Math.random(),
+      x,
+      y: 35,
+      vy: 42,
+      kind,
+      grounded: false,
+      active: true,
+    });
+  }
+
+  _stepCrates(dt) {
+    for (const c of this.crates) {
+      if (!c.active) continue;
+      if (!c.grounded) {
+        c.y += c.vy * dt;
+        if (this.terrain.isSolid(c.x, c.y + 10)) {
+          c.grounded = true;
+        } else if (c.y >= this.waterLevel) {
+          c.active = false;
+        }
+      } else if (!this.terrain.isSolid(c.x, c.y + 11)) {
+        c.grounded = false;
+      }
+
+      for (const w of this.worms) {
+        if (!w.alive) continue;
+        if (Math.hypot(w.x - c.x, w.y - c.y) <= PHYSICS.WORM_RADIUS + 12) {
+          c.active = false;
+          this.sound.playPickup();
+          if (c.kind === 'medkit') {
+            const heal = Math.min(25, w.maxHp - w.hp);
+            w.hp = Math.min(w.maxHp, w.hp + 25);
+            this._addFloatingText(w.x, w.y - 24, `+${heal || 25} HP`, '#52c41a');
+          } else {
+            const bonus = this.rng() < 0.5 ? 'cluster' : 'airstrike';
+            this.teamAmmo[w.teamId][bonus] += 1;
+            const wName = WEAPON_MAP[bonus].name;
+            this._addFloatingText(w.x, w.y - 24, `+1 ${wName}`, '#38bdf8');
+          }
+          break;
+        }
+      }
+    }
+    this.crates = this.crates.filter((c) => c.active);
+  }
+
+  _stepAi(dt) {
+    const worm = this.getActiveWorm();
+    if (!worm) return;
+
+    if (!this.aiState) {
+      const plan = planAiTurn(this, worm);
+      if (!plan) return;
+      this.selectWeapon(plan.weaponId);
+      this.aiState = {
+        stage: 'think',
+        timer: 0.65,
+        plan,
+      };
+      return;
+    }
+
+    const st = this.aiState;
+    const plan = st.plan;
+
+    if (st.stage === 'think') {
+      st.timer -= dt;
+      if (st.timer <= 0) {
+        st.stage = plan.walkDuration > 0 ? 'walk' : 'aim';
+        st.timer = plan.walkDuration;
+      }
+    } else if (st.stage === 'walk') {
+      walkWorm(worm, this.terrain, plan.walkDir, dt);
+      st.timer -= dt;
+      if (st.timer <= 0) {
+        st.stage = 'aim';
+      }
+    } else if (st.stage === 'aim') {
+      worm.facing = plan.facing;
+      const diff = plan.aimAngle - worm.aimAngle;
+      if (Math.abs(diff) < 0.04) {
+        worm.aimAngle = plan.aimAngle;
+        st.stage = 'charge';
+        st.timer = 0.4;
+      } else {
+        worm.aimAngle += Math.sign(diff) * Math.min(Math.abs(diff), dt * 2.5);
+      }
+    } else if (st.stage === 'charge') {
+      const weapon = WEAPON_MAP[this.selectedWeaponId];
+      if (!weapon.chargeable) {
+        st.timer -= dt;
+        if (st.timer <= 0) {
+          this.fireActiveWeapon(1.0, plan.targetPos);
+          // If multi-shot weapon (e.g. shotgun) still has shots left, pause then fire remaining shot
+          if (this.phase === PHASE.PLAYER_TURN && this.shotsRemainingThisTurn > 0) {
+            st.stage = 'followup';
+            st.timer = 0.55;
+          } else {
+            this.aiState = null;
+          }
+        }
+      } else {
+        if (!this.charging) {
+          this.startCharge();
+        } else if (this.chargePower >= plan.power) {
+          this.releaseCharge();
+          this.aiState = null;
+        }
+      }
+    } else if (st.stage === 'followup') {
+      st.timer -= dt;
+      if (st.timer <= 0) {
+        this.fireActiveWeapon(1.0, plan.targetPos);
+        if (this.phase !== PHASE.PLAYER_TURN || this.shotsRemainingThisTurn <= 0) {
+          this.aiState = null;
+        } else {
+          st.timer = 0.55;
+        }
+      }
+    }
+  }
+
+  _allSettled() {
+    if (this.projectiles.length > 0) return false;
+    for (const w of this.worms) {
+      if (!w.alive) continue;
+      if (!w.grounded) return false;
+      if (w.vx * w.vx + w.vy * w.vy > PHYSICS.SETTLE_SPEED_SQ) return false;
+    }
+    return true;
+  }
+
+  _checkGameOver() {
+    const redAlive = this.worms.some((w) => w.teamId === 0 && w.alive);
+    const blueAlive = this.worms.some((w) => w.teamId === 1 && w.alive);
+
+    if (!redAlive && !blueAlive) {
+      this.winnerTeamId = -1;
+      this.phase = PHASE.GAME_OVER;
+      this._showBanner('平局！双方同归于尽', 99);
+      return true;
+    }
+    if (!redAlive) {
+      this.winnerTeamId = 1;
+      this.phase = PHASE.GAME_OVER;
+      this.sound.playVictory();
+      this._showBanner(`${TEAMS[1].name} 获胜！`, 99);
+      return true;
+    }
+    if (!blueAlive) {
+      this.winnerTeamId = 0;
+      this.phase = PHASE.GAME_OVER;
+      this.sound.playVictory();
+      this._showBanner(`${TEAMS[0].name} 获胜！`, 99);
+      return true;
+    }
+    return false;
+  }
+
+  _advanceTurn() {
+    if (this._checkGameOver()) return;
+
+    this.turnNumber += 1;
+    this.wind = this._rollWind();
+    this._maybeSpawnCrate();
+
+    if (this.turnNumber >= WORLD.SUDDEN_DEATH_TURN) {
+      this.waterLevel = Math.max(360, this.waterLevel - WORLD.SUDDEN_DEATH_WATER_RISE);
+      this._showBanner(`骤死模式！水位上升 · 回合 ${this.turnNumber}`, 2.4);
+    }
+
+    const nextTeam = 1 - this.activeTeamId;
+    this._selectNextWormForTeam(nextTeam);
+    this.phase = PHASE.PLAYER_TURN;
+    this.sound.playTurnChime();
+
+    if (this.turnNumber < WORLD.SUDDEN_DEATH_TURN) {
+      const label = this.mode === 'ai' && nextTeam === 1 ? 'AI 行动' : `${TEAMS[nextTeam].shortName}行动`;
+      this._showBanner(`回合 ${this.turnNumber} · ${label}`, 1.8);
+    }
+  }
+
+  // Fixed-timestep simulation update
+  step(dt = WORLD.FIXED_DT) {
+    if (this.paused) return;
+
+    if (this.bannerTimer > 0) this.bannerTimer = Math.max(0, this.bannerTimer - dt);
+    if (this.shakeTime > 0) this.shakeTime = Math.max(0, this.shakeTime - dt);
+
+    // Step worms physics
+    for (const w of this.worms) {
+      if (!w.alive) continue;
+      stepWormPhysics(w, this.terrain, this.waterLevel, dt, (ev) => {
+        if (ev.type === 'fall_damage') {
+          this._addFloatingText(ev.worm.x, ev.worm.y - 20, `-${ev.damage} 摔伤`, '#ffa940');
+        } else if (ev.type === 'worm_drowned') {
+          this.sound.playSplash();
+          this._addFloatingText(ev.worm.x, this.waterLevel - 24, '落水!', '#69c0ff');
+          for (let i = 0; i < 14; i++) {
+            this.particles.push({
+              x: ev.worm.x,
+              y: this.waterLevel,
+              vx: (Math.random() - 0.5) * 140,
+              vy: -80 - Math.random() * 140,
+              size: 3 + Math.random() * 3,
+              color: this.terrain.theme.waterFoam,
+              life: 0.65,
+              maxLife: 0.65,
+              gravity: 340,
+            });
+          }
+        }
+      });
+    }
+
+    // Step projectiles
+    const newlySpawned = [];
+    for (const p of this.projectiles) {
+      if (!p.active) continue;
+      p.trail.push({ x: p.x, y: p.y });
+      if (p.trail.length > 18) p.trail.shift();
+
+      const res = stepProjectilePhysics(p, this.terrain, this.worms, this.wind, this.waterLevel, dt);
+      if (res) {
+        if (res.reason === 'bounce') {
+          this.sound.playBounce();
+        } else if (res.reason === 'water') {
+          this.sound.playSplash();
+        } else if (res.reason === 'hit_terrain' || res.reason === 'hit_worm' || res.reason === 'fuse') {
+          this._detonate(res.x, res.y, p.blastRadius, p.maxDamage, p.knockback, true);
+          if (p.type === 'cluster') {
+            newlySpawned.push(...spawnClusterBomblets(p));
+          }
+        }
+      }
+    }
+    this.projectiles = this.projectiles.filter((p) => p.active);
+    if (newlySpawned.length > 0) {
+      this.projectiles.push(...newlySpawned);
+    }
+
+    // Step crates & visual FX
+    this._stepCrates(dt);
+
+    for (const pt of this.particles) {
+      pt.vy += pt.gravity * dt;
+      pt.x += pt.vx * dt;
+      pt.y += pt.vy * dt;
+      pt.life -= dt;
+    }
+    this.particles = this.particles.filter((pt) => pt.life > 0);
+
+    for (const ex of this.explosions) ex.age += dt;
+    this.explosions = this.explosions.filter((ex) => ex.age < ex.duration);
+
+    for (const ft of this.floatingTexts) {
+      ft.age += dt;
+      ft.y -= 26 * dt;
+    }
+    this.floatingTexts = this.floatingTexts.filter((ft) => ft.age < ft.duration);
+
+    for (const b of this.hitscanBeams) b.life -= dt;
+    this.hitscanBeams = this.hitscanBeams.filter((b) => b.life > 0);
+
+    // State machine transitions
+    if (this.phase === PHASE.PLAYER_TURN) {
+      const activeWorm = this.getActiveWorm();
+      if (!activeWorm) {
+        this._enterResolving();
+      } else {
+        this.turnTimer -= dt;
+        if (this.charging) {
+          this.chargeTime += dt;
+          this.chargePower = clamp(
+            TURN.MIN_POWER + (this.chargeTime / TURN.MAX_CHARGE_TIME) * (1 - TURN.MIN_POWER),
+            TURN.MIN_POWER,
+            1.0
+          );
+          if (this.chargePower >= 1.0) {
+            this.releaseCharge();
+          }
+        }
+
+        // Keep stepping AI even while charging so AI releases at its calculated target power
+        if (this.phase === PHASE.PLAYER_TURN && this.isAiTurn()) {
+          this._stepAi(dt);
+        }
+
+        if (this.turnTimer <= 0 && this.phase === PHASE.PLAYER_TURN) {
+          this._enterResolving();
+        }
+      }
+    } else if (this.phase === PHASE.RETREAT) {
+      this.retreatTimer -= dt;
+      if (this.retreatTimer <= 0 || !this.getActiveWorm()) {
+        this._enterResolving();
+      }
+    } else if (this.phase === PHASE.RESOLVING) {
+      this.resolvingTimer += dt;
+      const timedOutSafely = this.projectiles.length === 0 && this.resolvingTimer >= MAX_RESOLVE_TIMEOUT;
+      if (this._allSettled() || timedOutSafely) {
+        if (timedOutSafely) {
+          for (const w of this.worms) {
+            if (w.alive && Math.hypot(w.vx, w.vy) < 40) {
+              w.vx = 0;
+              w.vy = 0;
+              w.grounded = true;
+            }
+          }
+        }
+        if (!this._checkGameOver()) {
+          this.phase = PHASE.TURN_TRANSITION;
+          this.transitionTimer = TURN.TRANSITION_DELAY;
+        }
+      }
+    } else if (this.phase === PHASE.TURN_TRANSITION) {
+      this.transitionTimer -= dt;
+      if (this.transitionTimer <= 0) {
+        this._advanceTurn();
+      }
+    }
+
+    // Update camera tracking
+    this._updateCamera(dt);
+  }
+
+  _updateCamera(dt) {
+    if (this.camera.manual) {
+      this.camera.manualTimer -= dt;
+      if (this.camera.manualTimer <= 0) {
+        this.camera.manual = false;
+      }
+    } else if (this.projectiles.length > 0) {
+      const p = this.projectiles[0];
+      this.camera.targetX = p.x;
+      this.camera.targetY = p.y;
+    } else {
+      const active = this.getActiveWorm();
+      if (active) {
+        this.camera.targetX = active.x;
+        this.camera.targetY = active.y;
+      }
+    }
+
+    const lerp = 1 - Math.exp(-6.5 * dt);
+    this.camera.x += (this.camera.targetX - this.camera.x) * lerp;
+    this.camera.y += (this.camera.targetY - this.camera.y) * lerp;
+  }
+
+  panCamera(dx, dy) {
+    this.camera.manual = true;
+    this.camera.manualTimer = 4.0;
+    this.camera.targetX = clamp(this.camera.targetX + dx, 0, WORLD.WIDTH);
+    this.camera.targetY = clamp(this.camera.targetY + dy, 0, WORLD.HEIGHT);
+  }
+}
+
+// ===== src/renderer.js =====
+// High-craft Canvas 2D renderer for Worms 2D (sky, parallax clouds, destructible terrain, worms, FX, minimap)
+
+
+
+
+class WormsRenderer {
+  constructor(canvas) {
+    this.canvas = canvas;
+    this.ctx = canvas.getContext('2d');
+    this.time = 0;
+    this.clouds = Array.from({ length: 9 }, (_, i) => ({
+      x: i * 210 + Math.random() * 90,
+      y: 55 + (i % 4) * 44,
+      scale: 0.7 + (i % 3) * 0.35,
+      speed: 8 + (i % 3) * 5,
+    }));
+  }
+
+  getCameraView() {
+    const cw = this.canvas.width;
+    const ch = this.canvas.height;
+    // Responsive zoom so the game looks crisp on narrow panels and wide desktops
+    const zoom = Math.max(0.55, Math.min(1.15, Math.min(cw / 980, ch / 560)));
+    const viewW = cw / zoom;
+    const viewH = ch / zoom;
+    return { cw, ch, zoom, viewW, viewH };
+  }
+
+  screenToWorld(game, screenX, screenY) {
+    const { cw, ch, zoom, viewW, viewH } = this.getCameraView();
+    const camX = Math.max(viewW / 2, Math.min(WORLD.WIDTH - viewW / 2, game.camera.x));
+    const camY = Math.max(viewH / 2, Math.min(WORLD.HEIGHT - viewH / 2, game.camera.y));
+    const offsetX = viewW >= WORLD.WIDTH ? (WORLD.WIDTH - viewW) / 2 : camX - viewW / 2;
+    const offsetY = viewH >= WORLD.HEIGHT ? (WORLD.HEIGHT - viewH) / 2 : camY - viewH / 2;
+    return {
+      x: offsetX + (screenX / cw) * viewW,
+      y: offsetY + (screenY / ch) * viewH,
+    };
+  }
+
+  render(game, dt = 1 / 60) {
+    this.time += dt;
+    const ctx = this.ctx;
+    const { cw, ch, zoom, viewW, viewH } = this.getCameraView();
+    const theme = game.terrain.theme;
+
+    // 1. Sky gradient background
+    const skyGrad = ctx.createLinearGradient(0, 0, 0, ch);
+    skyGrad.addColorStop(0, theme.skyTop);
+    skyGrad.addColorStop(0.55, theme.skyMid);
+    skyGrad.addColorStop(1, theme.skyBottom);
+    ctx.fillStyle = skyGrad;
+    ctx.fillRect(0, 0, cw, ch);
+
+    // Sun / moon glow
+    ctx.save();
+    const sunX = cw * 0.82;
+    const sunY = ch * 0.18;
+    const sunGlow = ctx.createRadialGradient(sunX, sunY, 8, sunX, sunY, 90);
+    sunGlow.addColorStop(0, theme.sunColor);
+    sunGlow.addColorStop(1, 'rgba(255,255,255,0)');
+    ctx.fillStyle = sunGlow;
+    ctx.beginPath();
+    ctx.arc(sunX, sunY, 90, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.restore();
+
+    // Camera transform with optional screen shake
+    const camX = Math.max(viewW / 2, Math.min(WORLD.WIDTH - viewW / 2, game.camera.x));
+    const camY = Math.max(viewH / 2, Math.min(WORLD.HEIGHT - viewH / 2, game.camera.y));
+    let offsetX = viewW >= WORLD.WIDTH ? (WORLD.WIDTH - viewW) / 2 : camX - viewW / 2;
+    let offsetY = viewH >= WORLD.HEIGHT ? (WORLD.HEIGHT - viewH) / 2 : camY - viewH / 2;
+
+    if (game.shakeTime > 0) {
+      offsetX += (Math.random() - 0.5) * game.shakeIntensity;
+      offsetY += (Math.random() - 0.5) * game.shakeIntensity;
+    }
+
+    ctx.save();
+    ctx.scale(zoom, zoom);
+    ctx.translate(-offsetX, -offsetY);
+
+    // 2. Parallax clouds drifted by current wind
+    this._drawClouds(ctx, game.wind, theme.cloudColor, dt);
+
+    // 3. Background ocean layer
+    this._drawWater(ctx, game.waterLevel, theme, false);
+
+    // 4. Destructible terrain bitmap
+    if (game.terrain.dirty || !game.terrain.canvas) {
+      game.terrain.rebuildCanvas();
+    }
+    if (game.terrain.canvas) {
+      ctx.drawImage(game.terrain.canvas, 0, 0);
+    }
+
+    // 5. Supply crates
+    for (const crate of game.crates) {
+      this._drawCrate(ctx, crate);
+    }
+
+    // 6. Worms
+    const activeWorm = game.getActiveWorm();
+    for (const w of game.worms) {
+      if (!w.alive) continue;
+      this._drawWorm(ctx, w, activeWorm && w.id === activeWorm.id, game);
+    }
+
+    // 7. Hitscan shotgun beams
+    for (const b of game.hitscanBeams) {
+      ctx.save();
+      ctx.globalAlpha = b.life / b.maxLife;
+      ctx.strokeStyle = '#fff59d';
+      ctx.lineWidth = 3;
+      ctx.beginPath();
+      ctx.moveTo(b.startX, b.startY);
+      ctx.lineTo(b.endX, b.endY);
+      ctx.stroke();
+      ctx.restore();
+    }
+
+    // 8. Projectiles & smoke trails
+    for (const p of game.projectiles) {
+      this._drawProjectile(ctx, p);
+    }
+
+    // 9. Explosion shockwaves & particles
+    for (const ex of game.explosions) {
+      const t = ex.age / ex.duration;
+      ctx.save();
+      ctx.globalAlpha = Math.max(0, 1 - t);
+      const r = ex.radius * (0.45 + t * 0.9);
+      const grad = ctx.createRadialGradient(ex.x, ex.y, r * 0.1, ex.x, ex.y, r);
+      grad.addColorStop(0, '#ffffff');
+      grad.addColorStop(0.4, '#ffd43b');
+      grad.addColorStop(0.75, '#ff6b35');
+      grad.addColorStop(1, 'rgba(255, 60, 0, 0)');
+      ctx.fillStyle = grad;
+      ctx.beginPath();
+      ctx.arc(ex.x, ex.y, r, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.restore();
+    }
+
+    for (const pt of game.particles) {
+      ctx.save();
+      ctx.globalAlpha = Math.max(0, Math.min(1, pt.life / pt.maxLife));
+      ctx.fillStyle = pt.color;
+      ctx.beginPath();
+      ctx.arc(pt.x, pt.y, pt.size, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.restore();
+    }
+
+    // 10. Foreground translucent water surface
+    this._drawWater(ctx, game.waterLevel, theme, true);
+
+    // 11. Floating damage & status texts
+    ctx.font = 'bold 15px Inter, system-ui, sans-serif';
+    ctx.textAlign = 'center';
+    for (const ft of game.floatingTexts) {
+      ctx.save();
+      ctx.globalAlpha = Math.max(0, 1 - ft.age / ft.duration);
+      ctx.lineWidth = 3;
+      ctx.strokeStyle = 'rgba(0,0,0,0.75)';
+      ctx.strokeText(ft.text, ft.x, ft.y);
+      ctx.fillStyle = ft.color;
+      ctx.fillText(ft.text, ft.x, ft.y);
+      ctx.restore();
+    }
+
+    ctx.restore();
+
+    // 12. Minimap in top-right corner on wider canvases
+    if (cw >= 520) {
+      this._drawMinimap(ctx, game, cw, ch);
+    }
+  }
+
+  _drawClouds(ctx, wind, color, dt) {
+    ctx.save();
+    ctx.fillStyle = color;
+    for (const c of this.clouds) {
+      c.x += (wind * 0.35 + c.speed * 0.3) * dt;
+      if (c.x > WORLD.WIDTH + 140) c.x = -140;
+      if (c.x < -140) c.x = WORLD.WIDTH + 140;
+
+      ctx.beginPath();
+      ctx.arc(c.x, c.y, 24 * c.scale, 0, Math.PI * 2);
+      ctx.arc(c.x + 22 * c.scale, c.y - 8 * c.scale, 28 * c.scale, 0, Math.PI * 2);
+      ctx.arc(c.x + 48 * c.scale, c.y, 22 * c.scale, 0, Math.PI * 2);
+      ctx.fill();
+    }
+    ctx.restore();
+  }
+
+  _drawWater(ctx, waterLevel, theme, foreground) {
+    ctx.save();
+    const grad = ctx.createLinearGradient(0, waterLevel, 0, WORLD.HEIGHT + 60);
+    grad.addColorStop(0, foreground ? theme.waterTop : theme.waterDeep);
+    grad.addColorStop(1, theme.waterDeep);
+    ctx.fillStyle = grad;
+
+    ctx.beginPath();
+    ctx.moveTo(-200, WORLD.HEIGHT + 120);
+    for (let x = -200; x <= WORLD.WIDTH + 200; x += 28) {
+      const wave =
+        Math.sin(x * 0.025 + this.time * (foreground ? 3.2 : 2.1)) * (foreground ? 4.5 : 3) +
+        Math.cos(x * 0.015 - this.time * 1.6) * 2;
+      ctx.lineTo(x, waterLevel + wave + (foreground ? 2 : -2));
+    }
+    ctx.lineTo(WORLD.WIDTH + 200, WORLD.HEIGHT + 120);
+    ctx.closePath();
+    ctx.fill();
+
+    if (foreground) {
+      ctx.strokeStyle = theme.waterFoam;
+      ctx.lineWidth = 2.5;
+      ctx.beginPath();
+      for (let x = -200; x <= WORLD.WIDTH + 200; x += 28) {
+        const wave =
+          Math.sin(x * 0.025 + this.time * 3.2) * 4.5 +
+          Math.cos(x * 0.015 - this.time * 1.6) * 2;
+        if (x === -200) ctx.moveTo(x, waterLevel + wave + 2);
+        else ctx.lineTo(x, waterLevel + wave + 2);
+      }
+      ctx.stroke();
+    }
+    ctx.restore();
+  }
+
+  _drawCrate(ctx, crate) {
+    ctx.save();
+    ctx.translate(crate.x, crate.y);
+
+    // Parachute when falling
+    if (!crate.grounded) {
+      ctx.strokeStyle = 'rgba(255,255,255,0.75)';
+      ctx.lineWidth = 1.2;
+      ctx.beginPath();
+      ctx.moveTo(-12, -24);
+      ctx.lineTo(-6, -8);
+      ctx.moveTo(12, -24);
+      ctx.lineTo(6, -8);
+      ctx.stroke();
+
+      ctx.fillStyle = crate.kind === 'medkit' ? '#ff4d4f' : '#38bdf8';
+      ctx.beginPath();
+      ctx.arc(0, -24, 14, Math.PI, 0);
+      ctx.fill();
+    }
+
+    // Crate box
+    ctx.fillStyle = crate.kind === 'medkit' ? '#f8fafc' : '#d97706';
+    ctx.strokeStyle = '#1e293b';
+    ctx.lineWidth = 1.8;
+    ctx.fillRect(-9, -9, 18, 18);
+    ctx.strokeRect(-9, -9, 18, 18);
+
+    // Symbol
+    ctx.fillStyle = crate.kind === 'medkit' ? '#ef4444' : '#fef08a';
+    if (crate.kind === 'medkit') {
+      ctx.fillRect(-2, -6, 4, 12);
+      ctx.fillRect(-6, -2, 12, 4);
+    } else {
+      ctx.font = 'bold 11px sans-serif';
+      ctx.textAlign = 'center';
+      ctx.textBaseline = 'middle';
+      ctx.fillText('★', 0, 1);
+    }
+    ctx.restore();
+  }
+
+  _drawWorm(ctx, worm, isActive, game) {
+    const team = TEAMS[worm.teamId];
+    const bob = worm.grounded ? Math.sin(worm.walkPhase) * 1.4 : 0;
+
+    ctx.save();
+    ctx.translate(worm.x, worm.y + bob);
+
+    // Active worm golden bounce arrow above head
+    if (isActive && game.phase !== PHASE.GAME_OVER) {
+      const arrowY = -44 + Math.sin(this.time * 6) * 4;
+      ctx.fillStyle = '#fde047';
+      ctx.strokeStyle = '#1e293b';
+      ctx.lineWidth = 1.5;
+      ctx.beginPath();
+      ctx.moveTo(0, arrowY + 8);
+      ctx.lineTo(-6, arrowY);
+      ctx.lineTo(6, arrowY);
+      ctx.closePath();
+      ctx.fill();
+      ctx.stroke();
+    }
+
+    // Worm segmented pink body (classic Worms silhouette)
+    ctx.save();
+    ctx.scale(worm.facing, 1);
+
+    // Tail segment
+    ctx.fillStyle = '#f8b4b4';
+    ctx.strokeStyle = '#7f1d1d';
+    ctx.lineWidth = 1.4;
+    ctx.beginPath();
+    ctx.ellipse(-6, 6, 7, 5, 0.15, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.stroke();
+
+    // Main torso
+    ctx.fillStyle = '#fbcfe8';
+    ctx.beginPath();
+    ctx.ellipse(0, 1, 7.5, 10, -0.08, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.stroke();
+
+    // Team headband
+    ctx.fillStyle = team.bandColor;
+    ctx.fillRect(-7, -7, 14, 3.5);
+    // Flowing headband tail
+    ctx.beginPath();
+    ctx.moveTo(-7, -5.5);
+    ctx.lineTo(-13, -7 + Math.sin(this.time * 8 + worm.id) * 2);
+    ctx.lineTo(-12, -3.5 + Math.sin(this.time * 8 + worm.id) * 2);
+    ctx.closePath();
+    ctx.fill();
+
+    // Expressive eyes
+    ctx.fillStyle = '#ffffff';
+    ctx.beginPath();
+    ctx.ellipse(2.5, -3, 2.7, 3.2, 0, 0, Math.PI * 2);
+    ctx.ellipse(6.2, -3, 2.5, 3.0, 0, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.fillStyle = '#0f172a';
+    ctx.beginPath();
+    ctx.arc(3.3, -3, 1.2, 0, Math.PI * 2);
+    ctx.arc(7.0, -3, 1.2, 0, Math.PI * 2);
+    ctx.fill();
+
+    // Held weapon indicator for active worm
+    if (isActive && game.phase === PHASE.PLAYER_TURN) {
+      const weapon = WEAPON_MAP[game.selectedWeaponId];
+      ctx.save();
+      ctx.translate(2, 0);
+      ctx.rotate(worm.aimAngle);
+      if (weapon.id === 'bazooka') {
+        ctx.fillStyle = '#3f6212';
+        ctx.fillRect(-6, -3, 19, 6);
+        ctx.fillStyle = '#84cc16';
+        ctx.fillRect(10, -4, 4, 8);
+      } else if (weapon.id === 'shotgun') {
+        ctx.fillStyle = '#334155';
+        ctx.fillRect(0, -2, 16, 3.5);
+        ctx.fillStyle = '#92400e';
+        ctx.fillRect(-5, -1, 7, 4);
+      } else if (weapon.id === 'grenade' || weapon.id === 'cluster') {
+        ctx.fillStyle = weapon.id === 'cluster' ? '#dc2626' : '#15803d';
+        ctx.beginPath();
+        ctx.arc(9, 0, 4.5, 0, Math.PI * 2);
+        ctx.fill();
+      } else if (weapon.id === 'dynamite') {
+        ctx.fillStyle = '#ef4444';
+        ctx.fillRect(5, -5, 6, 10);
+      }
+      ctx.restore();
+    }
+
+    ctx.restore();
+
+    // Aiming crosshair & power gauge for active worm
+    if (isActive && game.phase === PHASE.PLAYER_TURN && !game.isAiTurn()) {
+      const worldAngle = getWorldAimAngle(worm);
+      const dist = 42;
+      const cx = Math.cos(worldAngle) * dist;
+      const cy = -3 + Math.sin(worldAngle) * dist;
+
+      // Crosshair
+      ctx.strokeStyle = '#fde047';
+      ctx.lineWidth = 2;
+      ctx.beginPath();
+      ctx.arc(cx, cy, 7, 0, Math.PI * 2);
+      ctx.moveTo(cx - 11, cy);
+      ctx.lineTo(cx - 4, cy);
+      ctx.moveTo(cx + 4, cy);
+      ctx.lineTo(cx + 11, cy);
+      ctx.moveTo(cx, cy - 11);
+      ctx.lineTo(cx, cy - 4);
+      ctx.moveTo(cx, cy + 4);
+      ctx.lineTo(cx, cy + 11);
+      ctx.stroke();
+
+      // Power charge arc along firing vector
+      if (game.charging) {
+        const len = 18 + game.chargePower * 44;
+        const grad = ctx.createLinearGradient(0, 0, Math.cos(worldAngle) * len, Math.sin(worldAngle) * len);
+        grad.addColorStop(0, '#52c41a');
+        grad.addColorStop(0.55, '#fadb14');
+        grad.addColorStop(1, '#ff4d4f');
+        ctx.strokeStyle = grad;
+        ctx.lineWidth = 6;
+        ctx.lineCap = 'round';
+        ctx.beginPath();
+        ctx.moveTo(Math.cos(worldAngle) * 14, -3 + Math.sin(worldAngle) * 14);
+        ctx.lineTo(Math.cos(worldAngle) * len, -3 + Math.sin(worldAngle) * len);
+        ctx.stroke();
+      }
+    }
+
+    // Nameplate & HP badge above worm
+    ctx.font = 'bold 11px Inter, system-ui, sans-serif';
+    ctx.textAlign = 'center';
+    const label = `${worm.name} ${worm.hp}`;
+    const tw = ctx.measureText(label).width + 10;
+    ctx.fillStyle = 'rgba(15, 23, 42, 0.82)';
+    ctx.beginPath();
+    ctx.roundRect(-tw / 2, -32, tw, 16, 4);
+    ctx.fill();
+    ctx.strokeStyle = team.color;
+    ctx.lineWidth = 1.2;
+    ctx.stroke();
+
+    ctx.fillStyle = team.accent;
+    ctx.fillText(label, 0, -20.5);
+
+    ctx.restore();
+  }
+
+  _drawProjectile(ctx, p) {
+    // Smoke trail
+    if (p.trail.length > 1) {
+      ctx.save();
+      for (let i = 0; i < p.trail.length; i++) {
+        const pt = p.trail[i];
+        const ratio = i / p.trail.length;
+        ctx.globalAlpha = ratio * 0.45;
+        ctx.fillStyle = p.weaponId === 'bazooka' || p.type === 'airstrike_missile' ? '#e2e8f0' : '#fef08a';
+        ctx.beginPath();
+        ctx.arc(pt.x, pt.y, 1.5 + ratio * 2.5, 0, Math.PI * 2);
+        ctx.fill();
+      }
+      ctx.restore();
+    }
+
+    ctx.save();
+    ctx.translate(p.x, p.y);
+    const angle = Math.atan2(p.vy, p.vx);
+
+    if (p.weaponId === 'bazooka' || p.type === 'airstrike_missile') {
+      ctx.rotate(angle);
+      ctx.fillStyle = '#e2e8f0';
+      ctx.fillRect(-7, -3, 12, 6);
+      ctx.fillStyle = '#ef4444';
+      ctx.beginPath();
+      ctx.moveTo(5, -3.5);
+      ctx.lineTo(10, 0);
+      ctx.lineTo(5, 3.5);
+      ctx.closePath();
+      ctx.fill();
+    } else if (p.weaponId === 'dynamite') {
+      ctx.fillStyle = '#ef4444';
+      ctx.fillRect(-4, -7, 8, 14);
+      ctx.fillStyle = '#fde047';
+      ctx.beginPath();
+      ctx.arc(0, -9, 2.5 + Math.sin(this.time * 30) * 1.2, 0, Math.PI * 2);
+      ctx.fill();
+    } else {
+      ctx.fillStyle = p.weaponId === 'cluster' || p.weaponId === 'cluster_sub' ? '#dc2626' : '#16a34a';
+      ctx.strokeStyle = '#0f172a';
+      ctx.lineWidth = 1.5;
+      ctx.beginPath();
+      ctx.arc(0, 0, p.radius, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.stroke();
+    }
+
+    // Countdown timer above fused weapons
+    if (p.fuse > 0 && p.fuseRemaining > 0) {
+      ctx.font = 'bold 11px Inter, sans-serif';
+      ctx.textAlign = 'center';
+      ctx.fillStyle = '#fef08a';
+      ctx.strokeStyle = '#000';
+      ctx.lineWidth = 2.5;
+      const secs = Math.ceil(p.fuseRemaining);
+      ctx.strokeText(`${secs}`, 0, -12);
+      ctx.fillText(`${secs}`, 0, -12);
+    }
+
+    ctx.restore();
+  }
+
+  _drawMinimap(ctx, game, cw, ch) {
+    const mw = 160;
+    const mh = 80;
+    const mx = cw - mw - 14;
+    const my = 62;
+
+    ctx.save();
+    ctx.fillStyle = 'rgba(15, 23, 42, 0.72)';
+    ctx.strokeStyle = 'rgba(148, 163, 184, 0.45)';
+    ctx.lineWidth = 1.2;
+    ctx.beginPath();
+    ctx.roundRect(mx, my, mw, mh, 8);
+    ctx.fill();
+    ctx.stroke();
+
+    if (game.terrain.canvas) {
+      ctx.drawImage(game.terrain.canvas, mx + 2, my + 2, mw - 4, mh - 4);
+    }
+
+    // Water line on minimap
+    const wy = my + (game.waterLevel / WORLD.HEIGHT) * mh;
+    ctx.fillStyle = 'rgba(56, 189, 248, 0.45)';
+    ctx.fillRect(mx + 2, wy, mw - 4, my + mh - wy - 2);
+
+    // Worms dots
+    for (const w of game.worms) {
+      if (!w.alive) continue;
+      const wx = mx + (w.x / WORLD.WIDTH) * mw;
+      const wyDot = my + (w.y / WORLD.HEIGHT) * mh;
+      ctx.fillStyle = TEAMS[w.teamId].color;
+      ctx.beginPath();
+      ctx.arc(wx, wyDot, w.id === game.activeWormId ? 3.5 : 2.3, 0, Math.PI * 2);
+      ctx.fill();
+    }
+    ctx.restore();
+  }
+}
+
+// ===== src/main.js =====
+// Browser entry point: responsive canvas, keyboard + mouse + touch HUD, game loop
+
+
+
+
+let game = null;
+let renderer = null;
+let rafId = null;
+let lastTime = 0;
+let accumulator = 0;
+
+const keys = new Set();
+const touchHold = { left: false, right: false, aimUp: false, aimDown: false };
+
+function $(id) {
+  return document.getElementById(id);
+}
+
+function resizeCanvas() {
+  const canvas = $('game-canvas');
+  const stage = $('stage-wrap');
+  if (!canvas || !stage) return;
+  const rect = stage.getBoundingClientRect();
+  canvas.width = Math.max(320, Math.floor(rect.width));
+  canvas.height = Math.max(260, Math.floor(rect.height));
+  if (renderer && game) {
+    renderer.render(game, 0);
+  }
+}
+
+function buildWeaponBar() {
+  const bar = $('weapon-bar');
+  if (!bar) return;
+  bar.innerHTML = '';
+
+  for (const w of WEAPONS) {
+    const btn = document.createElement('button');
+    btn.type = 'button';
+    btn.className = 'weapon-btn';
+    btn.dataset.weaponId = w.id;
+    btn.title = `${w.name} [${w.key}] — ${w.description}`;
+    btn.innerHTML = `
+      <span class="w-key">${w.key}</span>
+      <span class="w-icon">${w.icon}</span>
+      <span class="w-name">${w.name}</span>
+      <span class="w-ammo" data-ammo-for="${w.id}">∞</span>
+    `;
+    btn.addEventListener('click', () => {
+      game.sound.unlock();
+      if (!game.isAiTurn()) {
+        game.selectWeapon(w.id);
+        syncHud();
+      }
+    });
+    bar.appendChild(btn);
+  }
+}
+
+function syncHud() {
+  if (!game) return;
+  const stats = game.getTeamStats();
+
+  // Team HP bars
+  const red = stats[0];
+  const blue = stats[1];
+  $('red-hp-text').textContent = `${red.totalHp} HP (${red.aliveCount})`;
+  $('blue-hp-text').textContent = `${blue.totalHp} HP (${blue.aliveCount})`;
+  $('red-hp-fill').style.width = `${(red.totalHp / Math.max(1, red.maxTotalHp)) * 100}%`;
+  $('blue-hp-fill').style.width = `${(blue.totalHp / Math.max(1, blue.maxTotalHp)) * 100}%`;
+
+  // Turn timer & round
+  const activeTeam = TEAMS[game.activeTeamId];
+  $('turn-badge').textContent = `R${game.turnNumber} · ${activeTeam.shortName}`;
+  $('turn-badge').style.borderColor = activeTeam.color;
+
+  const timerVal =
+    game.phase === PHASE.RETREAT
+      ? Math.ceil(game.retreatTimer)
+      : game.phase === PHASE.PLAYER_TURN
+      ? Math.ceil(Math.max(0, game.turnTimer))
+      : '--';
+  $('timer-val').textContent = `${timerVal}`;
+  $('timer-val').classList.toggle('urgent', typeof timerVal === 'number' && timerVal <= 5);
+
+  // Wind indicator
+  const wind = game.wind;
+  const windAbs = Math.abs(wind);
+  const windPct = Math.min(100, windAbs);
+  $('wind-val').textContent = wind === 0 ? '无风 0' : `${wind > 0 ? '→' : '←'} ${windAbs}`;
+  const windBar = $('wind-bar-fill');
+  if (wind >= 0) {
+    windBar.style.left = '50%';
+    windBar.style.width = `${windPct / 2}%`;
+  } else {
+    windBar.style.left = `${50 - windPct / 2}%`;
+    windBar.style.width = `${windPct / 2}%`;
+  }
+
+  // Weapon bar active & ammo state
+  const teamAmmo = game.teamAmmo[game.activeTeamId];
+  const weaponBtns = document.querySelectorAll('.weapon-btn');
+  weaponBtns.forEach((btn) => {
+    const id = btn.dataset.weaponId;
+    const ammo = teamAmmo[id];
+    const ammoEl = btn.querySelector('.w-ammo');
+    ammoEl.textContent = ammo === Infinity ? '∞' : `${ammo}`;
+    btn.classList.toggle('active', game.selectedWeaponId === id);
+    btn.disabled = ammo <= 0 || game.isAiTurn() || game.phase !== PHASE.PLAYER_TURN;
+  });
+
+  // Weapon hint text
+  const curW = WEAPON_MAP[game.selectedWeaponId];
+  const hint = $('weapon-hint');
+  if (game.phase === PHASE.GAME_OVER) {
+    hint.textContent = game.bannerText;
+  } else if (game.isAiTurn()) {
+    hint.textContent = 'AI 正在计算风力与弹道...';
+  } else if (curW.id === 'airstrike') {
+    hint.textContent = '空袭导弹已就绪：点击战场任意位置呼叫轰炸！';
+  } else if (curW.id === 'shotgun') {
+    hint.textContent = `霰弹枪：本回合剩余 ${game.shotsRemainingThisTurn} 发（空格/发射键开火）`;
+  } else {
+    hint.textContent = `${curW.name}：${curW.description}`;
+  }
+
+  // Banner overlay
+  const banner = $('turn-banner');
+  if (game.bannerTimer > 0 && game.bannerText) {
+    banner.textContent = game.bannerText;
+    banner.classList.add('visible');
+  } else {
+    banner.classList.remove('visible');
+  }
+
+  // Game Over modal
+  const overModal = $('gameover-modal');
+  if (game.phase === PHASE.GAME_OVER) {
+    const title =
+      game.winnerTeamId === -1
+        ? '平局！'
+        : `${TEAMS[game.winnerTeamId].name} 胜利！`;
+    $('gameover-title').textContent = title;
+    $('gameover-sub').textContent = `共激战 ${game.turnNumber} 回合 · 地图：${THEMES[game.themeId].name}`;
+    overModal.classList.add('open');
+  } else {
+    overModal.classList.remove('open');
+  }
+
+  // Pause & Mute buttons
+  $('btn-pause').textContent = game.paused ? '▶ 继续' : '⏸ 暂停';
+  $('btn-mute').textContent = game.sound.muted ? '🔇 静音' : '🔊 音效';
+}
+
+function handleInputs(dt) {
+  if (!game || game.paused || game.phase === PHASE.GAME_OVER || game.isAiTurn()) return;
+
+  const moveLeft = keys.has('ArrowLeft') || keys.has('KeyA') || touchHold.left;
+  const moveRight = keys.has('ArrowRight') || keys.has('KeyD') || touchHold.right;
+  const aimUp = keys.has('ArrowUp') || keys.has('KeyW') || touchHold.aimUp;
+  const aimDown = keys.has('ArrowDown') || keys.has('KeyS') || touchHold.aimDown;
+
+  if (moveLeft && !moveRight) game.moveActiveWorm(-1, dt);
+  if (moveRight && !moveLeft) game.moveActiveWorm(1, dt);
+  if (aimUp && !aimDown) game.aimActiveWorm(-1.75 * dt);
+  if (aimDown && !aimUp) game.aimActiveWorm(1.75 * dt);
+}
+
+function gameLoop(timestamp) {
+  if (!lastTime) lastTime = timestamp;
+  const frameDt = Math.min(0.05, (timestamp - lastTime) / 1000);
+  lastTime = timestamp;
+
+  if (!game.paused) {
+    accumulator += frameDt;
+    while (accumulator >= WORLD.FIXED_DT) {
+      handleInputs(WORLD.FIXED_DT);
+      game.step(WORLD.FIXED_DT);
+      accumulator -= WORLD.FIXED_DT;
+    }
+  }
+
+  renderer.render(game, frameDt);
+  syncHud();
+  rafId = requestAnimationFrame(gameLoop);
+}
+
+function startNewGame(options = {}) {
+  const mode = options.mode ?? $('select-mode').value;
+  const themeId = options.themeId ?? $('select-theme').value;
+  const wormsPerTeam = Number(options.wormsPerTeam ?? $('select-worms').value) || 3;
+
+  const prevMuted = game ? game.sound.muted : false;
+  game = new WormsGame({ mode, themeId, wormsPerTeam });
+  game.sound.setMuted(prevMuted);
+  keys.clear();
+  Object.keys(touchHold).forEach((k) => (touchHold[k] = false));
+  $('gameover-modal').classList.remove('open');
+  syncHud();
+}
+
+function bindEvents() {
+  window.addEventListener('resize', resizeCanvas);
+
+  // Keyboard controls
+  window.addEventListener('keydown', (e) => {
+    if (!game) return;
+    if (['ArrowUp', 'ArrowDown', 'ArrowLeft', 'ArrowRight', 'Space'].includes(e.code)) {
+      e.preventDefault();
+    }
+    game.sound.unlock();
+    if (game.paused || game.phase === PHASE.GAME_OVER) return;
+
+    keys.add(e.code);
+
+    if (game.isAiTurn()) return;
+
+    if (e.code === 'Space' && !e.repeat) {
+      game.startCharge();
+    } else if ((e.code === 'Enter' || e.code === 'KeyJ') && !e.repeat) {
+      game.jumpActiveWorm(false);
+    } else if ((e.code === 'Backspace' || e.code === 'KeyK') && !e.repeat) {
+      game.jumpActiveWorm(true);
+    } else if (e.code.startsWith('Digit') && !e.repeat) {
+      const idx = Number(e.code.replace('Digit', '')) - 1;
+      if (WEAPONS[idx]) game.selectWeapon(WEAPONS[idx].id);
+    } else if (e.code === 'KeyP' && !e.repeat) {
+      game.paused = !game.paused;
+      syncHud();
+    }
+  });
+
+  window.addEventListener('keyup', (e) => {
+    keys.delete(e.code);
+    if (e.code === 'Space' && game && !game.isAiTurn()) {
+      game.releaseCharge();
+    }
+  });
+
+  // Canvas pointer events: click for Airstrike, drag to pan camera
+  const canvas = $('game-canvas');
+  let dragging = false;
+  let dragStartX = 0;
+  let dragStartY = 0;
+  let draggedDist = 0;
+
+  canvas.addEventListener('pointerdown', (e) => {
+    game.sound.unlock();
+    dragging = true;
+    dragStartX = e.clientX;
+    dragStartY = e.clientY;
+    draggedDist = 0;
+  });
+
+  window.addEventListener('pointermove', (e) => {
+    if (!dragging || !game) return;
+    const dx = e.clientX - dragStartX;
+    const dy = e.clientY - dragStartY;
+    draggedDist += Math.hypot(dx, dy);
+    dragStartX = e.clientX;
+    dragStartY = e.clientY;
+    if (draggedDist > 6) {
+      game.panCamera(-dx * 1.25, -dy * 1.25);
+    }
+  });
+
+  window.addEventListener('pointerup', (e) => {
+    if (!dragging || !game) return;
+    dragging = false;
+    if (draggedDist < 8 && !game.isAiTurn() && game.selectedWeaponId === 'airstrike') {
+      const rect = canvas.getBoundingClientRect();
+      const world = renderer.screenToWorld(game, e.clientX - rect.left, e.clientY - rect.top);
+      game.triggerAirstrikeAt(world.x, world.y);
+    }
+  });
+
+  // Top bar buttons
+  $('btn-new').addEventListener('click', () => {
+    game.sound.unlock();
+    startNewGame();
+  });
+  $('select-mode').addEventListener('change', () => startNewGame());
+  $('select-theme').addEventListener('change', () => startNewGame());
+  $('select-worms').addEventListener('change', () => startNewGame());
+
+  $('btn-pause').addEventListener('click', () => {
+    game.paused = !game.paused;
+    syncHud();
+  });
+
+  $('btn-mute').addEventListener('click', () => {
+    game.sound.unlock();
+    game.sound.toggleMute();
+    syncHud();
+  });
+
+  $('btn-help').addEventListener('click', () => {
+    $('help-modal').classList.add('open');
+  });
+  $('btn-close-help').addEventListener('click', () => {
+    $('help-modal').classList.remove('open');
+  });
+  $('btn-restart-modal').addEventListener('click', () => {
+    game.sound.unlock();
+    startNewGame();
+  });
+
+  // On-screen touch / click action controls
+  const bindHold = (id, keyName) => {
+    const el = $(id);
+    if (!el) return;
+    const onDown = (e) => {
+      e.preventDefault();
+      game.sound.unlock();
+      touchHold[keyName] = true;
+    };
+    const onUp = () => {
+      touchHold[keyName] = false;
+    };
+    el.addEventListener('pointerdown', onDown);
+    el.addEventListener('pointerup', onUp);
+    el.addEventListener('pointerleave', onUp);
+    el.addEventListener('pointercancel', onUp);
+  };
+
+  bindHold('ctrl-left', 'left');
+  bindHold('ctrl-right', 'right');
+  bindHold('ctrl-aim-up', 'aimUp');
+  bindHold('ctrl-aim-down', 'aimDown');
+
+  $('ctrl-jump').addEventListener('click', () => {
+    game.sound.unlock();
+    if (!game.isAiTurn()) game.jumpActiveWorm(false);
+  });
+  $('ctrl-backflip').addEventListener('click', () => {
+    game.sound.unlock();
+    if (!game.isAiTurn()) game.jumpActiveWorm(true);
+  });
+
+  const fireBtn = $('ctrl-fire');
+  fireBtn.addEventListener('pointerdown', (e) => {
+    e.preventDefault();
+    game.sound.unlock();
+    if (!game.isAiTurn()) game.startCharge();
+  });
+  const releaseFire = () => {
+    if (game && !game.isAiTurn()) game.releaseCharge();
+  };
+  fireBtn.addEventListener('pointerup', releaseFire);
+  fireBtn.addEventListener('pointerleave', releaseFire);
+  fireBtn.addEventListener('pointercancel', releaseFire);
+}
+
+function init() {
+  const canvas = $('game-canvas');
+  renderer = new WormsRenderer(canvas);
+  buildWeaponBar();
+  startNewGame({ mode: 'ai', themeId: 'emerald', wormsPerTeam: 3 });
+  bindEvents();
+  resizeCanvas();
+
+  if (rafId) cancelAnimationFrame(rafId);
+  lastTime = 0;
+  rafId = requestAnimationFrame(gameLoop);
+}
+
+window.addEventListener('load', init);
+
+})();
+</script>
+</body>
+</html>

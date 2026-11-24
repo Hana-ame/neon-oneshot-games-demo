@@ -1,0 +1,63 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>网页魂斗罗 · Contra Web Edition</title>
+  <link rel="stylesheet" href="css/style.css" />
+</head>
+<body>
+  <main class="arcade-shell">
+    <header class="topbar">
+      <div class="brand">
+        <span class="brand-title">CONTRA</span>
+        <span class="brand-sub">网页魂斗罗 · 双关卡完整版</span>
+      </div>
+      <div class="toolbar">
+        <button id="btn-start" class="btn btn-primary" type="button">开始游戏</button>
+        <button id="btn-pause" class="btn" type="button" disabled>暂停</button>
+        <button id="btn-mute" class="btn" type="button">音效: 开</button>
+        <button id="btn-crt" class="btn" type="button">CRT: 开</button>
+        <button id="btn-konami" class="btn btn-konami" type="button" title="激活科乐美30命秘籍">30命秘籍</button>
+      </div>
+    </header>
+
+    <section id="stage-wrapper" class="stage-wrapper" aria-label="魂斗罗游戏画布">
+      <canvas id="game-canvas" width="480" height="270"></canvas>
+      <div id="status-toast" class="status-toast" role="status" aria-live="polite"></div>
+    </section>
+
+    <section class="controls-bar" aria-label="触控手柄与操作说明">
+      <div class="dpad" aria-label="方向键">
+        <div class="pad-empty"></div>
+        <button class="pad-btn" type="button" data-action="up" aria-label="上">▲</button>
+        <div class="pad-empty"></div>
+        <button class="pad-btn" type="button" data-action="left" aria-label="左">◀</button>
+        <div class="pad-empty"></div>
+        <button class="pad-btn" type="button" data-action="right" aria-label="右">▶</button>
+        <div class="pad-empty"></div>
+        <button class="pad-btn" type="button" data-action="down" aria-label="下">▼</button>
+        <div class="pad-empty"></div>
+      </div>
+
+      <div class="guide-panel">
+        <div><strong>键位：</strong>WASD / 方向键 8方向瞄准移动 · <strong>J / Z</strong> 射击 · <strong>K / X</strong> 跳跃（↓+跳 下穿平台）· <strong>P</strong> 暂停</div>
+        <div class="weapon-badges">
+          <span class="badge">R 步枪</span>
+          <span class="badge">M 机枪</span>
+          <span class="badge">S 5向散弹</span>
+          <span class="badge">L 穿透激光</span>
+          <span class="badge">F 螺旋火球</span>
+        </div>
+      </div>
+
+      <div class="action-pads" aria-label="动作按键">
+        <button class="action-btn" type="button" data-action="shoot">射击</button>
+        <button class="action-btn jump" type="button" data-action="jump">跳跃</button>
+      </div>
+    </section>
+  </main>
+
+  <script type="module" src="src/main.js"></script>
+</body>
+</html>

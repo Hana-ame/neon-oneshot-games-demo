@@ -1,0 +1,285 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
+  <title>以撒的结合：泪之地下室 (Web Edition)</title>
+  <style>
+    :root {
+      --bg: #120d0c;
+      --panel: #1e1614;
+      --border: #3d2c26;
+      --text: #f3eae6;
+      --muted: #a9958d;
+      --accent: #e03131;
+      --gold: #fcc419;
+    }
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body {
+      background: radial-gradient(circle at top, #241916 0%, var(--bg) 65%);
+      color: var(--text);
+      font-family: "Inter", -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      padding: 12px;
+      user-select: none;
+    }
+    .app-shell {
+      width: 100%;
+      max-width: 980px;
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+    }
+    .topbar {
+      display: flex;
+      flex-wrap: wrap;
+      align-items: center;
+      justify-content: space-between;
+      gap: 10px;
+      background: var(--panel);
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      padding: 10px 14px;
+    }
+    .brand {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+    .brand-badge {
+      width: 34px;
+      height: 34px;
+      border-radius: 50%;
+      background: linear-gradient(135deg, #f6cbb9, #d99b8a);
+      border: 2px solid #3a2320;
+      display: grid;
+      place-items: center;
+      font-size: 16px;
+      flex-shrink: 0;
+    }
+    .brand h1 {
+      font-size: 16px;
+      font-weight: 700;
+      letter-spacing: 0.3px;
+    }
+    .brand p {
+      font-size: 12px;
+      color: var(--muted);
+    }
+    .controls-bar {
+      display: flex;
+      flex-wrap: wrap;
+      align-items: center;
+      gap: 8px;
+    }
+    .seed-box {
+      display: flex;
+      align-items: center;
+      gap: 4px;
+      background: #140f0e;
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      padding: 3px 6px;
+    }
+    .seed-box input {
+      width: 98px;
+      background: transparent;
+      border: none;
+      color: var(--gold);
+      font-family: monospace;
+      font-size: 13px;
+      outline: none;
+      text-transform: uppercase;
+    }
+    button {
+      background: #2b1f1c;
+      color: var(--text);
+      border: 1px solid #4d3730;
+      border-radius: 8px;
+      padding: 6px 11px;
+      font-size: 13px;
+      font-weight: 600;
+      cursor: pointer;
+      transition: background 0.15s, transform 0.1s;
+    }
+    button:hover { background: #3b2a26; }
+    button:active { transform: scale(0.97); }
+    button.primary {
+      background: var(--accent);
+      border-color: #ff6b6b;
+      color: #fff;
+    }
+    button.primary:hover { background: #c92a2a; }
+    #canvas-wrap {
+      position: relative;
+      width: 100%;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      background: #0d0908;
+      border: 2px solid var(--border);
+      border-radius: 14px;
+      overflow: hidden;
+      box-shadow: 0 18px 42px rgba(0, 0, 0, 0.55);
+    }
+    canvas {
+      display: block;
+      image-rendering: crisp-edges;
+    }
+    .overlay {
+      position: absolute;
+      inset: 0;
+      background: rgba(12, 8, 8, 0.82);
+      backdrop-filter: blur(4px);
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      gap: 14px;
+      text-align: center;
+      padding: 20px;
+    }
+    .overlay.hidden { display: none; }
+    .overlay h2 { font-size: 28px; color: var(--gold); }
+    .overlay p { font-size: 14px; color: var(--text); max-width: 440px; line-height: 1.6; }
+    .items-bar {
+      background: var(--panel);
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      padding: 10px 14px;
+      display: flex;
+      flex-wrap: wrap;
+      align-items: center;
+      gap: 8px;
+      font-size: 12px;
+    }
+    .items-label { color: var(--muted); font-weight: 600; }
+    .item-empty { color: var(--muted); font-style: italic; }
+    .item-chip {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      padding: 3px 9px;
+      border-radius: 999px;
+      background: #261b18;
+      border: 1px solid var(--gold);
+      font-weight: 600;
+    }
+    .item-chip i {
+      width: 8px;
+      height: 8px;
+      border-radius: 50%;
+      display: inline-block;
+    }
+    .touch-controls {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      gap: 12px;
+      background: var(--panel);
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      padding: 10px 14px;
+    }
+    .pad-grid {
+      display: grid;
+      grid-template-columns: repeat(3, 42px);
+      grid-template-rows: repeat(3, 38px);
+      gap: 4px;
+    }
+    .pad-btn {
+      padding: 0;
+      display: grid;
+      place-items: center;
+      font-size: 15px;
+      touch-action: none;
+    }
+    .pad-btn.active { background: var(--accent); color: #fff; }
+    .action-col {
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+      align-items: center;
+    }
+    .key-hint {
+      font-size: 11px;
+      color: var(--muted);
+      text-align: center;
+    }
+    @media (max-width: 640px) {
+      .topbar { padding: 8px 10px; }
+      .brand h1 { font-size: 14px; }
+      .pad-grid { grid-template-columns: repeat(3, 36px); grid-template-rows: repeat(3, 34px); }
+    }
+  </style>
+</head>
+<body>
+  <div class="app-shell">
+    <header class="topbar">
+      <div class="brand">
+        <div class="brand-badge">😭</div>
+        <div>
+          <h1>以撒的结合 · 泪之地下室</h1>
+          <p>Roguelike 随机地牢 · 3层Boss挑战 · 12种协同道具</p>
+        </div>
+      </div>
+      <div class="controls-bar">
+        <div class="seed-box">
+          <input id="seed-input" type="text" maxlength="12" aria-label="地图种子" placeholder="SEED" />
+          <button id="btn-apply-seed" type="button">载入种子</button>
+        </div>
+        <button id="btn-mute" type="button">🔊 音效</button>
+        <button id="btn-pause" type="button">⏸ 暂停</button>
+        <button id="btn-restart" type="button" class="primary">↻ 重开</button>
+      </div>
+    </header>
+
+    <main id="canvas-wrap">
+      <canvas id="game-canvas" width="960" height="640"></canvas>
+      <div id="state-overlay" class="overlay hidden">
+        <h2 id="overlay-title">游戏暂停</h2>
+        <p id="overlay-desc"></p>
+        <button id="overlay-action" type="button" class="primary">继续</button>
+      </div>
+    </main>
+
+    <section class="items-bar">
+      <span class="items-label">已收集道具：</span>
+      <div id="items-list" style="display:flex;flex-wrap:wrap;gap:6px;"></div>
+    </section>
+
+    <section class="touch-controls" aria-label="触屏与快捷控制">
+      <div>
+        <div class="pad-grid">
+          <div></div><button id="pad-up" class="pad-btn" type="button">W</button><div></div>
+          <button id="pad-left" class="pad-btn" type="button">A</button><div></div><button id="pad-right" class="pad-btn" type="button">D</button>
+          <div></div><button id="pad-down" class="pad-btn" type="button">S</button><div></div>
+        </div>
+        <div class="key-hint">移动 (WASD)</div>
+      </div>
+
+      <div class="action-col">
+        <div style="display:flex;gap:8px;">
+          <button id="btn-touch-bomb" type="button">💣 炸弹 (E)</button>
+          <button id="btn-touch-active" type="button">❤️ 主动 (Space)</button>
+        </div>
+        <div class="key-hint">提示：炸开带 X 标记的蓝石头可获得魂心与钥匙</div>
+      </div>
+
+      <div>
+        <div class="pad-grid">
+          <div></div><button id="shoot-up" class="pad-btn" type="button">↑</button><div></div>
+          <button id="shoot-left" class="pad-btn" type="button">←</button><div></div><button id="shoot-right" class="pad-btn" type="button">→</button>
+          <div></div><button id="shoot-down" class="pad-btn" type="button">↓</button><div></div>
+        </div>
+        <div class="key-hint">射击 (方向键)</div>
+      </div>
+    </section>
+  </div>
+
+  <script type="module" src="./src/main.js"></script>
+</body>
+</html>

@@ -1,0 +1,138 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
+  <title>VoxelCraft Web — 网页版 Minecraft 体素沙盒</title>
+  <link rel="stylesheet" href="styles.css" />
+</head>
+<body>
+  <div id="game-root">
+    <canvas id="gl-canvas"></canvas>
+
+    <!-- Crosshair -->
+    <div id="crosshair" aria-hidden="true"></div>
+
+    <!-- Top-left HUD bar -->
+    <div id="top-bar">
+      <div class="hud-pill" id="mode-badge">创造模式</div>
+      <div class="hud-pill" id="time-badge">白天 10:48</div>
+      <button class="hud-btn" id="btn-debug" title="切换调试信息 (F3)">F3 调试</button>
+      <button class="hud-btn" id="btn-inventory" title="方块图鉴 (E)">E 图鉴</button>
+      <button class="hud-btn" id="btn-fly" title="切换飞行模式 (F)">F 飞行: 关</button>
+      <button class="hud-btn" id="btn-mute" title="切换音效 (M)">🔊 音效</button>
+      <button class="hud-btn primary" id="btn-menu" title="设置与存档 (Esc)">⚙ 菜单</button>
+    </div>
+
+    <!-- F3 Debug Panel -->
+    <div id="debug-panel" class="hidden">
+      <div><strong>VoxelCraft WebGL Engine v1.0</strong></div>
+      <div id="dbg-fps">FPS: -- | DrawCalls: -- | Tris: --</div>
+      <div id="dbg-pos">XYZ: 0.0 / 0.0 / 0.0</div>
+      <div id="dbg-chunk">Chunk: 0, 0 | Biome: plains | Seed: 2026</div>
+      <div id="dbg-target">Target: None</div>
+    </div>
+
+    <!-- Toast Notification -->
+    <div id="toast" class="hidden" role="status"></div>
+
+    <!-- Selected Block Label -->
+    <div id="block-label">草方块</div>
+
+    <!-- Bottom Hotbar -->
+    <div id="hotbar-wrap">
+      <div id="hotbar" role="toolbar" aria-label="快捷栏"></div>
+    </div>
+
+    <!-- Touch / On-screen Controls (visible on touch or toggle) -->
+    <div id="touch-controls">
+      <div class="touch-dpad">
+        <button class="touch-btn" data-move="forward" aria-label="前进">▲</button>
+        <div class="touch-row">
+          <button class="touch-btn" data-move="left" aria-label="左移">◀</button>
+          <button class="touch-btn" data-move="back" aria-label="后退">▼</button>
+          <button class="touch-btn" data-move="right" aria-label="右移">▶</button>
+        </div>
+      </div>
+      <div class="touch-actions">
+        <button class="touch-btn action-break" id="touch-break">挖掘</button>
+        <button class="touch-btn action-place" id="touch-place">放置</button>
+        <button class="touch-btn action-jump" id="touch-jump">跳跃</button>
+      </div>
+    </div>
+
+    <!-- Start / Pause Menu Modal -->
+    <div id="menu-overlay">
+      <div class="modal-card">
+        <div class="modal-header">
+          <h1>VOXELCRAFT WEB</h1>
+          <p class="subtitle">零依赖纯 WebGL 体素沙盒引擎 · 网页版 Minecraft</p>
+        </div>
+
+        <div class="controls-grid">
+          <div class="ctrl-item"><kbd>W A S D</kbd> 移动</div>
+          <div class="ctrl-item"><kbd>Space</kbd> 跳跃 / 上升</div>
+          <div class="ctrl-item"><kbd>Shift</kbd> 冲刺 / 下降</div>
+          <div class="ctrl-item"><kbd>左键</kbd> 破坏方块</div>
+          <div class="ctrl-item"><kbd>右键</kbd> 放置方块</div>
+          <div class="ctrl-item"><kbd>1-9 / 滚轮</kbd> 切换方块</div>
+          <div class="ctrl-item"><kbd>F</kbd> 飞行模式</div>
+          <div class="ctrl-item"><kbd>E / F3</kbd> 图鉴 / 调试</div>
+        </div>
+
+        <div class="settings-section">
+          <div class="setting-row">
+            <label for="select-mode">游戏模式</label>
+            <select id="select-mode">
+              <option value="creative">创造模式 (无限方块 + 飞行)</option>
+              <option value="survival">生存模式 (采集消耗)</option>
+            </select>
+          </div>
+          <div class="setting-row">
+            <label for="range-radius">视距半径: <span id="val-radius">3</span> 区块</label>
+            <input type="range" id="range-radius" min="2" max="5" step="1" value="3" />
+          </div>
+          <div class="setting-row">
+            <label for="range-time">昼夜时间: <span id="val-time">白天</span></label>
+            <input type="range" id="range-time" min="0" max="1" step="0.01" value="0.44" />
+          </div>
+          <div class="setting-row">
+            <label for="check-cycle">自动昼夜交替</label>
+            <input type="checkbox" id="check-cycle" checked />
+          </div>
+          <div class="setting-row">
+            <label for="input-seed">世界种子</label>
+            <div class="seed-group">
+              <input type="text" id="input-seed" value="2026" maxlength="20" />
+              <button class="btn-secondary" id="btn-new-world">生成新世界</button>
+            </div>
+          </div>
+        </div>
+
+        <div class="modal-actions">
+          <button class="btn-primary" id="btn-play">▶ 进入 / 继续游戏</button>
+          <div class="action-row">
+            <button class="btn-secondary" id="btn-save">💾 保存世界</button>
+            <button class="btn-secondary" id="btn-load">📂 读取存档</button>
+            <button class="btn-secondary" id="btn-respawn">🧭 返回出生点</button>
+          </div>
+        </div>
+        <p class="hint-text">提示：点击画面可锁定鼠标视角；若浏览器限制指针锁定，也可按住鼠标左/右键拖拽旋转视角。</p>
+      </div>
+    </div>
+
+    <!-- Block Catalog / Inventory Modal -->
+    <div id="inventory-overlay" class="hidden">
+      <div class="modal-card inventory-card">
+        <div class="inv-header">
+          <h2>方块图鉴（点击替换当前快捷栏槽位）</h2>
+          <button class="hud-btn" id="btn-close-inv">✕ 关闭</button>
+        </div>
+        <div id="catalog-grid"></div>
+      </div>
+    </div>
+  </div>
+
+  <script type="module" src="src/main.js"></script>
+</body>
+</html>

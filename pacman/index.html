@@ -1,0 +1,81 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>NEON PAC-ARCADE · 经典街机吃豆人复刻版</title>
+  <link rel="stylesheet" href="./styles/arcade.css" />
+</head>
+<body>
+  <main class="arcade-shell">
+    <header class="marquee-header">
+      <div class="marquee-title">
+        <h1>NEON PAC-ARCADE</h1>
+        <p>经典 28×31 街机迷宫 · 四幽灵独立 AI · Web Audio 合成音效</p>
+      </div>
+      <div class="toolbar">
+        <button id="btn-start" class="btn btn-primary" type="button">投币开始</button>
+        <button id="btn-pause" class="btn" type="button" disabled>暂停 (P)</button>
+        <button id="btn-mute" class="btn" type="button" aria-pressed="true">音效: 开 (M)</button>
+        <button id="btn-crt" class="btn" type="button" aria-pressed="true">CRT扫描线: 开</button>
+      </div>
+    </header>
+
+    <section class="cabinet-body">
+      <div id="cabinet-screen" class="screen-bezel crt-enabled">
+        <canvas id="arcade-canvas" width="560" height="620" aria-label="吃豆人街机游戏画布"></canvas>
+      </div>
+
+      <aside class="side-panel">
+        <div class="hud-card">
+          <div class="hud-grid">
+            <div class="stat-box">
+              <div class="stat-label">SCORE</div>
+              <div id="hud-score" class="stat-value gold">000000</div>
+            </div>
+            <div class="stat-box">
+              <div class="stat-label">HIGH SCORE</div>
+              <div id="hud-highscore" class="stat-value cyan">000000</div>
+            </div>
+            <div class="stat-box">
+              <div class="stat-label">LEVEL</div>
+              <div id="hud-level" class="stat-value">STAGE 1</div>
+            </div>
+            <div class="stat-box">
+              <div class="stat-label">LIVES</div>
+              <div id="hud-lives" class="stat-value gold">● ● ●</div>
+            </div>
+            <div class="stat-box">
+              <div class="stat-label">PELLETS</div>
+              <div id="hud-pellets" class="stat-value">244/244</div>
+            </div>
+            <div class="stat-box">
+              <div class="stat-label">AI MODE</div>
+              <div id="hud-mode" class="stat-value" data-mode="scatter">SCATTER</div>
+            </div>
+          </div>
+
+          <div class="ghost-legend">
+            <div class="ghost-row"><span class="dot" style="background:#ff2a54"></span><strong>BLINKY</strong> · 直接追击</div>
+            <div class="ghost-row"><span class="dot" style="background:#ff85d0"></span><strong>PINKY</strong> · 前方4格伏击</div>
+            <div class="ghost-row"><span class="dot" style="background:#00f5d4"></span><strong>INKY</strong> · 双倍向量包抄</div>
+            <div class="ghost-row"><span class="dot" style="background:#ff9e00"></span><strong>CLYDE</strong> · 8格阈值游走</div>
+          </div>
+        </div>
+
+        <div class="dpad-card">
+          <div class="dpad-grid" aria-label="触控方向键">
+            <button id="dpad-up" class="dpad-btn dpad-up" type="button" aria-label="向上">▲</button>
+            <button id="dpad-left" class="dpad-btn dpad-left" type="button" aria-label="向左">◀</button>
+            <button id="dpad-right" class="dpad-btn dpad-right" type="button" aria-label="向右">▶</button>
+            <button id="dpad-down" class="dpad-btn dpad-down" type="button" aria-label="向下">▼</button>
+          </div>
+          <p class="hint-text">支持键盘 WASD / 方向键、画布触屏滑动与虚拟十字键操作</p>
+        </div>
+      </aside>
+    </section>
+  </main>
+
+  <script type="module" src="./src/main.js"></script>
+</body>
+</html>
