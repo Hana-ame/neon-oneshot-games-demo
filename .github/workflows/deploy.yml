@@ -16,6 +16,8 @@ concurrency:
 
 jobs:
   deploy:
+    # 未到发布时间前不部署：仓库变量 PAGES_ENABLED 未设为 true 时，push 触发的运行直接跳过
+    if: github.event_name == 'workflow_dispatch' || vars.PAGES_ENABLED == 'true'
     runs-on: ubuntu-latest
     environment:
       name: github-pages
